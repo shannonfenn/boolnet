@@ -1,0 +1,7 @@
+build/
+*.c
+*.so
+py*.cpp
+*.pyc
+*.html
+*.pytest.restart

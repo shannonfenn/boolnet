@@ -1,0 +1,98 @@
+---
+name: 4 input cascaded NAND
+invariant under single move: yes
+invariant under multiple moves: no
+Ni: 4
+'No': 1
+gates: [[0, 1], [2, 3], [4, 5]]
+max depths: [2]
+# state can be extracted from full state table
+samples: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+target matrix: 
+    full:
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+activation matrix:   
+# includes input (first Ni cols) and output (last No cols)
+    full:
+        - [0, 0, 0, 0, 1, 1, 0]
+        - [1, 0, 0, 0, 1, 1, 0]
+        - [0, 1, 0, 0, 1, 1, 0]
+        - [1, 1, 0, 0, 0, 1, 1]
+        - [0, 0, 1, 0, 1, 1, 0]
+        - [1, 0, 1, 0, 1, 1, 0]
+        - [0, 1, 1, 0, 1, 1, 0]
+        - [1, 1, 1, 0, 0, 1, 1]
+        - [0, 0, 0, 1, 1, 1, 0]
+        - [1, 0, 0, 1, 1, 1, 0]
+        - [0, 1, 0, 1, 1, 1, 0]
+        - [1, 1, 0, 1, 0, 1, 1]
+        - [0, 0, 1, 1, 1, 0, 1]
+        - [1, 0, 1, 1, 1, 0, 1]
+        - [0, 1, 1, 1, 1, 0, 1]
+        - [1, 1, 1, 1, 0, 0, 1]
+error matrix: 
+    full:
+        - [0]
+        - [0]
+        - [0]
+        - [1]
+        - [0]
+        - [0]
+        - [0]
+        - [1]
+        - [0]
+        - [0]
+        - [0]
+        - [1]
+        - [1]
+        - [1]
+        - [1]
+        - [1]
+metric value:
+    sample:
+        e1:             0.4375
+        e2 msb:       0.4375
+        e2 lsb:       0.4375
+        e3 msb:   0.4375
+        e3 lsb:   0.4375
+        e7 msb:  1.0
+        e7 lsb:  1.0
+        e4 lsb:             0.8125
+        e4 msb:             0.8125
+        e5 lsb:             0.8125
+        e5 msb:             0.8125
+        e6 lsb:             0.4375
+        e6 msb:             0.4375
+        accuracy:           0.5625
+        per output:  [0.4375]
+    full:
+        e1:             0.4375
+        e2 msb:       0.4375
+        e2 lsb:       0.4375
+        e3 msb:   0.4375
+        e3 lsb:   0.4375
+        e7 msb:  1.0
+        e7 lsb:  1.0
+        e4 lsb:             0.8125
+        e4 msb:             0.8125
+        e5 lsb:             0.8125
+        e5 msb:             0.8125
+        e6 lsb:             0.4375
+        e6 msb:             0.4375
+        accuracy:           0.5625
+        per output:  [0.4375]

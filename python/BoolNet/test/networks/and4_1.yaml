@@ -1,0 +1,104 @@
+---
+name: 4 input AND
+invariant under single move: no
+invariant under multiple moves: no
+Ni: 4
+'No': 1
+gates: 
+    - [0, 1]
+    - [2, 3]
+    - [4, 4]
+    - [5, 5]
+    - [6, 7]
+    - [8, 8]
+max depths: [4]
+# state can be extracted from full state table
+samples: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+target matrix:
+    full:
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [1]
+activation matrix:   
+# includes input (first Ni cols) and output (last No cols)
+    full:
+        - [0, 0, 0, 0, 1, 1, 0, 0, 1, 0]
+        - [1, 0, 0, 0, 1, 1, 0, 0, 1, 0]
+        - [0, 1, 0, 0, 1, 1, 0, 0, 1, 0]
+        - [1, 1, 0, 0, 0, 1, 1, 0, 1, 0]
+        - [0, 0, 1, 0, 1, 1, 0, 0, 1, 0]
+        - [1, 0, 1, 0, 1, 1, 0, 0, 1, 0]
+        - [0, 1, 1, 0, 1, 1, 0, 0, 1, 0]
+        - [1, 1, 1, 0, 0, 1, 1, 0, 1, 0]
+        - [0, 0, 0, 1, 1, 1, 0, 0, 1, 0]
+        - [1, 0, 0, 1, 1, 1, 0, 0, 1, 0]
+        - [0, 1, 0, 1, 1, 1, 0, 0, 1, 0]
+        - [1, 1, 0, 1, 0, 1, 1, 0, 1, 0]
+        - [0, 0, 1, 1, 1, 0, 0, 1, 1, 0]
+        - [1, 0, 1, 1, 1, 0, 0, 1, 1, 0]
+        - [0, 1, 1, 1, 1, 0, 0, 1, 1, 0]
+        - [1, 1, 1, 1, 0, 0, 1, 1, 0, 1]
+error matrix: 
+    full:
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+        - [0]
+metric value:
+    sample:
+        e1: 0.0
+        e2 msb: 0.0
+        e2 lsb: 0.0
+        e3 msb: 0.0
+        e3 lsb: 0.0
+        e7 msb: 0.0
+        e7 lsb: 0.0
+        e4 msb: 0.0
+        e4 lsb: 0.0
+        e5 msb: 0.0
+        e5 lsb: 0.0
+        e6 msb: 0.0
+        e6 lsb: 0.0
+        accuracy: 1.0
+        per output: [0.0]
+    full:
+        e1: 0.0
+        e2 msb: 0.0
+        e2 lsb: 0.0
+        e3 msb: 0.0
+        e3 lsb: 0.0
+        e7 msb: 0.0
+        e7 lsb: 0.0
+        e4 msb: 0.0
+        e4 lsb: 0.0
+        e5 msb: 0.0
+        e5 lsb: 0.0
+        e6 msb: 0.0
+        e6 lsb: 0.0
+        accuracy: 1.0
+        per output: [0.0]

@@ -1,0 +1,98 @@
+---
+name: single layer zero
+invariant under single move: yes
+invariant under multiple moves: yes
+Ni: 4
+'No': 2
+gates: [[0, 1], [2, 3]]
+max depths: [1, 1]
+# state can be extracted from full state table
+samples: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+target matrix: 
+    full:
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+        - [0, 0]
+activation matrix:   
+# includes input (first Ni cols) and output (last No cols)
+    full:
+        - [0, 0, 0, 0, 1, 1]
+        - [1, 0, 0, 0, 1, 1]
+        - [0, 1, 0, 0, 1, 1]
+        - [1, 1, 0, 0, 0, 1]
+        - [0, 0, 1, 0, 1, 1]
+        - [1, 0, 1, 0, 1, 1]
+        - [0, 1, 1, 0, 1, 1]
+        - [1, 1, 1, 0, 0, 1]
+        - [0, 0, 0, 1, 1, 1]
+        - [1, 0, 0, 1, 1, 1]
+        - [0, 1, 0, 1, 1, 1]
+        - [1, 1, 0, 1, 0, 1]
+        - [0, 0, 1, 1, 1, 0]
+        - [1, 0, 1, 1, 1, 0]
+        - [0, 1, 1, 1, 1, 0]
+        - [1, 1, 1, 1, 0, 0]
+error matrix: 
+    full:
+        - [1, 1]
+        - [1, 1]
+        - [1, 1]
+        - [0, 1]
+        - [1, 1]
+        - [1, 1]
+        - [1, 1]
+        - [0, 1]
+        - [1, 1]
+        - [1, 1]
+        - [1, 1]
+        - [0, 1]
+        - [1, 0]
+        - [1, 0]
+        - [1, 0]
+        - [0, 0]
+metric value:
+    sample: 
+        e1:            0.75
+        e2 msb:      0.75
+        e2 lsb:      0.75
+        e3 lsb:  0.84375
+        e3 msb:  0.84375
+        e7 lsb: 1.0
+        e7 msb: 1.0
+        e4 msb:            1.0
+        e4 lsb:            1.0
+        e5 lsb:            1.0
+        e5 msb:            1.0
+        e6 lsb:            0.875
+        e6 msb:            0.875
+        accuracy:          0.0625
+        per output: [0.75, 0.75]
+    full: 
+        e1:             0.75
+        e2 msb:       0.75
+        e2 lsb:       0.75
+        e3 msb:   0.84375
+        e3 lsb:   0.84375
+        e7 msb:  1.0
+        e7 lsb:  1.0
+        e4 msb:             1.0
+        e4 lsb:             1.0
+        e5 msb:             1.0
+        e5 lsb:             1.0
+        e6 msb:             0.875
+        e6 lsb:             0.875
+        accuracy:           0.0625
+        per output:  [0.75, 0.75]
