@@ -1,16 +1,15 @@
 from datetime import datetime       # for date for result dir
-from os import mkdir, getcwd        # for mkdir and cwd
-from os.path import join, isdir, relpath, basename    # for path manipulation
 from multiprocessing import Pool    # non-distributed parallellism      ## REPLACE WITH SCOOP LATER
 from time import time               # timing
 from progress.bar import Bar        # progress indicators
+import os                           # for mkdir
+import os.path                      # for path manipulation
 import yaml                         # for loading experiment files
 import sys                          # for path, exit
 import shutil                       # file copying
 import subprocess                   # for git and cython compile
 import logging                      # for logging, duh
 import argparse                     # CLI
-import re                           # for filtering git output
 import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
@@ -30,7 +29,7 @@ def check_git():
 
     if changed_files:
         print(('Warning, the following files in git repo '
-               'have changes:\n\t{}').format('\n\t'.join(changed_files)))
+               'have changes:\n\t{}').format('\n\t'.os.path.join(changed_files)))
     return repo_base_dir
 
 
@@ -38,19 +37,19 @@ def create_result_dir(experiment_filename, exp_name, now):
     ''' Generates a new timestamped directory for the results and copies
         the experiment script, experiment file and git hash into it.'''
     # make directory for the results
-    result_dir = join('results/', '{}_{}_'.format(
+    result_dir = os.path.join('results/', '{}_{}_'.format(
         exp_name, now.strftime('%y-%m-%d')))
 
     # find the first number i such that 'Results_datetime_i' is not
     # already a directory and make that new directory
     result_dir += next(str(i) for i in itertools.count()
-                       if not isdir(result_dir + str(i)))
-    mkdir(result_dir)
+                       if not os.path.isdir(result_dir + str(i)))
+    os.mkdir(result_dir)
 
     # copy experiment files and git hash into results directory
-    shutil.copy(__file__, join(result_dir, 'exp_script'))
-    shutil.copy(experiment_filename, join(result_dir, basename(experiment_filename)))
-    with open(join(result_dir, 'git_hash_at_time_of_exp'), 'w') as hashfile:
+    shutil.copy(__file__, os.path.join(result_dir, 'exp_script'))
+    shutil.copy(experiment_filename, result_dir)
+    with open(os.path.join(result_dir, 'git_hash_at_time_of_exp'), 'w') as hashfile:
         hashfile.write(subprocess.check_output(['git', 'rev-parse', 'HEAD'],
                        universal_newlines=True))
 
@@ -111,7 +110,8 @@ def initialise(experiment_file):
     # load experiment file
     settings = yaml.load(experiment_file, Loader=yaml.CSafeLoader)
 
-    settings['dataset_dir'] = join(repo_base_dir, 'experiments/datasets/')
+    # MUST FIX THIS SINCE BASE_DIR will be code, not above
+    settings['dataset_dir'] = os.path.join(repo_base_dir, 'experiments/datasets/')
 
     # create result directory
     result_dir = create_result_dir(experiment_file.name,
@@ -119,7 +119,7 @@ def initialise(experiment_file):
                                    datetime.now())
 
     # create a temp subdir
-    mkdir(join(result_dir, 'temp'))
+    os.mkdir(os.path.join(result_dir, 'temp'))
 
     # initialise logging
     initialise_logging(settings, result_dir)
@@ -182,10 +182,9 @@ def main():
 
     settings, result_dir = initialise(args.experiment)
 
-    settings['inter_file_base'] = join(result_dir, 'temp', 'inter_')
+    settings['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
 
-    r = join(result_dir, 'results.json')
-    with open(r, 'w') as results_stream:
+    with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # generate learning tasks
         configurations = ex.generate_configurations(settings, args.evaluator)
         print('{} runs generated.'.format(len(configurations)))
@@ -194,7 +193,7 @@ def main():
 
     if not args.keep_temp:
         print('Deleting temp directory')
-        shutil.rmtree(join(result_dir, 'temp'))
+        shutil.rmtree(os.path.join(result_dir, 'temp'))
 
     total_time = time() - start_time
 
