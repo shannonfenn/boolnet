@@ -21,24 +21,19 @@ def check_git():
     ''' Checks the git directory for uncommitted source modifications.
         Since the experiment is tagged with a git hash it should not be
         run while the repo is dirty.'''
-    repo_base_dir = subprocess.check_output(
-        ['git', 'rev-parse', '--show-toplevel'], universal_newlines=True).strip()
-
     changed_files = subprocess.check_output(
         ['git', 'diff', '--name-only'], universal_newlines=True).splitlines()
-
     if changed_files:
         print(('Warning, the following files in git repo '
                'have changes:\n\t{}').format('\n\t'.os.path.join(changed_files)))
-    return repo_base_dir
 
 
-def create_result_dir(experiment_filename, exp_name, now):
+def create_result_dir(args, exp_name):
     ''' Generates a new timestamped directory for the results and copies
         the experiment script, experiment file and git hash into it.'''
     # make directory for the results
-    result_dir = os.path.join('results/', '{}_{}_'.format(
-        exp_name, now.strftime('%y-%m-%d')))
+    result_dir = os.path.join(args.results_dir, '{}_{}_'.format(
+        exp_name, datetime.now().strftime('%y-%m-%d')))
 
     # find the first number i such that 'Results_datetime_i' is not
     # already a directory and make that new directory
@@ -46,12 +41,11 @@ def create_result_dir(experiment_filename, exp_name, now):
                        if not os.path.isdir(result_dir + str(i)))
     os.mkdir(result_dir)
 
-    # copy experiment files and git hash into results directory
-    shutil.copy(__file__, os.path.join(result_dir, 'exp_script'))
-    shutil.copy(experiment_filename, result_dir)
-    with open(os.path.join(result_dir, 'git_hash_at_time_of_exp'), 'w') as hashfile:
-        hashfile.write(subprocess.check_output(['git', 'rev-parse', 'HEAD'],
-                       universal_newlines=True))
+    # copy experiment config and git hash into results directory
+    shutil.copy(args.experiment.name, result_dir)
+    with open(os.path.join(result_dir, 'git_hash'), 'w') as hashfile:
+        hashfile.write(subprocess.check_output(
+            ['git', 'rev-parse', 'HEAD'], universal_newlines=True))
 
     # return the directory name for the results to go in
     return result_dir
@@ -67,18 +61,26 @@ def initialise_logging(settings, result_dir):
         log_level = level_dict[settings['logging_level'].lower()]
     except:
         log_level = logging.WARNING
-    logging.basicConfig(filename=join(result_dir, 'log'), level=log_level)
+    logging.basicConfig(filename=os.path.join(result_dir, 'log'), level=log_level)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('experiment',
                         type=argparse.FileType('r'),
-                        default='experiment.yaml')
-    parser.add_argument('--evaluator', default='cy', choices=['py', 'cy', 'gpu'])
+                        default='experiment.yaml',
+                        help='experiment config filename (relative to --exp-dir).')
+    parser.add_argument('--evaluator', default='cy', choices=['py', 'cy', 'gpu'],
+                        help='python, cython or cuda based evaluator.')
     parser.add_argument('--numprocs', '-n', metavar='N', type=int,
-                        default=8, choices=range(0, 17))
-    parser.add_argument('--keep_temp', action='store_true')
+                        default=8, choices=range(0, 17),
+                        help='how many parallel processes to use (give 0 for scoop).')
+    parser.add_argument('--keep-tmp', action='store_true',
+                        help='provide to retain temporary FABCPP files.')
+    parser.add_argument('--data-dir', default='datasets', type=str,
+                        help='dataset directory.')
+    parser.add_argument('--results-dir', default='results', type=str,
+                        help='directory to store results in (in own subdir).')
 
     args = parser.parse_args()
 
@@ -97,7 +99,7 @@ def parse_arguments():
     return args
 
 
-def initialise(experiment_file):
+def initialise(args):
     ''' This is responsible for setting up the output directory,
         checking the git repository for cleanliness, setting up
         logging and compiling the cython code for boolean nets.'''
@@ -105,18 +107,16 @@ def initialise(experiment_file):
     if sys.version_info.major != 3:
         sys.exit("Requires python 3.")
 
-    repo_base_dir = check_git()
+    check_git()
 
     # load experiment file
-    settings = yaml.load(experiment_file, Loader=yaml.CSafeLoader)
+    settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
     # MUST FIX THIS SINCE BASE_DIR will be code, not above
-    settings['dataset_dir'] = os.path.join(repo_base_dir, 'experiments/datasets/')
+    settings['dataset_dir'] = os.path.abspath(args.data_dir)
 
     # create result directory
-    result_dir = create_result_dir(experiment_file.name,
-                                   settings['name'],
-                                   datetime.now())
+    result_dir = create_result_dir(args, settings['name'])
 
     # create a temp subdir
     os.mkdir(os.path.join(result_dir, 'temp'))
@@ -180,7 +180,7 @@ def main():
 
     # run_experiment(repo_dir, build_subdir, experiment_filename)
 
-    settings, result_dir = initialise(args.experiment)
+    settings, result_dir = initialise(args)
 
     settings['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
 
