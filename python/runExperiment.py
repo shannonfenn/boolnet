@@ -75,7 +75,7 @@ def parse_arguments():
     parser.add_argument('--numprocs', '-n', metavar='N', type=int,
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for scoop).')
-    parser.add_argument('--keep-tmp', action='store_true',
+    parser.add_argument('--keep-temp', action='store_true',
                         help='provide to retain temporary FABCPP files.')
     parser.add_argument('--data-dir', default='datasets', type=str,
                         help='dataset directory.')
