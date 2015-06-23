@@ -200,13 +200,15 @@ def main():
     print('Experiment completed in {} seconds. Results in \"{}\"'.format(total_time, result_dir))
 
     try:
-        from pushbullet import PushBullet
+        from pushbullet import PushBullet, PushbulletError
         pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
         pb.push_note(
             'Experiment complete.', 'name: {} time: {} results: {}'.format(
                 settings['name'], total_time, str(result_dir)))
-    except:
-        print('Failed to generate PushBullet notification.')
+    except ImportError:
+        print('Failed to import PushBullet - no notification sent.')
+    except PushbulletError as err:
+        print('Failed to generate PushBullet notification: {}.'.format(err))
 
 if __name__ == '__main__':
     main()
