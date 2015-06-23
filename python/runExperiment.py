@@ -14,23 +14,19 @@ import re                           # for filtering git output
 import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
-sys.path.append('../code/python/')
 from BoolNet.LearnBoolNet import learn_bool_net
 import experiment as ex
 
 
-def check_git(code_subdir):
+def check_git():
     ''' Checks the git directory for uncommitted source modifications.
         Since the experiment is tagged with a git hash it should not be
         run while the repo is dirty.'''
     repo_base_dir = subprocess.check_output(
         ['git', 'rev-parse', '--show-toplevel'], universal_newlines=True).strip()
 
-    exp_subdir = relpath(getcwd(), repo_base_dir)
     changed_files = subprocess.check_output(
         ['git', 'diff', '--name-only'], universal_newlines=True).splitlines()
-    code_re = re.compile('\\A({}|{}.+\\.py\\Z)'.format(code_subdir, exp_subdir))
-    changed_files = [s for s in changed_files if code_re.match(s)]
 
     if changed_files:
         print(('Warning, the following files in git repo '
@@ -102,7 +98,7 @@ def parse_arguments():
     return args
 
 
-def initialise(build_subdir, experiment_file):
+def initialise(experiment_file):
     ''' This is responsible for setting up the output directory,
         checking the git repository for cleanliness, setting up
         logging and compiling the cython code for boolean nets.'''
@@ -110,7 +106,7 @@ def initialise(build_subdir, experiment_file):
     if sys.version_info.major != 3:
         sys.exit("Requires python 3.")
 
-    repo_base_dir = check_git(build_subdir)
+    repo_base_dir = check_git()
 
     # load experiment file
     settings = yaml.load(experiment_file, Loader=yaml.CSafeLoader)
@@ -184,7 +180,7 @@ def main():
 
     # run_experiment(repo_dir, build_subdir, experiment_filename)
 
-    settings, result_dir = initialise('code/python/BoolNet', args.experiment)
+    settings, result_dir = initialise(args.experiment)
 
     settings['inter_file_base'] = join(result_dir, 'temp', 'inter_')
 
