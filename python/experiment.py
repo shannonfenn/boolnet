@@ -1,166 +1,16 @@
 from copy import deepcopy
 from collections import MutableMapping, namedtuple
-from good import Schema, Required, In, All, Any, Range, Type, IsDir
-from good import message, Allow, Optional
 from os import fsync
-from os.path import join
+from os.path import join, splitext
 import numpy as np
 import json
 
-from BoolNet.LearnBoolNet import LEARNERS, OPTIMISERS
-from BoolNet.Packing import pack_bool_matrix
-from BoolNet.BitError import all_metric_names
-
-
-class BoolMapping:
-    def __init__(self, dataset, Ne):
-        self.inputs, self.target = self._validate(dataset, Ne)
-        self.Ne = Ne
-
-    @staticmethod
-    def _validate(dataset, Ne):
-        if dataset.shape[0] == 0:
-            raise ValueError('Empty dataset.')
-        if dataset.shape[1] != 2:
-            raise ValueError(
-                'Invalid dataset shape ({}).'.format(dataset.shape))
-        inputs = np.asarray(dataset[:, 0].tolist())
-        target = np.asarray(dataset[:, 1].tolist())
-        if inputs.shape[0] != target.shape[0] != Ne:
-            raise ValueError(
-                'Dataset input (), target () and Ne () do not match.'.format(
-                    inputs.shape[0], target.shape[0], Ne))
-        return pack_bool_matrix(inputs), pack_bool_matrix(target)
-
-    @property
-    def Ni(self):
-        return self.inputs.shape[0]
-
-    @property
-    def No(self):
-        return self.target.shape[0]
-
-    def toDict(self):
-        return {'inputs': self.inputs, 'target': self.target, 'Ne': self.Ne}
+from boolmapping import BoolMapping
+from config_schemata import config_schema
 
 
 Instance = namedtuple('Instance', [
     'training_mapping', 'test_mapping', 'training_indices'])
-
-
-metrics = list(all_metric_names())
-
-
-@message('2D array expected')
-def is_2d(v):
-    if len(v.shape) != 2:
-        raise ValueError
-    return v
-
-
-@message('1D integer array expected')
-def is_1d(v):
-    if len(v.shape) != 1:
-        raise ValueError
-    return v
-
-
-@message('Integer array expected')
-def is_int_arr(v):
-    if not np.issubdtype(v.dtype, np.integer):
-        raise ValueError
-    return v
-
-SA_schema = Schema({
-    'name':           'SA',
-    'metric':         In(metrics),
-    'num_temps':      All(int, Range(min=1)),
-    'init_temp':      Range(min=0.0),
-    'temp_rate':      Range(min=0.0, max=1.0),
-    'steps_per_temp': All(int, Range(min=1))
-    }, default_keys=Required)
-
-SA_VN_schema = Schema({
-    'name':             'SA-VN',
-    'metric':           In(metrics),
-    'num_temps':        All(int, Range(min=1)),
-    'init_temp':        Range(min=0.0),
-    'temp_rate':        Range(min=0.0, max=1.0),
-    'steps_per_temp':   All(int, Range(min=1)),
-    'init_move_count':  All(int, Range(min=1))
-    }, default_keys=Required)
-
-LAHC_schema = Schema({
-    'name':             'LAHC',
-    'metric':           In(metrics),
-    'cost_list_length': All(int, Range(min=1)),
-    'max_iterations':   All(int, Range(min=1))
-    }, default_keys=Required)
-
-LAHC_VN_schema = Schema({
-    'name':             'LAHC-VN',
-    'metric':           In(metrics),
-    'cost_list_length': All(int, Range(min=1)),
-    'max_iterations':   All(int, Range(min=1)),
-    'init_move_count':  All(int, Range(min=1))
-    }, default_keys=Required)
-
-TS_schema = Schema({
-    'name':             'TS',
-    'metric':           In(metrics),
-    'tabu_period':      All(int, Range(min=1)),
-    'max_iterations':   All(int, Range(min=1))
-    }, default_keys=Required)
-
-optimiser_name_schema = Schema({
-    'name':     In(OPTIMISERS.keys())
-    }, extra_keys=Allow)
-
-optimiser_schema = Schema(
-    All(Any(SA_schema, SA_VN_schema, LAHC_schema, LAHC_VN_schema, TS_schema),
-        optimiser_name_schema))
-
-sampling_schema = Schema({
-    'method':                   In({'given', 'generated'}),
-    'Ns':                       All(int, Range(min=1)),
-    'Ne':                       All(int, Range(min=1)),
-    Optional('indices'):        [All(int, Range(min=0))],
-    Optional('file_suffix'):    str
-    }, default_keys=Required)
-
-network_schema_given = Schema({
-    'method':       'given',
-    'node_funcs':   'NAND',
-    'file':         All(str, lambda v: v.endswith('.json')),
-    'index':        All(int, Range(min=0)),
-    }, default_keys=Required)
-
-network_schema_generated = Schema({
-    'method':       'generated',
-    'Ng':           All(int, Range(min=1)),
-    'node_funcs':   In(['NAND', 'NOR', 'random'])
-    }, default_keys=Required)
-
-network_schema = Schema(Any(network_schema_given,
-                            network_schema_generated))
-
-config_schema = Schema({
-    'name':                     str,
-    'dataset_dir':              IsDir(),
-    'dataset':                  All(str, lambda v: v.endswith('.json')),
-    'network':                  network_schema,
-    'logging':                  In(['none', 'warning', 'info', 'debug']),
-    'learner':                  In(LEARNERS.keys()),
-    'optimiser':                optimiser_schema,
-    'sampling':                 sampling_schema,
-    'configuration_number':     All(int, Range(min=0)),
-    'training_set_number':      All(int, Range(min=0)),
-    'inter_file_base':          str,
-    'training_set':             Type(BoolMapping),
-    'test_set':                 Type(BoolMapping),
-    'training_indices':         All(Type(np.ndarray), is_1d, is_int_arr),
-    Optional('initial_gates'):  All(Type(np.ndarray), is_2d, is_int_arr),
-    }, default_keys=Required)
 
 
 class ExperimentJSONEncoder(json.JSONEncoder):
@@ -202,11 +52,11 @@ def update_nested(d, u):
     return d
 
 
-def partition_and_pack_examples(examples, training_indices):
+def pack_examples(inputs, targets, training_indices):
     ''' Parititions the given function into training and test sets,
         based on the given training indices.'''
     # Parameters
-    N = examples.shape[0]
+    N = inputs.shape[0]
     Ns, Ne = training_indices.shape
     # Generate the test indices array, each row should contain all
     # indices not in the equivalent row of training_indices
@@ -214,54 +64,59 @@ def partition_and_pack_examples(examples, training_indices):
     for s in range(Ns):
         test_indices[s] = np.setdiff1d(np.arange(N), training_indices[s])
     # Using numpy's advanced indexing we can get the sets
-    training_sets = examples[training_indices]
-    test_sets = examples[test_indices]
+    training_inps = inputs[training_indices]
+    training_tgts = targets[training_indices]
+    test_inps = inputs[test_indices]
+    test_tgts = targets[test_indices]
 
-    instances = []
-    for trg, tst, ind in zip(training_sets, test_sets, training_indices):
-        instances.append(Instance(
-            training_mapping=BoolMapping(trg, Ne),
-            test_mapping=BoolMapping(tst, N-Ne),
-            training_indices=ind))
+    # build list of train/test set instances
+    instances = [Instance(
+        training_mapping=BoolMapping(training_inps[i], training_tgts[i], Ne),
+        test_mapping=BoolMapping(test_inps[i], test_tgts[i], N - Ne),
+        training_indices=training_indices[i],
+        ) for i in range(Ns)]
 
     return instances
 
 
-def load_packed_datasets(settings):
-    # load data set from file
+def load_datasets(settings):
     dataset_dir = settings['dataset_dir']
-    with open(join(dataset_dir, 'functions', settings['dataset'])) as ds_file:
-        ds_settings = json.load(ds_file)
+    # load data set from file
+    dataset_filename = join(dataset_dir, 'functions', settings['dataset'])
+    if splitext(dataset_filename)[-1] == '':
+        dataset_filename += '.npz'
+    with np.load(dataset_filename) as dataset:
+        inputs = dataset['input_matrix']
+        targets = dataset['target_matrix']
+
     sample_settings = settings['sampling']
 
     # load function
-    function = np.array(ds_settings['function'])
-    # load samples from file
     if sample_settings['method'] == 'given':
-        # prepate filename
+        # load samples from file
+        # prepare filename
+        _, Ni = inputs.shape
+        Ns = sample_settings['Ns']
+        Ne = sample_settings['Ne']
         if 'file_suffix' in sample_settings:
-            file_end = '{}_{}_{}{}.json'.format(
-                ds_settings['Ni'], sample_settings['Ns'],
-                sample_settings['Ne'], sample_settings['file_suffix'])
+            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, sample_settings['file_suffix'])
         else:
-            file_end = '{}_{}_{}.json'.format(
-                ds_settings['Ni'], sample_settings['Ns'], sample_settings['Ne'])
+            base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
 
-        sample_filename = join(dataset_dir, 'samples', file_end)
-        # open and load file
-        with open(sample_filename) as sample_file:
-            training_indices = np.array(json.load(sample_file))
-    # generate samples
+        # load sample indices
+        sample_filename = join(dataset_dir, 'samples', base_name)
+        training_indices = np.load(sample_filename)
     elif sample_settings['method'] == 'generated':
+        # generate samples
         Ns = sample_settings['Ns']
         Ne = sample_settings['Ne']
         # generate
-        training_indices = np.random.randint(len(function), size=(Ns, Ne))
+        training_indices = np.random.randint(inputs.shape[0], size=(Ns, Ne))
     else:
         raise ValueError('Invalid sampling method {}'.format(
                          sample_settings['method']))
     # partition the sets based on loaded indices
-    return partition_and_pack_examples(function, training_indices)
+    return pack_examples(inputs, targets, training_indices)
 
 
 def handle_initial_network(settings):
@@ -296,7 +151,7 @@ def generate_configurations(settings, evaluator_class):
         # load initial network from file if required
         handle_initial_network(config_settings)
         # load the data for this configuration
-        instances = load_packed_datasets(config_settings)
+        instances = load_datasets(config_settings)
         # samples may be optionally sub-indexed
         if 'indices' in config_settings['sampling']:
             config_indices = config_settings['sampling']['indices']
