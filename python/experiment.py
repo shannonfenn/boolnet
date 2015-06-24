@@ -297,6 +297,7 @@ def generate_configurations(settings, evaluator_class):
         handle_initial_network(config_settings)
         # load the data for this configuration
         instances = load_packed_datasets(config_settings)
+        # samples may be optionally sub-indexed
         if 'indices' in config_settings['sampling']:
             config_indices = config_settings['sampling']['indices']
             if any(i >= len(instances) for i in config_indices):
