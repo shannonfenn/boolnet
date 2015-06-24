@@ -14,7 +14,7 @@ import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
 from BoolNet.LearnBoolNet import learn_bool_net
-import experiment as ex
+import experiment as exp
 
 
 def check_git():
@@ -46,6 +46,9 @@ def create_result_dir(args, exp_name):
     with open(os.path.join(result_dir, 'git_hash'), 'w') as hashfile:
         hashfile.write(subprocess.check_output(
             ['git', 'rev-parse', 'HEAD'], universal_newlines=True))
+
+    # create a temp subdir
+    os.mkdir(os.path.join(result_dir, 'temp'))
 
     # return the directory name for the results to go in
     return result_dir
@@ -118,9 +121,6 @@ def initialise(args):
     # create result directory
     result_dir = create_result_dir(args, settings['name'])
 
-    # create a temp subdir
-    os.mkdir(os.path.join(result_dir, 'temp'))
-
     # initialise logging
     initialise_logging(settings, result_dir)
 
@@ -146,7 +146,7 @@ def run_parallel(tasks, num_processes, out_stream):
         bar.update()
         # uses unordered imap to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
-            ex.dump_results_partial(result, out_stream, i == 0)
+            exp.dump_results_partial(result, out_stream, i == 0)
             bar.next()
         bar.finish()
 
@@ -157,7 +157,7 @@ def run_scooped(tasks, out_stream):
     bar.update()
     # uses unordered imap to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(learn_bool_net, tasks)):
-        ex.dump_results_partial(result, out_stream, i == 0)
+        exp.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
 
@@ -167,9 +167,24 @@ def run_sequential(tasks, out_stream):
     bar = Bar('Running sequentially', max=len(tasks))
     bar.update()
     for i, result in enumerate(itertools.imap(learn_bool_net, tasks)):
-        ex.dump_results_partial(result, out_stream, i == 0)
+        exp.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
+
+
+def notify(exp_name, result_dirname, time):
+    result_dirname = str(result_dirname)
+    print('Experiment completed in {} seconds. Results in \"{}\"'.format(time, result_dirname))
+    try:
+        from pushbullet import PushBullet, PushbulletError
+        pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
+        pb.push_note(
+            'Experiment complete.', 'name: {} time: {} results: {}'.format(
+                exp_name, time, result_dirname))
+    except ImportError:
+        print('Failed to import PushBullet - no notification sent.')
+    except PushbulletError as err:
+        print('Failed to generate PushBullet notification: {}.'.format(err))
 
 
 # ############################## MAIN ####################################### #
@@ -186,7 +201,7 @@ def main():
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # generate learning tasks
-        configurations = ex.generate_configurations(settings, args.evaluator)
+        configurations = exp.generate_configurations(settings, args.evaluator)
         print('{} runs generated.'.format(len(configurations)))
         # Run the actual learning as a parallel process
         run_tasks(configurations, args.numprocs, results_stream)
@@ -197,18 +212,8 @@ def main():
 
     total_time = time() - start_time
 
-    print('Experiment completed in {} seconds. Results in \"{}\"'.format(total_time, result_dir))
+    notify(settings['name'], result_dir, total_time)
 
-    try:
-        from pushbullet import PushBullet, PushbulletError
-        pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
-        pb.push_note(
-            'Experiment complete.', 'name: {} time: {} results: {}'.format(
-                settings['name'], total_time, str(result_dir)))
-    except ImportError:
-        print('Failed to import PushBullet - no notification sent.')
-    except PushbulletError as err:
-        print('Failed to generate PushBullet notification: {}.'.format(err))
 
 if __name__ == '__main__':
     main()
