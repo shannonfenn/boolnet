@@ -25,7 +25,7 @@ def check_git():
         ['git', 'diff', '--name-only'], universal_newlines=True).splitlines()
     if changed_files:
         print(('Warning, the following files in git repo '
-               'have changes:\n\t{}').format('\n\t'.os.path.join(changed_files)))
+               'have changes:\n\t{}').format('\n\t'.join(changed_files)))
 
 
 def create_result_dir(args, exp_name):
