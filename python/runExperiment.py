@@ -172,24 +172,27 @@ def run_sequential(tasks, out_stream):
     bar.finish()
 
 
-def notify(exp_name, result_dirname, time):
+def notify(pb_handle, exp_name, result_dirname, time):
     result_dirname = str(result_dirname)
     print('Experiment completed in {} seconds. Results in \"{}\"'.format(time, result_dirname))
-    try:
-        from pushbullet import PushBullet, PushbulletError
-        pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
-        pb.push_note(
+    if pb_handle:
+        pb_handle.push_note(
             'Experiment complete.', 'name: {} time: {} results: {}'.format(
                 exp_name, time, result_dirname))
-    except ImportError:
-        print('Failed to import PushBullet - no notification sent.')
-    except PushbulletError as err:
-        print('Failed to generate PushBullet notification: {}.'.format(err))
 
 
 # ############################## MAIN ####################################### #
 def main():
     start_time = time()
+    try:
+        from pushbullet import PushBullet, PushbulletError
+        pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
+    except ImportError:
+        print('Failed to import PushBullet - notifications will not be sent.')
+        pb = None
+    except PushbulletError:
+        print('Failed to generate PushBullet interface - notifications will not be sent.')
+        pb = None
 
     args = parse_arguments()
 
@@ -212,7 +215,10 @@ def main():
 
     total_time = time() - start_time
 
-    notify(settings['name'], result_dir, total_time)
+    try:
+        notify(pb, settings['name'], result_dir, total_time)
+    except PushbulletError as err:
+        print('Failed to send PushBullet notification: {}.'.format(err))
 
 
 if __name__ == '__main__':
