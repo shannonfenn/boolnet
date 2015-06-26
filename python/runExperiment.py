@@ -21,8 +21,9 @@ def check_git():
     ''' Checks the git directory for uncommitted source modifications.
         Since the experiment is tagged with a git hash it should not be
         run while the repo is dirty.'''
+    cur_file_dir = os.path.dirname(os.path.realpath(__file__))
     changed_files = subprocess.check_output(
-        ['git', 'diff', '--name-only'], universal_newlines=True).splitlines()
+        ['git', '-C', cur_file_dir, 'diff', '--name-only'], universal_newlines=True).splitlines()
     if changed_files:
         print(('Warning, the following files in git repo '
                'have changes:\n\t{}').format('\n\t'.join(changed_files)))
