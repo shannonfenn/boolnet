@@ -6,7 +6,6 @@ from collections import deque
 from BoolNet.BitError import metric_from_name
 import sys
 import logging
-import numpy as np
 
 
 def stepped_exp_decrease(init_temp, rate, num_temps, steps_per_temp):
@@ -52,15 +51,15 @@ class SA:
         self.temperatures = stepped_exp_decrease(
             self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)
 
-    def run(self, evaluator, state_idx, parameters, end_condition):
+    def run(self, evaluator, parameters, end_condition):
         """This learns a network using SA."""
         # initialise
         self.initialise(parameters)
 
-        state = evaluator.network(state_idx)
+        state = evaluator.network
 
         # Calculate initial error
-        error = evaluator.metric_value(state_idx, self.guiding_metric)
+        error = evaluator.metric_value(self.guiding_metric)
 
         # Setup aspiration criteria
         best_error = error
@@ -79,7 +78,7 @@ class SA:
         # annealing loop
         for iteration, temp in enumerate(self.temperatures):
             # Stop on user defined condition
-            if end_condition(evaluator, state_idx, best_error):
+            if end_condition(evaluator, best_error):
                 break
 
             # Log error on new temperature if logging
@@ -94,7 +93,7 @@ class SA:
             self.move(state, temp)
 
             # calculate error for new state
-            new_error = evaluator.metric_value(state_idx, self.guiding_metric)
+            new_error = evaluator.metric_value(self.guiding_metric)
 
             # Keep best state seen
             if new_error < best_error:
@@ -140,15 +139,15 @@ class LAHC:
             print('Optimiser parameters missing!', sys.stderr)
             raise
 
-    def run(self, evaluator, state_idx, parameters, end_condition):
+    def run(self, evaluator, parameters, end_condition):
         # unpack options
         self.initialise(parameters)
 
         # initialise state
-        state = evaluator.network(state_idx)
+        state = evaluator.network
 
         # Calculate initial error
-        error = evaluator.metric_value(state_idx, self.guiding_metric)
+        error = evaluator.metric_value(self.guiding_metric)
 
         # set up aspiration criteria
         best_error = error
@@ -161,14 +160,14 @@ class LAHC:
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
-            if end_condition(evaluator, state_idx, best_error):
+            if end_condition(evaluator, best_error):
                 break
 
             # perform random move
             self.move(state, iteration)
 
             # calculate error for new state
-            new_error = evaluator.metric_value(state_idx, self.guiding_metric)
+            new_error = evaluator.metric_value(self.guiding_metric)
 
             # Keep best state seen
             if new_error < best_error:
@@ -202,51 +201,51 @@ class LAHC:
 
 
 # ###### Variable Neighbourhood versions ###### #
-class SA_VN(SA):
-    def move(self, state, temp):
-        num_moves = self.temp_to_move_map[temp]
-        for i in range(num_moves):
-            state.move_to_neighbour(state.random_move())
+# class SA_VN(SA):
+#     def move(self, state, temp):
+#         num_moves = self.temp_to_move_map[temp]
+#         for i in range(num_moves):
+#             state.move_to_neighbour(state.random_move())
 
-    def undo_move(self, state):
-        state.revert_all_moves()
+#     def undo_move(self, state):
+#         state.revert_all_moves()
 
-    def initialise(self, parameters):
-        super().initialise(parameters)
-        try:
-            self.init_move_count = parameters['init_move_count']
-        except KeyError:
-            print('Optimiser parameters missing!', sys.stderr)
-            raise
-        # generates a table of evenly space integers starting in the
-        # range [init_move_count, 1] for each temperature as a LUT
-        move_schedule = np.ceil(np.linspace(
-            self.init_move_count, 1, self.num_temps,
-            endpoint=False)) - 1
-        move_schedule = np.array(move_schedule, dtype=int)
-        temp_schedule = np.unique(list(stepped_exp_decrease(
-            self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)))
-        self.temp_to_move_map = dict(zip(temp_schedule, move_schedule))
+#     def initialise(self, parameters):
+#         super().initialise(parameters)
+#         try:
+#             self.init_move_count = parameters['init_move_count']
+#         except KeyError:
+#             print('Optimiser parameters missing!', sys.stderr)
+#             raise
+#         # generates a table of evenly space integers starting in the
+#         # range [init_move_count, 1] for each temperature as a LUT
+#         move_schedule = np.ceil(np.linspace(
+#             self.init_move_count, 1, self.num_temps,
+#             endpoint=False)) - 1
+#         move_schedule = np.array(move_schedule, dtype=int)
+#         temp_schedule = np.unique(list(stepped_exp_decrease(
+#             self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)))
+#         self.temp_to_move_map = dict(zip(temp_schedule, move_schedule))
 
 
-class LAHC_VN(LAHC):
-    def move(self, state, iteration):
-        num_moves = int(np.ceil(self.init_move_count * (
-            1 - iteration / self.max_iterations)))
-        for i in range(num_moves):
-            state.move_to_neighbour(state.random_move())
+# class LAHC_VN(LAHC):
+#     def move(self, state, iteration):
+#         num_moves = int(np.ceil(self.init_move_count * (
+#             1 - iteration / self.max_iterations)))
+#         for i in range(num_moves):
+#             state.move_to_neighbour(state.random_move())
 
-    def undo_move(self, state):
-        state.revert_all_moves()
+#     def undo_move(self, state):
+#         state.revert_all_moves()
 
-    def initialise(self, parameters):
-        super().initialise(parameters)
-        # unpack options
-        try:
-            self.init_move_count = parameters['init_move_count']
-        except KeyError:
-            print('Optimiser parameters missing!', sys.stderr)
-            raise
+#     def initialise(self, parameters):
+#         super().initialise(parameters)
+#         # unpack options
+#         try:
+#             self.init_move_count = parameters['init_move_count']
+#         except KeyError:
+#             print('Optimiser parameters missing!', sys.stderr)
+#             raise
 
 
 # #### THIS IS NOT ACTUALLY TABU SEARCH ##### #
