@@ -12,12 +12,11 @@ Result = namedtuple('Result', [
 
 
 def per_target_error_end_condition(bit):
-    return lambda evaluator, error: evaluator.metric_value(
-        Metric.PER_OUTPUT)[bit] <= 0
+    return lambda ev, _: ev.metric_value(Metric.PER_OUTPUT)[bit] <= 0
 
 
 def guiding_error_end_condition():
-    return lambda evaluator, idx, error: error <= 0
+    return lambda _, error: error <= 0
 
 
 def strata_boundaries(network):
