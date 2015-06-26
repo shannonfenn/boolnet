@@ -12,8 +12,8 @@ Result = namedtuple('Result', [
 
 
 def per_target_error_end_condition(bit):
-    return lambda evaluator, idx, error: evaluator.metric_value(
-        idx, Metric.PER_OUTPUT)[bit] <= 0
+    return lambda evaluator, error: evaluator.metric_value(
+        Metric.PER_OUTPUT)[bit] <= 0
 
 
 def guiding_error_end_condition():
@@ -45,8 +45,8 @@ def check_parameters(parameters):
 def handle_single_FS(feature_set, evaluator, bit, target):
     # When we have a 1FS we have already learned the target, or its inverse,
     # simply map this feature to the output
-    activation_matrix = evaluator.activation_matrix(0)
-    network = evaluator.network(0)
+    activation_matrix = evaluator.activation_matrix
+    network = evaluator.network
     Ni = network.Ni
     Ng = network.Ng
     No = network.No
@@ -99,8 +99,8 @@ def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
 
 
 def get_feature_set(evaluator, parameters, lower_bound, bit):
-    activation_matrix = evaluator.activation_matrix(0)
-    Ni = evaluator.network(0).Ni
+    activation_matrix = evaluator.activation_matrix
+    Ni = evaluator.network.Ni
     # generate input to minFS solver
     kFS_matrix = activation_matrix[:(lower_bound+Ni), :]
     # target feature for this bit
@@ -125,7 +125,7 @@ def get_feature_set(evaluator, parameters, lower_bound, bit):
 
 def stratified_learn(evaluator, parameters, optimiser,
                      use_kfs_masking=False, log_all_feature_sets=False):
-    network = evaluator.network(0)
+    network = evaluator.network
     num_targets = network.No
 
     # For logging network as each new bit is learnt
@@ -180,14 +180,14 @@ def stratified_learn(evaluator, parameters, optimiser,
         network.reconnect_masked_range()
 
         # run the optimiser
-        results = optimiser.run(evaluator, 0, optimiser_parameters, end_condition)
+        results = optimiser.run(evaluator, optimiser_parameters, end_condition)
         # unpack results
         optimised_network, best_it, final_it = results
 
         logging.info('''Error per output (sample): %s
                         best iteration: %d
                         final iteration: %d''',
-                     evaluator.metric_value(0, Metric.PER_OUTPUT),
+                     evaluator.metric_value(Metric.PER_OUTPUT),
                      best_it, final_it)
 
         # record result
@@ -215,7 +215,7 @@ def basic_learn(evaluator, parameters, optimiser):
     opt_params = parameters['optimiser']
     end_condition = guiding_error_end_condition()
 
-    results = optimiser.run(evaluator, 0, opt_params, end_condition)
+    results = optimiser.run(evaluator, opt_params, end_condition)
     best_state, best_it, final_it = results
 
     return Result([best_state], [best_it], [final_it], [])
