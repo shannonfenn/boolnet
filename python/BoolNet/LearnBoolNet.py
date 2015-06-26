@@ -101,10 +101,6 @@ def _learn_bool_net(parameters, evaluator_class):
     test_evaluator = evaluator_class(training_evaluator.network, test_set.inputs,
                                      test_set.target, test_set.Ne)
 
-    # lambdas to make following more readable
-    training_value = lambda metric: training_evaluator.metric_value(0, metric)
-    test_value = lambda metric: test_evaluator.metric_value(0, metric)
-
     results = {
         'Ni':                       Ni,
         'No':                       No,
@@ -115,12 +111,12 @@ def _learn_bool_net(parameters, evaluator_class):
         # 'Final Network':            network_trg,
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
-        'training_error_guiding':   training_value(metric),
-        'training_error_simple':    training_value(Metric.E1),
-        'training_accuracy':        training_value(Metric.ACCURACY),
-        'test_error_guiding':       test_value(metric),
-        'test_error_simple':        test_value(Metric.E1),
-        'test_accuracy':            test_value(Metric.ACCURACY),
+        'training_error_guiding':   training_evaluator.metric_value(metric),
+        'training_error_simple':    training_evaluator.metric_value(Metric.E1),
+        'training_accuracy':        training_evaluator.metric_value(Metric.ACCURACY),
+        'test_error_guiding':       test_evaluator.metric_value(metric),
+        'test_error_simple':        test_evaluator.metric_value(Metric.E1),
+        'test_accuracy':            test_evaluator.metric_value(Metric.ACCURACY),
         'final_network':            final_network.gates,
         'Ne':                       training_set.Ne,
         'time':                     (end_time - start_time).total_seconds(),
@@ -131,10 +127,10 @@ def _learn_bool_net(parameters, evaluator_class):
         for bit, v in enumerate(learner_result.feature_sets):
             key = 'feature_set_target_{}'.format(bit)
             results[key] = v
-    for bit, v in enumerate(training_value(Metric.PER_OUTPUT)):
+    for bit, v in enumerate(training_evaluator.metric_value(Metric.PER_OUTPUT)):
         key = 'training_error_target_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_value(Metric.PER_OUTPUT)):
+    for bit, v in enumerate(test_evaluator.metric_value(Metric.PER_OUTPUT)):
         key = 'test_error_target_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):
