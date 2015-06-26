@@ -6,6 +6,7 @@ from copy import deepcopy
 from BoolNet.boolnetwork import BoolNetwork
 import BoolNet.BitErrorCython as BitError
 from BoolNet.Packing cimport packed_type_t, generate_end_mask, f_type, function_list
+from BoolNet.Packing import packed_type
 
 
 cdef _check_invariants(network,
@@ -26,6 +27,7 @@ cdef _check_invariants(network,
         raise ValueError('Incompatible input/target shapes: {} {}.'.format(
                          inputs.shape[1], target.shape[1]))
     # [TODO] Add more here for combined invariants.
+    isinstance(network, BoolNetwork)
     if network.No != target.shape[0]:
         raise ValueError(('Network output # ({}) does not matchexpress target '
                          '({}).').format(network.No, target.shape[0]))
@@ -37,12 +39,11 @@ cdef class NetworkState:
         packed_type_t[:, :] activation, inputs, output,
         packed_type_t[:, :] target, error, error_scratch
         packed_type_t zero_mask
-        BoolNetwork network
+        object network
 
-    def __init__(self,
+    def __init__(self, network,
                  packed_type_t[:, :] inputs,
                  packed_type_t[:, :] target,
-                 BoolNetwork network,
                  unsigned int Ne):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
