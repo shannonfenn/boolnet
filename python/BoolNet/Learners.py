@@ -206,7 +206,7 @@ def stratified_learn(evaluator, parameters, optimiser,
                       final_iterations, feature_set_results)
     else:
         return Result(best_states, best_iterations,
-                      final_iterations, [])
+                      final_iterations, None)
 
 
 def basic_learn(evaluator, parameters, optimiser):
@@ -217,4 +217,4 @@ def basic_learn(evaluator, parameters, optimiser):
     results = optimiser.run(evaluator, opt_params, end_condition)
     best_state, best_it, final_it = results
 
-    return Result([best_state], [best_it], [final_it], [])
+    return Result([best_state], [best_it], [final_it], None)

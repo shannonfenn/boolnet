@@ -101,7 +101,6 @@ def _learn_bool_net(parameters, evaluator_class):
     test_evaluator = evaluator_class(training_evaluator.network, test_set.inputs,
                                      test_set.target, test_set.Ne)
 
-
     # lambdas to make following more readable
     training_value = lambda metric: training_evaluator.metric_value(0, metric)
     test_value = lambda metric: test_evaluator.metric_value(0, metric)
