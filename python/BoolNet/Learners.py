@@ -186,9 +186,9 @@ def stratified_learn(evaluator, parameters, optimiser,
                      best_it, final_it)
 
         # record result
-        best_states[T] = copy(optimised_network)
-        best_iterations[T] = best_it
-        final_iterations[T] = final_it
+        best_states[tgt] = copy(optimised_network)
+        best_iterations[tgt] = best_it
+        final_iterations[tgt] = final_it
 
     # ################## End kFS learning ################## #
 
@@ -198,10 +198,10 @@ def stratified_learn(evaluator, parameters, optimiser,
     #       states according to the provided guiding metric?
 
     if feature_set_results:
-        return (best_states[-1], best_iterations,
+        return (best_states, best_iterations,
                 final_iterations, feature_set_results)
     else:
-        return (best_states[-1], best_iterations,
+        return (best_states, best_iterations,
                 final_iterations)
 
 
