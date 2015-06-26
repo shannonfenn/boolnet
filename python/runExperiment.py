@@ -14,7 +14,7 @@ import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
 from BoolNet.LearnBoolNet import learn_bool_net
-import experiment as exp
+import experiment.experiment as exp
 
 
 def check_git():
