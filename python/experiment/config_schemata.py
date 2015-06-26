@@ -78,6 +78,19 @@ optimiser_schema = Schema(
     All(Any(SA_schema, SA_VN_schema, LAHC_schema, LAHC_VN_schema, TS_schema),
         optimiser_name_schema))
 
+data_schema_generated = Schema({
+    'type':         'generated',
+    'dir':          IsDir(),
+    'num_operands': All(int, Range(min=1)),
+    'operand_bits': All(int, Range(min=1))
+    }, default_keys=Required)
+
+data_schema_file = Schema({
+    'type':     'file',
+    'dir':      IsDir(),
+    'filename': str
+    }, default_keys=Required)
+
 sampling_schema = Schema({
     'method':                   In({'given', 'generated'}),
     'Ns':                       All(int, Range(min=1)),
@@ -104,8 +117,7 @@ network_schema = Schema(Any(network_schema_given,
 
 config_schema = Schema({
     'name':                     str,
-    'dataset_dir':              IsDir(),
-    'dataset':                  All(str, lambda v: v.endswith('.json')),
+    'data':                     Any(data_schema_file, data_schema_generated),
     'network':                  network_schema,
     'logging':                  In(['none', 'warning', 'info', 'debug']),
     'learner':                  In(LEARNERS.keys()),

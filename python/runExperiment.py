@@ -119,7 +119,7 @@ def initialise(args):
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
     # MUST FIX THIS SINCE BASE_DIR will be code, not above
-    settings['dataset_dir'] = os.path.abspath(args.data_dir)
+    settings['data']['dir'] = os.path.abspath(args.data_dir)
 
     # create result directory
     result_dir = create_result_dir(args, settings['name'])

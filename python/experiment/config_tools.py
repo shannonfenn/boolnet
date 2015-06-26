@@ -83,44 +83,42 @@ def load_dataset(settings):
     data_settings = settings['data']
     sampling_settings = settings['sampling']
 
-    training_indices = load_samples(sampling_settings)
-
     if data_settings['type'] == 'file':
-        return file_instance(data_settings, training_indices)
+        return file_instance(data_settings, sampling_settings)
     elif data_settings['type'] == 'generated':
-        return generated_instance(data_settings, training_indices)
+        return generated_instance(data_settings, sampling_settings)
     else:
         raise ValueError('Invalid dataset type {}'.format(data_settings['type']))
 
 
-def load_samples(sampling_settings):
-    if sampling_settings['method'] == 'given':
+def load_samples(params, data_dir, inputs):
+    if params['method'] == 'given':
         # load samples from file
         # prepare filename
-        _, Ni = inputs.shape
-        Ns = sampling_settings['Ns']
-        Ne = sampling_settings['Ne']
-        if 'file_suffix' in sampling_settings:
-            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, sampling_settings['file_suffix'])
+        N, Ni = inputs.shape
+        Ns = params['Ns']
+        Ne = params['Ne']
+        if 'file_suffix' in params:
+            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, params['file_suffix'])
         else:
             base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
 
         # load sample indices
         sample_filename = join(data_dir, 'samples', base_name)
         training_indices = np.load(sample_filename)
-    elif sampling_settings['method'] == 'generated':
+    elif params['method'] == 'generated':
         # generate samples
-        Ns = sampling_settings['Ns']
-        Ne = sampling_settings['Ne']
+        Ns = params['Ns']
+        Ne = params['Ne']
         # generate
-        training_indices = np.random.randint(inputs.shape[0], size=(Ns, Ne))
+        training_indices = np.random.randint(N, size=(Ns, Ne))
     else:
         raise ValueError('Invalid sampling method {}'.format(
-                         sampling_settings['method']))
+                         params['method']))
     return training_indices
 
 
-def file_instance(data_settings, training_indices):
+def file_instance(data_settings, sampling_settings):
     data_dir = data_settings['dir']
     # load data set from file
     dataset_filename = join(data_dir, 'functions', data_settings['filename'])
@@ -129,6 +127,8 @@ def file_instance(data_settings, training_indices):
     with np.load(dataset_filename) as dataset:
         inputs = dataset['input_matrix']
         targets = dataset['target_matrix']
+
+    training_indices = load_samples(sampling_settings, data_dir, inputs)
     # partition the sets based on loaded indices
     return pack_examples(inputs, targets, training_indices)
 
@@ -191,7 +191,7 @@ def generate_configurations(settings, evaluator_class):
             iteration_settings = deepcopy(config_settings)
             iteration_settings['training_indices'] = instance.training_indices
             iteration_settings['training_set'] = instance.training_mapping
-            iteration_settings['test_function'] = instance.test_mapping
+            iteration_settings['test_set'] = instance.test_mapping
             iteration_settings['training_set_number'] = i
             iteration_settings['inter_file_base'] += '{}_{}_'.format(config_no, i)
 
