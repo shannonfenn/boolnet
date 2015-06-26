@@ -1,8 +1,8 @@
-from BoolNet.BooleanNetwork import BooleanNetwork
+from BoolNet.boolnetwork import BoolNetwork
 import numpy as np
 
 
-class RandomBooleanNetwork(BooleanNetwork):
+class RandomBoolNetwork(BoolNetwork):
 
     def __init__(self, initial_gates, Ni, No, transfer_functions):
         self._transfer_functions = np.array(

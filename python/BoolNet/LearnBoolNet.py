@@ -1,7 +1,7 @@
 from datetime import datetime
 import random
-from BoolNet.BooleanNetwork import BooleanNetwork
-from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
+from BoolNet.boolnetwork import BoolNetwork
+from BoolNet.boolnetwork_rand import RandomBoolNetwork
 from BoolNet.BitError import Metric, metric_from_name
 from BoolNet.Learners import basic_learn, stratified_learn
 import BoolNet.FastRand as FastRand
@@ -71,13 +71,13 @@ def _learn_bool_net(parameters, evaluator_class):
     if parameters['network']['node_funcs'] == 'random':
         # generate a random set of transfer functions
         transfer_functions = np.random.randint(16, size=Ng)
-        initial_network = RandomBooleanNetwork(initial_gates, Ni, No, transfer_functions)
+        initial_network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
     elif parameters['network']['node_funcs'] == 'NOR':
         # 1 is the decimal code for NOR
         transfer_functions = [1]*Ng
-        initial_network = RandomBooleanNetwork(initial_gates, Ni, No, transfer_functions)
+        initial_network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
     elif parameters['network']['node_funcs'] == 'NAND':
-        initial_network = BooleanNetwork(initial_gates, Ni, No)
+        initial_network = BoolNetwork(initial_gates, Ni, No)
     else:
         raise ValueError('Invalid setting for \'transfer functions\': {}'.format(
             parameters['network']['node_funcs']))

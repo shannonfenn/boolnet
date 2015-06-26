@@ -3,7 +3,7 @@ import numpy as np
 cimport numpy as np
 from copy import deepcopy
 
-from BoolNet.BooleanNetwork import BooleanNetwork
+from BoolNet.boolnetwork import BoolNetwork
 import BoolNet.BitErrorCython as BitError
 from BoolNet.Packing cimport packed_type_t, generate_end_mask, f_type, function_list
 
@@ -35,14 +35,14 @@ cdef class NetworkState:
     cdef:
         readonly unsigned int Ne, Ni, No, Ng
         packed_type_t[:, :] activation, inputs, output,
-                            target, error, error_scratch
+        packed_type_t[:, :] target, error, error_scratch
         packed_type_t zero_mask
-        BooleanNetwork network
+        BoolNetwork network
 
     def __init__(self,
                  packed_type_t[:, :] inputs,
                  packed_type_t[:, :] target,
-                 BooleanNetwork network,
+                 BoolNetwork network,
                  unsigned int Ne):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications

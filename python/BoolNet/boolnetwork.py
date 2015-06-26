@@ -7,7 +7,7 @@ except ImportError:
     import BoolNet.NetworkAlgorithms as NetworkAlgorithms
 
 
-class BooleanNetwork:
+class BoolNetwork:
 
     def __init__(self, initial_gates, Ni, No):
         self._evaluated = False
