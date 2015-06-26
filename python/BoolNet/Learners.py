@@ -1,9 +1,14 @@
 from copy import copy
+from collections import namedtuple
 import numpy as np
 import kFS
 import logging
 from BoolNet.BitError import Metric
 from BoolNet.Packing import unpack_bool_matrix, unpack_bool_vector
+
+
+Result = namedtuple('Result', [
+    'best_states', 'best_iterations', 'final_iterations', 'feature_set_results'])
 
 
 def per_target_error_end_condition(bit):
@@ -198,11 +203,11 @@ def stratified_learn(evaluator, parameters, optimiser,
     #       states according to the provided guiding metric?
 
     if feature_set_results:
-        return (best_states, best_iterations,
-                final_iterations, feature_set_results)
+        return Result(best_states, best_iterations,
+                      final_iterations, feature_set_results)
     else:
-        return (best_states, best_iterations,
-                final_iterations)
+        return Result(best_states, best_iterations,
+                      final_iterations, [])
 
 
 def basic_learn(evaluator, parameters, optimiser):
@@ -213,4 +218,4 @@ def basic_learn(evaluator, parameters, optimiser):
     results = optimiser.run(evaluator, 0, opt_params, end_condition)
     best_state, best_it, final_it = results
 
-    return (best_state, best_it, final_it)
+    return Result([best_state], [best_it], [final_it], [])

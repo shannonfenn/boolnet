@@ -54,14 +54,6 @@ def _learn_bool_net(parameters, evaluator_class):
     Ni = training_set.Ni
     No = training_set.No
 
-    # make evaluators for the training and test sets
-    training_evaluator = evaluator_class(training_set.inputs,
-                                         training_set.target,
-                                         training_set.Ne)
-    test_evaluator = evaluator_class(test_set.inputs,
-                                     test_set.target,
-                                     test_set.Ne)
-
     if 'initial_gates' in parameters:
         initial_gates = np.asarray(parameters['initial_gates'], dtype=np.int32)
         Ng = initial_gates.shape[0]
@@ -90,25 +82,25 @@ def _learn_bool_net(parameters, evaluator_class):
         raise ValueError('Invalid setting for \'transfer functions\': {}'.format(
             parameters['network']['node_funcs']))
 
-    # add the network to the training evaluator list
-    training_evaluator.add_network(initial_network)
+    # make evaluators for the training and test sets
+    training_evaluator = evaluator_class(initial_network, training_set.inputs,
+                                         training_set.target, training_set.Ne)
 
     learner = LEARNERS[learner_name]
     optimiser = OPTIMISERS[optimiser_name]
 
     # learn the network
     start_time = datetime.now()
-    learner_out = learner(training_evaluator, parameters, optimiser)
-    final_network = learner_out[0]
-    steps_best = learner_out[1]
-    steps_total = learner_out[2]
-    feature_sets = learner_out[3] if len(learner_out) > 3 else None
+
+    learner_result = learner(training_evaluator, parameters, optimiser)
+
+    final_network = learner_result.best_states[-1]
 
     end_time = datetime.now()
 
-    training_evaluator.remove_all_networks()
-    training_evaluator.add_network(final_network)
-    test_evaluator.add_network(final_network)
+    test_evaluator = evaluator_class(training_evaluator.network, test_set.inputs,
+                                     test_set.target, test_set.Ne)
+
 
     # lambdas to make following more readable
     training_value = lambda metric: training_evaluator.metric_value(0, metric)
@@ -122,8 +114,8 @@ def _learn_bool_net(parameters, evaluator_class):
         'training_set_number':      parameters['training_set_number'],
         'transfer_functions':       parameters['network']['node_funcs'],
         # 'Final Network':            network_trg,
-        'iteration_for_best':       steps_best,
-        'total_iterations':         steps_total,
+        'iteration_for_best':       learner_result.steps_best,
+        'total_iterations':         learner_result.steps_total,
         'training_error_guiding':   training_value(metric),
         'training_error_simple':    training_value(Metric.E1),
         'training_accuracy':        training_value(Metric.ACCURACY),
@@ -136,8 +128,8 @@ def _learn_bool_net(parameters, evaluator_class):
         'evaluator':                evaluator_class.__name__
         }
 
-    if feature_sets:
-        for bit, v in enumerate(feature_sets):
+    if learner_result.feature_sets:
+        for bit, v in enumerate(learner_result.feature_sets):
             key = 'feature_set_target_{}'.format(bit)
             results[key] = v
     for bit, v in enumerate(training_value(Metric.PER_OUTPUT)):
