@@ -36,10 +36,10 @@ cdef _check_invariants(network,
 cdef class NetworkState:
     cdef:
         readonly unsigned int Ne, Ni, No, Ng
-        packed_type_t[:, :] activation, inputs, output,
+        packed_type_t[:, :] activation, inputs, outputs,
         packed_type_t[:, :] target, error, error_scratch
         packed_type_t zero_mask
-        object network
+        public object network
 
     def __init__(self, network,
                  packed_type_t[:, :] inputs,
@@ -63,13 +63,14 @@ cdef class NetworkState:
         # instantiate a matrix for activation
         self.activation = np.empty((network.Ng + self.Ni, inputs.shape[1]), dtype=packed_type)
         # copy inputs into activation matrix
-        self.activation[:self.Ni, :] = self.inputs
-        # create output view into activation matrix
-        self.output = self.activation[-self.No:, :]
+        self.activation[:self.Ni, :] = inputs
+        # create input and output view into activation matrix
+        self.inputs = self.activation[:self.Ni, :]
+        self.outputs = self.activation[-self.No:, :]
 
         # instantiate matrices for error
-        error = np.empty_like(self.target)
-        error_scratch = np.empty_like(self.target)
+        self.error = np.empty_like(self.target)
+        self.error_scratch = np.empty_like(self.target)
 
         # prevent another evaluator causing problems with this network
         self.network = deepcopy(network)
@@ -93,16 +94,16 @@ cdef class NetworkState:
     property output_matrix:
         def __get__(self):
             self.evaluate()
-            return self.output_matrix
+            return self.outputs
 
     property error_matrix:
         def __get__(self):
             self.evaluate()
-            return self.error_matrix
+            return self.error
 
     def metric_value(self, metric):
         self.evaluate()
-        return BitError.metric_value(self.error_matrix, self.error_scratch,
+        return BitError.metric_value(self.error, self.error_scratch,
                                            self.Ne, self.zero_mask, metric)
 
     @cython.boundscheck(False)
@@ -146,7 +147,7 @@ cdef class NetworkState:
             getting node TFs from network. '''
         cdef:
             size_t Ni, No, Ng, cols, c, g, o, in1, in2, start
-            packed_type_t[:, :] activation, output, error, target
+            packed_type_t[:, :] activation, outputs, error, target
             np.uint8_t[:] transfer_functions
             np.uint32_t[:, :] gates
             f_type func
@@ -156,7 +157,7 @@ cdef class NetworkState:
         No = self.No
         # local memoryviews to avoid 'self' evaluation later
         activation = self.activation
-        output = self.output
+        outputs = self.outputs
         error = self.error
         target = self.target
         gates = self.network.gates
@@ -177,7 +178,7 @@ cdef class NetworkState:
 
         for o in range(No):
             for c in range(cols):
-                error[o, c] = (target[o, c] ^ output[o, c])
+                error[o, c] = (target[o, c] ^ outputs[o, c])
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -188,7 +189,7 @@ cdef class NetworkState:
             assuming each node TF is NAND. '''
         cdef:
             size_t Ni, No, Ng, cols, c, g, o, in1, in2, start
-            packed_type_t[:, :] activation, output, error, target
+            packed_type_t[:, :] activation, outputs, error, target
             np.uint32_t[:, :] gates
                 
         Ng = self.Ng
@@ -197,7 +198,7 @@ cdef class NetworkState:
 
         # local memoryviews to avoid 'self' evaluation later
         activation = self.activation
-        output = self.output
+        outputs = self.outputs
         error = self.error
         target = self.target
         gates = self.network.gates
@@ -214,4 +215,4 @@ cdef class NetworkState:
         # evaluate the error matrix
         for o in range(No):
             for c in range(cols):
-                error[o, c] = (target[o, c] ^ output[o, c])
+                error[o, c] = (target[o, c] ^ outputs[o, c])
