@@ -8,7 +8,7 @@ from BoolNet.Packing import unpack_bool_matrix, unpack_bool_vector
 
 
 Result = namedtuple('Result', [
-    'best_states', 'best_iterations', 'final_iterations', 'feature_set_results'])
+    'best_states', 'best_iterations', 'final_iterations', 'feature_sets'])
 
 
 def per_target_error_end_condition(bit):
