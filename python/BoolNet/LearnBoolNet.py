@@ -14,9 +14,9 @@ import sys
 OPTIMISERS = {
     # 'TS': Optimisers.TabuSearch(),
     'SA': Optimisers.SA(),
-    'SA-VN': Optimisers.SA_VN(),
+    # 'SA-VN': Optimisers.SA_VN(),
     'LAHC': Optimisers.LAHC(),
-    'LAHC-VN': Optimisers.LAHC_VN()
+    # 'LAHC-VN': Optimisers.LAHC_VN()
     }
 
 
