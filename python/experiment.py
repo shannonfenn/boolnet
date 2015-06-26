@@ -79,55 +79,84 @@ def pack_examples(inputs, targets, training_indices):
     return instances
 
 
-def load_datasets(settings):
-    dataset_dir = settings['dataset_dir']
+def load_dataset(settings):
+    data_settings = settings['data']
+    sampling_settings = settings['sampling']
+
+    training_indices = load_samples(sampling_settings)
+
+    if data_settings['type'] == 'file':
+        return file_instance(data_settings, training_indices)
+    elif data_settings['type'] == 'generated':
+        return generated_instance(data_settings, training_indices)
+    else:
+        raise ValueError('Invalid dataset type {}'.format(data_settings['type']))
+
+
+def load_samples(sampling_settings):
+    if sampling_settings['method'] == 'given':
+        # load samples from file
+        # prepare filename
+        _, Ni = inputs.shape
+        Ns = sampling_settings['Ns']
+        Ne = sampling_settings['Ne']
+        if 'file_suffix' in sampling_settings:
+            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, sampling_settings['file_suffix'])
+        else:
+            base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
+
+        # load sample indices
+        sample_filename = join(data_dir, 'samples', base_name)
+        training_indices = np.load(sample_filename)
+    elif sampling_settings['method'] == 'generated':
+        # generate samples
+        Ns = sampling_settings['Ns']
+        Ne = sampling_settings['Ne']
+        # generate
+        training_indices = np.random.randint(inputs.shape[0], size=(Ns, Ne))
+    else:
+        raise ValueError('Invalid sampling method {}'.format(
+                         sampling_settings['method']))
+    return training_indices
+
+
+def file_instance(data_settings, training_indices):
+    data_dir = data_settings['dir']
     # load data set from file
-    dataset_filename = join(dataset_dir, 'functions', settings['dataset'])
+    dataset_filename = join(data_dir, 'functions', data_settings['filename'])
     if splitext(dataset_filename)[-1] == '':
         dataset_filename += '.npz'
     with np.load(dataset_filename) as dataset:
         inputs = dataset['input_matrix']
         targets = dataset['target_matrix']
-
-    sample_settings = settings['sampling']
-
-    # load function
-    if sample_settings['method'] == 'given':
-        # load samples from file
-        # prepare filename
-        _, Ni = inputs.shape
-        Ns = sample_settings['Ns']
-        Ne = sample_settings['Ne']
-        if 'file_suffix' in sample_settings:
-            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, sample_settings['file_suffix'])
-        else:
-            base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
-
-        # load sample indices
-        sample_filename = join(dataset_dir, 'samples', base_name)
-        training_indices = np.load(sample_filename)
-    elif sample_settings['method'] == 'generated':
-        # generate samples
-        Ns = sample_settings['Ns']
-        Ne = sample_settings['Ne']
-        # generate
-        training_indices = np.random.randint(inputs.shape[0], size=(Ns, Ne))
-    else:
-        raise ValueError('Invalid sampling method {}'.format(
-                         sample_settings['method']))
     # partition the sets based on loaded indices
     return pack_examples(inputs, targets, training_indices)
+
+
+def generated_instance(data_settings):
+    # do the things
 
 
 def handle_initial_network(settings):
     net_method = settings['network']['method']
     if net_method == 'given':
-        dataset_dir = settings['dataset_dir']
+        data_dir = settings['data_dir']
         filename = settings['network']['file']
         index = settings['network']['index']
-        with open(join(dataset_dir, filename)) as f:
+        with open(join(data_dir, filename)) as f:
             gates = np.array(json.load(f)[index], dtype=np.uint32)
             settings['initial_gates'] = gates
+
+
+def get_config_indices(instances, config_settings):
+    # samples may be optionally sub-indexed
+    if 'indices' in config_settings['sampling']:
+        config_indices = config_settings['sampling']['indices']
+        if any(i >= len(instances) for i in config_indices):
+            raise ValueError('\"sampling\" -> indices has elements larger than Ns')
+    else:
+        config_indices = range(len(instances))
+    return config_indices
 
 
 def generate_configurations(settings, evaluator_class):
@@ -141,33 +170,29 @@ def generate_configurations(settings, evaluator_class):
     settings.pop('configurations')
     # Build up the task list
     tasks = []
-    for conf_no, variables in enumerate(variable_sets):
+    for config_no, variables in enumerate(variable_sets):
         # keep each configuration isolated
         config_settings = deepcopy(settings)
         # update the settings dict with the values for this configuration
         update_nested(config_settings, variables)
         # record the config number for debuggin
-        config_settings['configuration_number'] = conf_no
+        config_settings['configuration_number'] = config_no
         # load initial network from file if required
         handle_initial_network(config_settings)
         # load the data for this configuration
-        instances = load_datasets(config_settings)
+        instances = load_dataset(config_settings)
         # samples may be optionally sub-indexed
-        if 'indices' in config_settings['sampling']:
-            config_indices = config_settings['sampling']['indices']
-            if any(i >= len(instances) for i in config_indices):
-                raise ValueError('\"sampling\" -> indices has elements larger than Ns')
-        else:
-            config_indices = range(len(instances))
+        config_indices = get_config_indices(instances, config_settings)
         # for each training set
         for i in config_indices:
             instance = instances[i]
+
             iteration_settings = deepcopy(config_settings)
             iteration_settings['training_indices'] = instance.training_indices
             iteration_settings['training_set'] = instance.training_mapping
-            iteration_settings['test_set'] = instance.test_mapping
+            iteration_settings['test_function'] = instance.test_mapping
             iteration_settings['training_set_number'] = i
-            iteration_settings['inter_file_base'] += '{}_{}_'.format(conf_no, i)
+            iteration_settings['inter_file_base'] += '{}_{}_'.format(config_no, i)
 
             config_schema(iteration_settings)
 
