@@ -14,7 +14,7 @@ import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
 from BoolNet.LearnBoolNet import learn_bool_net
-import experiment.experiment as exp
+import experiment.config_tools as config_tools
 
 
 def check_git():
@@ -88,16 +88,18 @@ def parse_arguments():
     args = parser.parse_args()
 
     if args.evaluator == 'gpu':
-        from BoolNet.NetworkEvaluatorGPU import NetworkEvaluatorGPU
-        args.evaluator = NetworkEvaluatorGPU
+        raise NotImplementedError()
+        # from BoolNet.NetworkEvaluatorGPU import NetworkEvaluatorGPU
+        # args.evaluator = NetworkEvaluatorGPU
     elif args.evaluator == 'cy':
         import pyximport
         pyximport.install()
-        from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
-        args.evaluator = NetworkEvaluatorCython
+        from BoolNet.networkstate import NetworkState
+        args.evaluator = NetworkState
     else:
-        from BoolNet.NetworkEvaluator import NetworkEvaluator
-        args.evaluator = NetworkEvaluator
+        raise NotImplementedError()
+        # from BoolNet.NetworkEvaluator import NetworkEvaluator
+        # args.evaluator = NetworkEvaluator
 
     return args
 
@@ -146,7 +148,7 @@ def run_parallel(tasks, num_processes, out_stream):
         bar.update()
         # uses unordered imap to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
-            exp.dump_results_partial(result, out_stream, i == 0)
+            config_tools.dump_results_partial(result, out_stream, i == 0)
             bar.next()
         bar.finish()
 
@@ -157,7 +159,7 @@ def run_scooped(tasks, out_stream):
     bar.update()
     # uses unordered imap to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(learn_bool_net, tasks)):
-        exp.dump_results_partial(result, out_stream, i == 0)
+        config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
 
@@ -167,7 +169,7 @@ def run_sequential(tasks, out_stream):
     bar = Bar('Running sequentially', max=len(tasks))
     bar.update()
     for i, result in enumerate(itertools.imap(learn_bool_net, tasks)):
-        exp.dump_results_partial(result, out_stream, i == 0)
+        config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
 
@@ -204,7 +206,7 @@ def main():
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # generate learning tasks
-        configurations = exp.generate_configurations(settings, args.evaluator)
+        configurations = config_tools.generate_configurations(settings, args.evaluator)
         print('{} runs generated.'.format(len(configurations)))
         # Run the actual learning as a parallel process
         run_tasks(configurations, args.numprocs, results_stream)

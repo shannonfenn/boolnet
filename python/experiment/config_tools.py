@@ -5,8 +5,8 @@ from os.path import join, splitext
 import numpy as np
 import json
 
-from boolmapping import BoolMapping
-from config_schemata import config_schema
+from experiment.boolmapping import BoolMapping
+from experiment.config_schemata import config_schema
 
 
 Instance = namedtuple('Instance', [
@@ -135,6 +135,7 @@ def file_instance(data_settings, training_indices):
 
 def generated_instance(data_settings):
     # do the things
+    raise NotImplementedError
 
 
 def handle_initial_network(settings):

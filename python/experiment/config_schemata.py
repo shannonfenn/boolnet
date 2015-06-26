@@ -2,7 +2,7 @@ import numpy as np
 from good import Schema, Required, In, All, Any, Range, Type, IsDir
 from good import message, Allow, Optional
 
-from boolmapping import BoolMapping
+from experiment.boolmapping import BoolMapping
 from BoolNet.LearnBoolNet import LEARNERS, OPTIMISERS
 from BoolNet.BitError import all_metric_names
 
