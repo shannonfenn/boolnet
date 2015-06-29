@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from itertools import chain
 import numpy as np
 from numpy.random import randint
-from BoolNet.BooleanNetwork import BooleanNetwork
+from BoolNet.boolnetwork import BoolNetwork
 import networkx as nx
 import pytest
 xfail = pytest.mark.xfail
@@ -69,7 +69,7 @@ class TestExceptions:
 
     @pytest.fixture
     def network(self):
-        return BooleanNetwork([(0, 1)], 2, 1)
+        return BoolNetwork([(0, 1)], 2, 1)
 
     @pytest.fixture(params=invalid_constructions)
     def invalid_construction(self, request):
@@ -82,7 +82,7 @@ class TestExceptions:
     ''' Exception Testing '''
     def test_construction_exceptions(self, invalid_construction):
         with pytest.raises(ValueError):
-            BooleanNetwork(*invalid_construction)
+            BoolNetwork(*invalid_construction)
 
     def test_set_mask_exceptions(self, adder2, invalid_mask):
         # the following have no valid sourceable nodes for any of the
@@ -133,7 +133,7 @@ def test_connected_gates():
     Ng = randint(No, 20)
     random_gates = [(randint(0, g+Ni), randint(0, g+Ni)) for g in range(Ng)]
     # create the seed network
-    net = BooleanNetwork(random_gates, Ni, No)
+    net = BoolNetwork(random_gates, Ni, No)
 
     actual = net.connected_gates(No)
     DG = gates_to_NX_digraph(random_gates, Ni, No)

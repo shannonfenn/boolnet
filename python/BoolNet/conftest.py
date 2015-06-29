@@ -4,8 +4,7 @@ import glob
 import yaml
 import os
 import numpy as np
-from BoolNet.BooleanNetwork import BooleanNetwork
-from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
+from BoolNet.boolnetwork import BoolNetwork, RandomBoolNetwork
 from BoolNet.Packing import pack_bool_matrix
 
 if os.path.basename(os.getcwd()) == 'BoolNet':
@@ -77,21 +76,22 @@ def harness_to_fixture(stream, evaluator_class):
     # add network to test
     if 'transfer functions' in test:
         tf = test['transfer functions']
-        test['network'] = RandomBooleanNetwork(gates, Ni, No, tf)
+        test['network'] = RandomBoolNetwork(gates, Ni, No, tf)
     else:
-        test['network'] = BooleanNetwork(gates, Ni, No)
+        test['network'] = BoolNetwork(gates, Ni, No)
     Ne_sample = sample_inputs.shape[0]
     Ne_full = full_inputs.shape[0]
     # add evaluators to test
     test['evaluator'] = {
-        'sample': evaluator_class(pack_bool_matrix(sample_inputs),
+        'sample': evaluator_class(test['network'],
+                                  pack_bool_matrix(sample_inputs),
                                   pack_bool_matrix(sample_target),
                                   Ne_sample),
-        'full': evaluator_class(pack_bool_matrix(full_inputs),
+        'full': evaluator_class(test['network'],
+                                pack_bool_matrix(full_inputs),
                                 pack_bool_matrix(full_target),
-                                Ne_full)}
-    test['evaluator']['sample'].add_network(test['network'])
-    test['evaluator']['full'].add_network(test['network'])
+                                Ne_full)
+    }
 
     return test
 
@@ -105,15 +105,15 @@ def evaluator_class(request):
     elif request.config.getoption("--evaluator") == 'cy':
         import pyximport
         pyximport.install()
-        import BoolNet.NetworkEvaluatorCython
-        return BoolNet.NetworkEvaluatorCython.NetworkEvaluatorCython
+        import BoolNet.networkstate
+        return BoolNet.networkstate.StaticNetworkState
     else:
         import BoolNet.NetworkEvaluator
         return BoolNet.NetworkEvaluator.NetworkEvaluator
 
 
 # @pytest.fixture(scope='module', autouse=True)
-# def compile_BooleanNetwork():
+# def compile_BoolNetwork():
 #     # compilation fixture
 #     subprocess.check_call(['python3', 'setup.py', 'build_ext', '--inplace'])
 
