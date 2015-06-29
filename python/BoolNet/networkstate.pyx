@@ -54,6 +54,7 @@ cdef class NetworkState:
         self.Ne = Ne
         self.Ni = inputs.shape[0]
         self.No = target.shape[0]
+        self.Ng = network.Ng
 
         # transpose and pack into integers
         self.target = np.array(target)
@@ -104,7 +105,7 @@ cdef class NetworkState:
     def metric_value(self, metric):
         self.evaluate()
         return BitError.metric_value(self.error, self.error_scratch,
-                                           self.Ne, self.zero_mask, metric)
+                                     self.Ne, self.zero_mask, metric)
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -174,8 +175,8 @@ cdef class NetworkState:
             func = function_list[transfer_functions[g]]
             for c in range(cols):
                 activation[Ni+g, c] = func(activation[in1, c], activation[in2, c])
-        # evaluate the error matrix
 
+        # evaluate the error matrix
         for o in range(No):
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
@@ -212,6 +213,7 @@ cdef class NetworkState:
             in2 = gates[g, 1]
             for c in range(cols):
                 activation[Ni+g, c] = ~(activation[in1, c] & activation[in2, c])
+
         # evaluate the error matrix
         for o in range(No):
             for c in range(cols):
