@@ -59,6 +59,8 @@ cdef void E3(packed_type_t[:, ::1] E_in,
 @cython.cdivision(True)
 cdef void E4(packed_type_t[:, ::1] E_in,
              packed_type_t[:, ::1] E_out,
+             bint[:] cin,
+             bint[:] cout,
              bint msb):
     cdef:
         size_t rows, cols, start, c, r, i, prev_err_col, err_col
@@ -79,26 +81,37 @@ cdef void E4(packed_type_t[:, ::1] E_in,
 
     r = start
     for i in range(rows):
-        # find first example with non zero error 
-        err_col = prev_err_col
-        for c in range(prev_err_col):
-            E_out[r, c] = E_in[r, c]
-            if E_in[r, c]:
-                err_col = c
-                break
-        # mask needs recalculating if we have found an earlier
-        # error column or an earlier example in this column
-        if err_col != prev_err_col or mask < E_in[r, c]:
-            mask = cascade(E_in[r, c])
-
-        # if we aren't at the end of the row
-        if err_col != cols:
-            E_out[r, err_col] = mask
-            # set all subsequent examples high
-            for c in range(err_col+1, cols):
+        if cin[r]:
+            # for this feature there is a carry in error
+            # set all examples high and all examples for
+            # future features high
+            mask = PACKED_ALL_SET
+            err_col = 0
+            for c in range(cols):
                 E_out[r, c] = PACKED_ALL_SET
+        else:
+            # find first example with non zero error 
+            err_col = prev_err_col
+            for c in range(prev_err_col):
+                E_out[r, c] = E_in[r, c]
+                if E_in[r, c]:
+                    err_col = c
+                    break
+            # mask needs recalculating if we have found an earlier
+            # error column or an earlier example in this column
+            if err_col != prev_err_col or mask < E_in[r, c]:
+                mask = cascade(E_in[r, c])
+
+            # if we aren't at the end of the row
+            if err_col != cols:
+                E_out[r, err_col] = mask
+                # set all subsequent examples high
+                for c in range(err_col+1, cols):
+                    E_out[r, c] = PACKED_ALL_SET
 
         prev_err_col = err_col
+        # calculate error carry out
+        cout[r] = E_out[r, -1]
         r += step
 
 
@@ -125,20 +138,29 @@ cdef void E5(packed_type_t[:, ::1] E_in,
 
     r = start
     for i in range(rows):
-        # find first example with non zero error 
-        for c in range(cols):
-            E_out[r, c] = E_in[r, c]
-            found = <bint>E_in[r, c]
-            if found:
-                err_col = c
-                break
-        if found:
-            # need to calculate mask by cascading 1s
-            E_out[r, err_col] = cascade(E_in[r, c])
-            # set all subsequent examples high
-            for c in range(err_col+1, cols):
+        if cin[r]:
+            # for this feature there is a carry in error
+            # set all examples high and all examples for
+            # future features high
+            mask = PACKED_ALL_SET
+            err_col = 0
+            for c in range(cols):
                 E_out[r, c] = PACKED_ALL_SET
-            break
+        else:
+            # find first example with non zero error 
+            for c in range(cols):
+                E_out[r, c] = E_in[r, c]
+                found = <bint>E_in[r, c]
+                if found:
+                    err_col = c
+                    break
+            if found:
+                # need to cascade 1s in this column
+                E_out[r, err_col] = cascade(E_in[r, c])
+                # set all subsequent examples high
+                for c in range(err_col+1, cols):
+                    E_out[r, c] = PACKED_ALL_SET
+                break
         r += step
 
     # set all subsequent features high
