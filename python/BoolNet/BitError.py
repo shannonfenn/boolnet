@@ -21,7 +21,11 @@ class Metric(Enum):
     PER_OUTPUT = 15,
 
     def __str__(self):
-        return self.name[0].lower() + self.name[1:]
+        s = self.name
+        if s.startswith('E') and s.endswith(('M', 'L')):
+            return s[0].lower() + s[1:]
+        else:
+            return s.lower()
 
     def raw_str(self):
         return self.name
