@@ -1,7 +1,6 @@
-from copy import copy
 from collections import namedtuple
 from BoolNet.Packing import pack_bool_matrix, unpack_bool_matrix
-from BoolNet.BooleanNetwork import BooleanNetwork
+from BoolNet.boolnetwork import BoolNetwork
 import numpy as np
 import pytest
 
@@ -23,26 +22,25 @@ def all_possible_inputs(num_bits):
         dtype=np.byte))
 
 
+def packed_zeros(num_bits):
+    return pack_bool_matrix(np.zeros((2**num_bits, 1), dtype=np.uint8)),
+
+
 Instance = namedtuple('Instance', ['inputs', 'target', 'Ne'])
 
 
 class TestExceptions:
     @pytest.fixture
     def gates(self):
-        return np.array([(0, 1)], dtype=np.uint32),
+        return np.array([(0, 1)], dtype=np.uint32)
 
     @pytest.fixture
     def instance(self):
         # gates
-        return Instance(
-            inputs=all_possible_inputs(4),
-            target=pack_bool_matrix(np.zeros((2**4, 1), dtype=np.uint8)),
-            Ne=2**4)
+        return Instance(inputs=all_possible_inputs(4), target=packed_zeros(4), Ne=2**4)
 
     ''' Exception Testing '''
     def test_construction_exceptions(self, instance, evaluator_class):
-        ''' This test may not check all cases but is not
-            particularly important as it is just error checks.'''
         # num input examples != num target examples
         with pytest.raises(ValueError):
             evaluator_class(all_possible_inputs(1),
@@ -52,14 +50,12 @@ class TestExceptions:
                             dtype=np.byte), instance.Ne)
 
     def test_addition_exceptions(self, gates, evaluator_class):
-        ''' This test may not check all cases but is not
-            particularly important as it is just error checks.'''
-        # num input examples != num target examples
-        e = evaluator_class(all_possible_inputs(2),
-                            pack_bool_matrix(np.zeros((4, 2), dtype=np.uint8)),
-                            4)
+        net = BoolNetwork(gates, 1, 1)
+        inp = all_possible_inputs(2)
+        tgt = pack_bool_matrix(np.zeros((4, 2), dtype=np.uint8))
+        # num gates < num targets
         with pytest.raises(ValueError):
-            e.add_network(BooleanNetwork(gates, 1, 1))
+            evaluator_class(net, inp, tgt, 4)
 
 
 class TestFunctionality:
