@@ -59,9 +59,7 @@ cdef void E3(packed_type_t[:, ::1] E_in,
 @cython.cdivision(True)
 cdef void E4(packed_type_t[:, ::1] E_in,
              packed_type_t[:, ::1] E_out,
-             bint[:] cin,
-             bint[:] cout,
-             bint msb):
+             bint[:] cin, bint[:] cout, bint msb):
     cdef:
         size_t rows, cols, start, c, r, i, prev_err_col, err_col
         int step
@@ -87,8 +85,7 @@ cdef void E4(packed_type_t[:, ::1] E_in,
             # future features high
             mask = PACKED_ALL_SET
             err_col = 0
-            for c in range(cols):
-                E_out[r, c] = PACKED_ALL_SET
+            E_out[r, :cols] = PACKED_ALL_SET
         else:
             # find first example with non zero error 
             err_col = prev_err_col
@@ -106,8 +103,7 @@ cdef void E4(packed_type_t[:, ::1] E_in,
             if err_col != cols:
                 E_out[r, err_col] = mask
                 # set all subsequent examples high
-                for c in range(err_col+1, cols):
-                    E_out[r, c] = PACKED_ALL_SET
+                E_out[r, err_col+1:cols] = PACKED_ALL_SET
 
         prev_err_col = err_col
         # calculate error carry out
@@ -121,7 +117,7 @@ cdef void E4(packed_type_t[:, ::1] E_in,
 @cython.cdivision(True)
 cdef void E5(packed_type_t[:, ::1] E_in,
              packed_type_t[:, ::1] E_out,
-             bint msb):
+             bint[:] cin, bint[:] cout, bint msb):
     cdef:
         unsigned int rows, cols, start, c, r, i, err_col
         int step
@@ -144,8 +140,7 @@ cdef void E5(packed_type_t[:, ::1] E_in,
             # future features high
             mask = PACKED_ALL_SET
             err_col = 0
-            for c in range(cols):
-                E_out[r, c] = PACKED_ALL_SET
+            E_out[r, :cols] = PACKED_ALL_SET
         else:
             # find first example with non zero error 
             for c in range(cols):
@@ -158,8 +153,7 @@ cdef void E5(packed_type_t[:, ::1] E_in,
                 # need to cascade 1s in this column
                 E_out[r, err_col] = cascade(E_in[r, c])
                 # set all subsequent examples high
-                for c in range(err_col+1, cols):
-                    E_out[r, c] = PACKED_ALL_SET
+                E_out[r, err_col+1:cols] = PACKED_ALL_SET
                 break
         r += step
 
@@ -168,8 +162,7 @@ cdef void E5(packed_type_t[:, ::1] E_in,
         rows = r if msb else rows - r - 1
         r += step
         for i in range(rows):
-            for c in range(cols):
-                E_out[r, c] = PACKED_ALL_SET
+            E_out[r, :cols] = PACKED_ALL_SET
             r += step
 
 @cython.boundscheck(False)
@@ -206,8 +199,7 @@ cdef void E6(packed_type_t[:, ::1] E_in,
         rows = r if msb else rows - r - 1
         r += step
         for i in range(rows):
-            for c in range(cols):
-                E_out[r, c] = PACKED_ALL_SET
+            E_out[r, :cols] = PACKED_ALL_SET
             r += step
 
 
@@ -247,8 +239,7 @@ cdef void E7(packed_type_t[:, ::1] E_in,
         # set this and all subsequent features high
         rows = r + 1 if msb else rows - r
         for i in range(rows):
-            for c in range(cols):
-                E_out[r, c] = PACKED_ALL_SET
+            E_out[r, :cols] = PACKED_ALL_SET
             r += step
 
 
