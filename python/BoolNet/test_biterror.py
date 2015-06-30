@@ -33,22 +33,22 @@ def test_error_cython(error_matrix_harness, metric):
 def test_error_gpu(error_matrix_harness, metric):
     import pycuda.driver as cuda
     import pycuda.autoinit
-    from BoolNet.BitErrorGPU import metric_value_gpu
+    from BoolNet.BitErrorGPU import metric_value_gpu, IMPLEMENTED_METRICS
 
     err_mat = error_matrix_harness['error matrix']
-    d_error_matrix = cuda.mem_alloc(err_mat.nbytes)
-    d_intermediate_matrix = cuda.mem_alloc(err_mat.shape[0] * 4)
+    d_error_mat = cuda.mem_alloc(err_mat.nbytes)
+    d_scratch_mat = cuda.mem_alloc(err_mat.shape[0] * 4)
+    Ne, No = err_mat.shape
+    Ne, No = np.int32(Ne), np.int32(No)
+    cuda.memcpy_htod(d_error_mat, err_mat)
 
-    cuda.memcpy_htod(d_error_matrix, err_mat)
-
-    actual = metric_value_gpu(d_error_matrix,
-                              d_intermediate_matrix,
-                              np.int32(err_mat.shape[0]),
-                              np.int32(err_mat.shape[1]),
-                              metric)
     expected = error_matrix_harness[metric_name(metric)]
 
-    d_intermediate_matrix.free()
-    d_error_matrix.free()
-
-    assert np.array_equal(actual, expected)
+    if metric in IMPLEMENTED_METRICS:
+        actual = metric_value_gpu(d_error_mat, d_scratch_mat, Ne, No, metric)
+        assert np.array_equal(actual, expected)
+    else:
+        with pytest.raises(NotImplementedError):
+            metric_value_gpu(d_error_mat, d_scratch_mat, Ne, No, metric)
+    d_scratch_mat.free()
+    d_error_mat.free()

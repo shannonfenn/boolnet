@@ -6,6 +6,7 @@ import os
 import numpy as np
 from BoolNet.boolnetwork import BoolNetwork, RandomBoolNetwork
 from BoolNet.Packing import pack_bool_matrix
+from BoolNet.BitError import all_metrics
 
 if os.path.basename(os.getcwd()) == 'BoolNet':
     TEST_LOCATION = 'test/'
@@ -15,32 +16,20 @@ else:
 
 # ################ Command line options #################### #
 def pytest_addoption(parser):
-    parser.addoption("--evaluator", action="store", default="cy",
-                     help="evaluator: [py | cy | gpu]")
+    parser.addoption('--evaluator', action='store', default='cys',
+                     help='evaluator: [py | cys | cyd | gpu]')
 
 
 def pytest_runtest_setup(item):
     if ('gpu' in item.keywords and
-       item.config.getoption("--evaluator") != "gpu"):
-        pytest.skip("need \'gpu\' option to run")
+       item.config.getoption('--evaluator') != 'gpu'):
+        pytest.skip('need \'gpu\' option to run')
     if ('cython' in item.keywords and
-       item.config.getoption("--evaluator") != "cy"):
-        pytest.skip("need \'cy\' option to run")
+       item.config.getoption('--evaluator') not in ['cys', 'cyd']):
+        pytest.skip('need \'cy\' option to run')
     if ('python' in item.keywords and
-       item.config.getoption("--evaluator") != "py"):
-        pytest.skip("need \'py\' option to run")
-
-
-# metric fixture generator
-def pytest_generate_tests(metafunc):
-    if 'metric' in metafunc.fixturenames:
-        if metafunc.config.option.evaluator == 'gpu':
-            from BoolNet.BitErrorGPU import IMPLEMENTED_METRICS
-            metrics = IMPLEMENTED_METRICS
-        else:
-            from BoolNet.BitError import all_metrics
-            metrics = list(all_metrics())
-        metafunc.parametrize("metric", metrics)
+       item.config.getoption('--evaluator') != 'py'):
+        pytest.skip('need \'py\' option to run')
 
 
 # ############ Helpers for fixtures ############# #
@@ -102,14 +91,24 @@ def evaluator_class(request):
     if request.config.getoption("--evaluator") == 'gpu':
         import BoolNet.NetworkEvaluatorGPU
         return BoolNet.NetworkEvaluatorGPU.NetworkEvaluatorGPU
-    elif request.config.getoption("--evaluator") == 'cy':
+    elif request.config.getoption("--evaluator") == 'cys':
         import pyximport
         pyximport.install()
         import BoolNet.networkstate
         return BoolNet.networkstate.StaticNetworkState
+    elif request.config.getoption("--evaluator") == 'cyd':
+        import pyximport
+        pyximport.install()
+        import BoolNet.networkstate
+        return BoolNet.networkstate.DynamicNetworkState
     else:
         import BoolNet.NetworkEvaluator
         return BoolNet.NetworkEvaluator.NetworkEvaluator
+
+
+@pytest.fixture(params=list(all_metrics()))
+def metric(request):
+    return request.param
 
 
 # @pytest.fixture(scope='module', autouse=True)
