@@ -70,7 +70,7 @@ cdef class StaticNetworkState:
         self.activation[:self.Ni, :] = inputs
         # create input and output view into activation matrix
         self.inputs = self.activation[:self.Ni, :]
-        self.outputs = self.activation[-self.No:, :]
+        self.outputs = self.activation[-<int>self.No:, :]
 
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
