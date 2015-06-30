@@ -30,33 +30,33 @@ error matrix:
 metric value:
     sample:
         e1:                 0.75
-        e2 msb:       0.75
-        e2 lsb:       0.75
-        e3 msb:   0.75
-        e3 lsb:   0.75
-        e7 msb:  1.0
-        e7 lsb:  1.0
-        e4 lsb:             1.0
-        e4 msb:             1.0
-        e5 lsb:             1.0
-        e5 msb:             1.0
-        e6 lsb:             0.75
-        e6 msb:             0.75
+        e2M:       0.75
+        e2L:       0.75
+        e3M:   0.75
+        e3L:   0.75
+        e7M:  1.0
+        e7L:  1.0
+        e4L:             1.0
+        e4M:             1.0
+        e5L:             1.0
+        e5M:             1.0
+        e6L:             0.75
+        e6M:             0.75
         accuracy:           0.25
-        per output:  [0.75]
+        per_output:  [0.75]
     full:
         e1:             0.75
-        e2 msb:       0.75
-        e2 lsb:       0.75
-        e3 msb:   0.75
-        e3 lsb:   0.75
-        e7 msb:  1.0
-        e7 lsb:  1.0
-        e4 lsb:             1.0
-        e4 msb:             1.0
-        e5 lsb:             1.0
-        e5 msb:             1.0
-        e6 lsb:             0.75
-        e6 msb:             0.75
+        e2M:       0.75
+        e2L:       0.75
+        e3M:   0.75
+        e3L:   0.75
+        e7M:  1.0
+        e7L:  1.0
+        e4L:             1.0
+        e4M:             1.0
+        e5L:             1.0
+        e5M:             1.0
+        e6L:             0.75
+        e6M:             0.75
         accuracy:           0.25
-        per output:  [0.75]
+        per_output:  [0.75]
