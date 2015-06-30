@@ -9,33 +9,6 @@ from BoolNet.Packing cimport packed_type_t, generate_end_mask, f_type, function_
 from BoolNet.Packing import packed_type
 
 
-cdef _check_invariants(network,
-                       packed_type_t[:, :] inputs,
-                       packed_type_t[:, :] target,
-                       unsigned int Ne):
-    Ni = inputs.shape[0]
-    No = target.shape[0]
-    # Test if the matrices are valid
-    if inputs.shape[1] == 0 or Ni == 0:
-        raise ValueError('Empty input matrix.')
-    if target.shape[1] == 0 or No == 0:
-        raise ValueError('Empty target matrix.')
-    if 2**Ni < Ne:
-        raise ValueError('More examples ({}) than #inputs ({}) '
-                         'can represent.'.format(Ne, Ni))
-    if inputs.shape[1] != target.shape[1]:
-        raise ValueError('Incompatible input/target shapes: {} {}.'.format(
-                         inputs.shape[1], target.shape[1]))
-    # [TODO] Add more here for combined invariants.
-    isinstance(network, BoolNetwork)
-    if network.Ni != inputs.shape[0]:
-        raise ValueError(('Network input # ({}) does not match input '
-                         '({}).').format(network.No, target.shape[0]))
-    if network.No != target.shape[0]:
-        raise ValueError(('Network output # ({}) does not match target '
-                         '({}).').format(network.No, target.shape[0]))
-
-
 cdef class StaticNetworkState:
     cdef:
         readonly unsigned int Ne, Ni, No, Ng
@@ -52,12 +25,11 @@ cdef class StaticNetworkState:
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
         # check invariants hold
-        _check_invariants(network, inputs, target, Ne)
+        self._check_instance_invariants(inputs, target, Ne)
 
         self.Ne = Ne
         self.Ni = inputs.shape[0]
         self.No = target.shape[0]
-        self.Ng = network.Ng
 
         # transpose and pack into integers
         self.target = np.array(target)
@@ -76,6 +48,13 @@ cdef class StaticNetworkState:
         self.error = np.empty_like(self.target)
         self.error_scratch = np.empty_like(self.target)
 
+        self.Ng = network.Ng    # this prevents invariant issue
+        self.set_network(network)
+
+    def set_network(self, network):
+        # check invariants hold
+        self._check_network_invariants(network)
+        self.Ng = network.Ng
         # prevent another evaluator causing problems with this network
         self.network = deepcopy(network)
         # force reevaluation of the copied network
@@ -221,6 +200,37 @@ cdef class StaticNetworkState:
         for o in range(No):
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
+
+    cdef _check_instance_invariants(self, packed_type_t[:, :] inputs,
+                                    packed_type_t[:, :] target, size_t Ne):
+        Ni = inputs.shape[0]
+        No = target.shape[0]
+        # Test if the matrices are valid
+        if inputs.shape[1] == 0 or Ni == 0:
+            raise ValueError('Empty input matrix.')
+        if target.shape[1] == 0 or No == 0:
+            raise ValueError('Empty target matrix.')
+        if 2**Ni < Ne:
+            raise ValueError('More examples ({}) than #inputs ({}) '
+                             'can represent.'.format(Ne, Ni))
+        if inputs.shape[1] != target.shape[1]:
+            raise ValueError('Incompatible input/target shapes: {} {}.'.format(
+                             inputs.shape[1], target.shape[1]))
+
+
+    cdef _check_network_invariants(self, network):
+        if network.Ng != self.Ng:
+            raise ValueError(
+                ('Network gate # ({}) does not match that of the network '
+                'this evaluator was instantiatied with ({}).').format(network.Ng, self.Ng))
+        if not isinstance(network, BoolNetwork):
+            raise ValueError('\"network\" parameter not a subclass of \"BoolNetwork\"')
+        if network.Ni != self.inputs.shape[0]:
+            raise ValueError(('Network input # ({}) does not match input '
+                             '({}).').format(network.No, self.inputs.shape[0]))
+        if network.No != self.target.shape[0]:
+            raise ValueError(('Network output # ({}) does not match target '
+                             '({}).').format(network.No, self.target.shape[0]))
 
 # cdef class DynamicNetworkState(StaticNetworkState):
 
