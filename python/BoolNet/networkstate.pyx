@@ -28,8 +28,11 @@ cdef _check_invariants(network,
                          inputs.shape[1], target.shape[1]))
     # [TODO] Add more here for combined invariants.
     isinstance(network, BoolNetwork)
+    if network.Ni != inputs.shape[0]:
+        raise ValueError(('Network input # ({}) does not match input '
+                         '({}).').format(network.No, target.shape[0]))
     if network.No != target.shape[0]:
-        raise ValueError(('Network output # ({}) does not matchexpress target '
+        raise ValueError(('Network output # ({}) does not match target '
                          '({}).').format(network.No, target.shape[0]))
 
 
@@ -219,46 +222,46 @@ cdef class StaticNetworkState:
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
 
-cdef class DynamicNetworkState(StaticNetworkState):
+# cdef class DynamicNetworkState(StaticNetworkState):
 
-    def __init__(self, network,
-                 index_generator,
-                 target_function,
-                 unsigned int Ne):
-        ''' Sets up the activation and error matrices for a new network.
-            Note: This copies the provided network, so do not expect modifications
-                  to pass through transparently without reacquiring the new alias.'''
-        # check invariants hold
-        _check_invariants(network, inputs, target, Ne)
+#     def __init__(self, network,
+#                  index_generator,
+#                  target_function,
+#                  unsigned int Ne):
+#         ''' Sets up the activation and error matrices for a new network.
+#             Note: This copies the provided network, so do not expect modifications
+#                   to pass through transparently without reacquiring the new alias.'''
+#         # check invariants hold
+#         _check_invariants(network, inputs, target, Ne)
 
-        self.Ne = Ne
-        self.Ni = inputs.shape[0]
-        self.No = target.shape[0]
+#         self.Ne = Ne
+#         self.Ni = inputs.shape[0]
+#         self.No = target.shape[0]
 
-        # transpose and pack into integers
-        self.target = np.array(target)
+#         # transpose and pack into integers
+#         self.target = np.array(target)
 
-        self.zero_mask = generate_end_mask(Ne)
+#         self.zero_mask = generate_end_mask(Ne)
         
-        # instantiate a matrix for activation
-        self.activation = np.empty((network.Ng + self.Ni, inputs.shape[1]), dtype=packed_type)
-        # copy inputs into activation matrix
-        self.activation[:self.Ni, :] = inputs
-        # create input and output view into activation matrix
-        self.inputs = self.activation[:self.Ni, :]
-        self.outputs = self.activation[-self.No:, :]
+#         # instantiate a matrix for activation
+#         self.activation = np.empty((network.Ng + self.Ni, inputs.shape[1]), dtype=packed_type)
+#         # copy inputs into activation matrix
+#         self.activation[:self.Ni, :] = inputs
+#         # create input and output view into activation matrix
+#         self.inputs = self.activation[:self.Ni, :]
+#         self.outputs = self.activation[-self.No:, :]
 
-        # instantiate matrices for error
-        self.error = np.empty_like(self.target)
-        self.error_scratch = np.empty_like(self.target)
+#         # instantiate matrices for error
+#         self.error = np.empty_like(self.target)
+#         self.error_scratch = np.empty_like(self.target)
 
-        # prevent another evaluator causing problems with this network
-        self.network = deepcopy(network)
-        # force reevaluation of the copied network
-        self.network._evaluated = False
-        self.network.first_unevaluated_gate = 0
+#         # prevent another evaluator causing problems with this network
+#         self.network = deepcopy(network)
+#         # force reevaluation of the copied network
+#         self.network._evaluated = False
+#         self.network.first_unevaluated_gate = 0
 
-    def metric_value(self, metric):
-        self.evaluate()
-        return BitError.metric_value(self.error, self.error_scratch,
-                                           self.Ne, self.zero_mask, metric)
+#     def metric_value(self, metric):
+#         self.evaluate()
+#         return BitError.metric_value(self.error, self.error_scratch,
+#                                            self.Ne, self.zero_mask, metric)
