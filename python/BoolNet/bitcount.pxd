@@ -12,5 +12,5 @@ cpdef size_t popcount_matrix(packed_type_t[:, :] mat)
 cpdef size_t popcount_vector(packed_type_t[:] vec)
 cpdef size_t popcount_chunk(packed_type_t chunk)
 
-cpdef size_t floodcount_vector(packed_type_t[:] vec)
-cpdef size_t floodcount_chunk(packed_type_t chunk)
+cpdef size_t floodcount_vector(packed_type_t[:] vec, size_t end_mask_len=*)
+cpdef size_t floodcount_chunk(packed_type_t chunk, size_t end_mask_len=*)
