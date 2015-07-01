@@ -3,9 +3,9 @@ from BoolNet.BitError import (E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
 import numpy as np
 cimport numpy as np
 import cython
-from BoolNet.PopCount cimport popcount_matrix, popcount_vector
-from BoolNet.Packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
-from BoolNet.Packing import packed_type
+from BoolNet.bitcount cimport popcount_matrix, popcount_vector
+from BoolNet.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
+from BoolNet.packing import packed_type
 
 
 chained_evaluators = {

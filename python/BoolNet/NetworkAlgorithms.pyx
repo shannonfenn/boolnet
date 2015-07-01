@@ -1,4 +1,4 @@
-from BoolNet.FastRand cimport random_uniform_int
+from BoolNet.fastrand cimport random_uniform_int
 import numpy as np
 cimport numpy as np
 import cython

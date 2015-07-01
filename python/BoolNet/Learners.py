@@ -4,7 +4,7 @@ import numpy as np
 import kFS
 import logging
 from BoolNet.BitError import Metric
-from BoolNet.Packing import unpack_bool_matrix, unpack_bool_vector
+from BoolNet.packing import unpack_bool_matrix, unpack_bool_vector
 
 
 Result = namedtuple('Result', [

@@ -5,7 +5,7 @@ import yaml
 import os
 import numpy as np
 from BoolNet.boolnetwork import BoolNetwork, RandomBoolNetwork
-from BoolNet.Packing import pack_bool_matrix
+from BoolNet.packing import pack_bool_matrix
 from BoolNet.BitError import all_metrics
 
 if os.path.basename(os.getcwd()) == 'BoolNet':

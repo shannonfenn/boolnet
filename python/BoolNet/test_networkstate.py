@@ -1,5 +1,5 @@
 from collections import namedtuple
-from BoolNet.Packing import pack_bool_matrix, unpack_bool_matrix
+from BoolNet.packing import pack_bool_matrix, unpack_bool_matrix
 from BoolNet.boolnetwork import BoolNetwork
 import numpy as np
 import pytest

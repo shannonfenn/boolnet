@@ -1,5 +1,5 @@
 import numpy as np
-from BoolNet.Packing import pack_bool_matrix, unpack_bool_matrix
+from BoolNet.packing import pack_bool_matrix, unpack_bool_matrix
 import pytest
 
 

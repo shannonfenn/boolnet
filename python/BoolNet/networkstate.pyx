@@ -5,8 +5,8 @@ from copy import deepcopy
 
 from BoolNet.boolnetwork import BoolNetwork
 import BoolNet.BitErrorCython as BitError
-from BoolNet.Packing cimport packed_type_t, generate_end_mask, f_type, function_list
-from BoolNet.Packing import packed_type
+from BoolNet.packing cimport packed_type_t, generate_end_mask, f_type, function_list
+from BoolNet.packing import packed_type
 
 
 cdef class StaticNetworkState:

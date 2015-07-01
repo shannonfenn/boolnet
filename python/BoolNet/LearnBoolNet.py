@@ -4,7 +4,7 @@ from BoolNet.boolnetwork import BoolNetwork
 from BoolNet.boolnetwork_rand import RandomBoolNetwork
 from BoolNet.BitError import Metric, metric_from_name
 from BoolNet.Learners import basic_learn, stratified_learn
-import BoolNet.FastRand as FastRand
+import BoolNet.fastrand as fastrand
 import BoolNet.Optimisers as Optimisers
 import numpy as np
 import functools
@@ -38,7 +38,7 @@ def check_data(training_set, test_set):
 def learn_bool_net(task):
     random.seed()
     seed = random.randint(1, sys.maxsize)
-    FastRand.seed(seed)
+    fastrand.seed(seed)
     return _learn_bool_net(*task)
 
 
