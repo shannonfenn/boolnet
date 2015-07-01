@@ -1,5 +1,5 @@
 # distutils: libraries = gmp
-from Packing cimport PACKED_HIGH_BIT_SET, PACKED_SIZE
+from packing cimport PACKED_HIGH_BIT_SET, PACKED_SIZE
 
 # @cython.boundscheck(False)
 # @cython.wraparound(False)

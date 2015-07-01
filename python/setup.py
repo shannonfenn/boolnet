@@ -9,16 +9,17 @@ setup(
     include_dirs=[cython_gsl.get_include()],
     cmdclass={'build_ext': build_ext},
     ext_modules=[
-        Extension("BoolNet.FastRand",
-                  ["BoolNet/FastRand.pyx"],
+        Extension("BoolNet.packing",
+                  ["BoolNet/packing.pyx"]),
+        Extension("BoolNet.fastrand",
+                  ["BoolNet/fastrand.pyx"],
                   libraries=cython_gsl.get_libraries(),
                   library_dirs=[cython_gsl.get_library_dir()],
                   include_dirs=[cython_gsl.get_cython_include_dir()]),
-        Extension("BoolNet.PopCount",
-                  ["BoolNet/PopCount.pyx"],
+        Extension("BoolNet.bitcount",
+                  ["BoolNet/bitcount.pyx"],
                   libraries=['gmp'],
                   library_dirs=[os.path.expanduser('~/static/lib/')],
                   include_dirs=[os.path.expanduser('~/static/include/')]),
-        Extension("BoolNet.Packing",
-                  ["BoolNet/Packing.pyx"])]
+        ]
     )
