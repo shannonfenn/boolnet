@@ -6,6 +6,7 @@ from libc.limits cimport ULLONG_MAX
 
 PACKED_SIZE = 64
 PACKED_ALL_SET = ULLONG_MAX
+PACKED_HIGH_BIT_SET = 0x8000000000000000
 packed_type = np.uint64
 
 

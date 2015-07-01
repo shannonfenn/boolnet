@@ -9,6 +9,7 @@ ctypedef np.uint64_t packed_type_t
 #DEF PACKED_SIZE = 64
 cpdef size_t PACKED_SIZE
 cpdef packed_type_t PACKED_ALL_SET
+cpdef packed_type_t PACKED_HIGH_BIT_SET
 
 
 cpdef pack_bool_matrix(np.ndarray mat)
