@@ -29,7 +29,7 @@ cpdef size_t floodcount_vector(packed_type_t[:] vec):
     pos = mpn_scan1(&vec[0], 0)
     if was_zero:
         vec[-1] &= ~PACKED_HIGH_BIT_SET
-        if pos == PACKED_SIZE - 1:
+        if pos == PACKED_SIZE*vec.size - 1:
             return 0
     return pos + 1
 
