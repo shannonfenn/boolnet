@@ -16,7 +16,7 @@ def test_error_cython(error_matrix_harness, metric):
     import pyximport
     pyximport.install()
     from BoolNet.BitErrorCython import metric_value
-    from BoolNet.Packing import generate_end_mask
+    from BoolNet.packing import generate_end_mask
     Ne = error_matrix_harness['Ne']
     E = error_matrix_harness['packed error matrix']
     E_out = np.zeros_like(E)
