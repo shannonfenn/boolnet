@@ -1,7 +1,7 @@
-
+# cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
-from BoolNet.BitError import (E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
-                              E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT, Metric)
+from BoolNet.metric_names import (E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
+                              E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT)
 import numpy as np
 cimport numpy as np
 import cython
@@ -10,23 +10,20 @@ from BoolNet.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
 from BoolNet.packing import packed_type
 
 
-standard_evaluators = {
-    E1:  StandardEvaluator,
-    E2L: StandardE2, E2M: StandardE2,
-    E3L: StandardE3, E3M: StandardE3,
-    E4L: StandardE4, E4M: StandardE4,
-    E5L: StandardE5, E5M: StandardE5,
-    E6L: StandardE6, E6M: StandardE6,
-    E7L: StandardE7, E7M: StandardE7,
-    ACCURACY: StandardAccuracy,
-    PER_OUTPUT: StandardPerOutput
+STANDARD_EVALUATORS = {
+    E1:  (StandardE1, False),
+    E2L: (StandardE2, False), E2M: (StandardE2, True),
+    E3L: (StandardE3, False), E3M: (StandardE3, True),
+    E4L: (StandardE4, False), E4M: (StandardE4, True),
+    E5L: (StandardE5, False), E5M: (StandardE5, True),
+    E6L: (StandardE6, False), E6M: (StandardE6, True),
+    E7L: (StandardE7, False), E7M: (StandardE7, True),
+    ACCURACY: (StandardAccuracy, False),
+    PER_OUTPUT: (StandardPerOutput, False)
 }
 
 
 cdef class StandardEvaluator:
-    cdef size_t No, cols, start, step
-    cdef double divisor
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         self.No = No
         self.divisor = No * Ne
@@ -40,11 +37,6 @@ cdef class StandardEvaluator:
 
 
 cdef class StandardPerOutput:
-    cdef:
-        size_t No, start, step
-        double divisor
-        double[:] accumulator
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         self.No = No
         self.divisor = No * Ne
@@ -59,8 +51,6 @@ cdef class StandardPerOutput:
 
 
 cdef class StandardAccuracy(StandardEvaluator):
-    cdef packed_type_t[:] row_disjunction
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_disjunction = np.zeros(cols, dtype=packed_type)
@@ -93,8 +83,6 @@ cdef class StandardE1(StandardEvaluator):
 
 
 cdef class StandardE2(StandardEvaluator):
-    cdef double[:] weight_vector
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.divisor = Ne * (No + 1.0) * No / 2.0
@@ -114,8 +102,6 @@ cdef class StandardE2(StandardEvaluator):
 
 
 cdef class StandardE3(StandardEvaluator):
-    cdef packed_type_t[:] row_disjunction
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_disjunction = np.zeros(cols, dtype=packed_type)
@@ -135,8 +121,6 @@ cdef class StandardE3(StandardEvaluator):
 
 
 cdef class StandardE4(StandardEvaluator):
-    cdef size_t end_subtractor
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         row_width = cols * PACKED_SIZE
@@ -160,8 +144,6 @@ cdef class StandardE4(StandardEvaluator):
 
 
 cdef class StandardE5(StandardEvaluator):
-    cdef size_t row_width, end_subtractor
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_width = self.cols * PACKED_SIZE
@@ -182,8 +164,6 @@ cdef class StandardE5(StandardEvaluator):
 
 
 cdef class StandardE6(StandardEvaluator):
-    cdef size_t row_width
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_width = self.cols * PACKED_SIZE
