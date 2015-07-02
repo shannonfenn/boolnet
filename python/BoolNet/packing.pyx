@@ -49,12 +49,12 @@ cpdef unpack_bool_matrix(packed_type_t[:, :] packed_mat, size_t Ne):
             #     unpacked[example, f] += ((chunk & mask) >> bit)
             #     mask <<= 1
             #     example -= 1
-            mask = PACKED_HIGH_BIT_SET
+            mask = 1
             example = c * PACKED_SIZE
             chunk = packed_mat[f, c]
             for bit in range(PACKED_SIZE):
                 unpacked[example, f] += ((chunk & mask) >> bit)
-                mask >>= 1
+                mask <<= 1
                 example += 1
     return np.asarray(unpacked[:Ne, :])
 
@@ -75,12 +75,12 @@ cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne):
         #     unpacked[example] += ((chunk & mask) >> bit)
         #     mask <<= 1
         #     example -= 1
-        mask = PACKED_HIGH_BIT_SET
+        mask = 1
         example = c * PACKED_SIZE
         chunk = packed_vec[c]
         for bit in range(PACKED_SIZE):
             unpacked[example] += ((chunk & mask) >> bit)
-            mask >>= 1
+            mask <<= 1
             example += 1
     return np.asarray(unpacked[:Ne])
 
