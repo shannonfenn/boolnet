@@ -1,26 +1,30 @@
+# cython: language_level=3
 import cython
 import numpy as np
 cimport numpy as np
 from copy import deepcopy
 
 from BoolNet.boolnetwork import BoolNetwork
-import BoolNet.BitErrorCython as BitError
+from BoolNet.biterror import STANDARD_EVALUATORS
+from BoolNet.biterror cimport StandardEvaluator
 from BoolNet.packing cimport packed_type_t, generate_end_mask, f_type, function_list
 from BoolNet.packing import packed_type
 
 
 cdef class StaticNetworkState:
     cdef:
-        readonly unsigned int Ne, Ni, No, Ng
+        readonly unsigned int Ne, Ni, No, Ng, cols
         packed_type_t[:, :] activation, inputs, outputs,
-        packed_type_t[:, :] target, error, error_scratch
+        packed_type_t[:, :] target, error
         packed_type_t zero_mask
+        StandardEvaluator err_evaluator
         public object network
 
     def __init__(self, network,
                  packed_type_t[:, :] inputs,
                  packed_type_t[:, :] target,
-                 unsigned int Ne):
+                 unsigned int Ne,
+                 metric):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
@@ -30,6 +34,7 @@ cdef class StaticNetworkState:
         self.Ne = Ne
         self.Ni = inputs.shape[0]
         self.No = target.shape[0]
+        self.cols = inputs.shape[1]
 
         # transpose and pack into integers
         self.target = np.array(target)
@@ -46,10 +51,9 @@ cdef class StaticNetworkState:
 
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
-        self.error_scratch = np.empty_like(self.target)
 
-        self.Ng = network.Ng    # this prevents invariant issue
         self.set_network(network)
+        self.set_metric(metric)
 
     def set_network(self, network):
         # check invariants hold
@@ -60,6 +64,10 @@ cdef class StaticNetworkState:
         # force reevaluation of the copied network
         self.network._evaluated = False
         self.network.first_unevaluated_gate = 0
+
+    def set_metric(self, metric):
+        eval_class, msb = STANDARD_EVALUATORS[metric]
+        self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
 
     property input_matrix:
         def __get__(self):
@@ -86,8 +94,7 @@ cdef class StaticNetworkState:
 
     def metric_value(self, metric):
         self.evaluate()
-        return BitError.metric_value(self.error, self.error_scratch,
-                                     self.Ne, self.zero_mask, metric)
+        return self.err_evaluator(self.error)
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -219,7 +226,7 @@ cdef class StaticNetworkState:
 
 
     cdef _check_network_invariants(self, network):
-        if network.Ng != self.Ng:
+        if self.Ng > 0 and network.Ng != self.Ng:
             raise ValueError(
                 ('Network gate # ({}) does not match that of the network '
                 'this evaluator was instantiatied with ({}).').format(network.Ng, self.Ng))
@@ -273,5 +280,5 @@ cdef class StaticNetworkState:
 
 #     def metric_value(self, metric):
 #         self.evaluate()
-#         return BitError.metric_value(self.error, self.error_scratch,
+#         return biterror.metric_value(self.error, self.error_scratch,
 #                                            self.Ne, self.zero_mask, metric)
