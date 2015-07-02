@@ -27,7 +27,8 @@ cpdef pack_bool_matrix(np.ndarray mat):
     for f in range(Nf):
         for c in range(num_chunks):
             for bit in range(PACKED_SIZE):
-                packed[f, c] |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << (PACKED_SIZE-bit-1))
+                # packed[f, c] |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << (PACKED_SIZE-bit-1))
+                packed[f, c] |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << bit)
     return np.asarray(packed)
 
 
@@ -41,13 +42,20 @@ cpdef unpack_bool_matrix(packed_type_t[:, :] packed_mat, size_t Ne):
     unpacked = np.zeros((num_chunks*PACKED_SIZE, Nf), dtype=np.uint8)
     for f in range(Nf):
         for c in range(num_chunks):
-            mask = 1
-            example = (c + 1) * PACKED_SIZE - 1
+            # mask = 1
+            # example = (c + 1) * PACKED_SIZE - 1
+            # chunk = packed_mat[f, c]
+            # for bit in range(PACKED_SIZE):
+            #     unpacked[example, f] += ((chunk & mask) >> bit)
+            #     mask <<= 1
+            #     example -= 1
+            mask = PACKED_HIGH_BIT_SET
+            example = c * PACKED_SIZE
             chunk = packed_mat[f, c]
             for bit in range(PACKED_SIZE):
                 unpacked[example, f] += ((chunk & mask) >> bit)
-                mask <<= 1
-                example -= 1
+                mask >>= 1
+                example += 1
     return np.asarray(unpacked[:Ne, :])
 
 
@@ -60,13 +68,20 @@ cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne):
     num_chunks = packed_vec.size
     unpacked = np.zeros(num_chunks*PACKED_SIZE, dtype=np.uint8)
     for c in range(num_chunks):
-        mask = 1
-        example = (c + 1) * PACKED_SIZE - 1
+        # mask = 1
+        # example = (c + 1) * PACKED_SIZE - 1
+        # chunk = packed_vec[c]
+        # for bit in range(PACKED_SIZE):
+        #     unpacked[example] += ((chunk & mask) >> bit)
+        #     mask <<= 1
+        #     example -= 1
+        mask = PACKED_HIGH_BIT_SET
+        example = c * PACKED_SIZE
         chunk = packed_vec[c]
         for bit in range(PACKED_SIZE):
             unpacked[example] += ((chunk & mask) >> bit)
-            mask <<= 1
-            example -= 1
+            mask >>= 1
+            example += 1
     return np.asarray(unpacked[:Ne])
 
 
@@ -79,10 +94,14 @@ cpdef packed_type_t generate_end_mask(Ne):
     bits_to_remain = Ne % PACKED_SIZE
 
     if bits_to_remain != 0:
-        shift = 1
+        # shift = 1
+        # for b in range(PACKED_SIZE-bits_to_remain):
+        #     end_mask -= shift
+        #     shift <<= 1
+        shift = PACKED_HIGH_BIT_SET
         for b in range(PACKED_SIZE-bits_to_remain):
-            end_mask -= shift
-            shift <<= 1
+            end_mask &= ~shift
+            shift >>= 1
     return end_mask
 
 function_list = [__f0, __f1, __f2, __f3, __f4, __f5, __f6, __f7,
