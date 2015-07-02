@@ -227,7 +227,8 @@ class TestFunctionality:
         # a value may not have been specified for all metrics
         # on this test network
         evaluator = any_test_network['evaluator'][network_type]
-        actual = evaluator.metric_value(metric)
+        evaluator.set_metric(metric)
+        actual = evaluator.metric_value()
         metric_values = any_test_network['metric value'][network_type]
         expected = metric_values[str(metric)]
         assert np.array_equal(actual, expected)
