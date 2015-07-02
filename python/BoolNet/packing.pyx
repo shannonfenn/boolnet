@@ -10,10 +10,26 @@ PACKED_HIGH_BIT_SET = 0x8000000000000000
 packed_type = np.uint64
 
 
+cpdef pack_chunk(np.uint8_t[:, :] mat, packed_type_t[:, :] packed, size_t column):
+    cdef:
+        size_t Nf, f, bit
+        packed_type_t chunk
+
+    assert mat.shape[0] == PACKED_SIZE
+
+    Nf = mat.shape[1]
+    # build packed matrix
+    for f in range(Nf):
+        chunk = 0
+        for bit in range(PACKED_SIZE):
+            chunk |= <packed_type_t>(mat[bit, f]) << bit
+        packed[f, column] = chunk
+
+
 cpdef pack_bool_matrix(np.ndarray mat):
     cdef:
-        size_t Ne, Nf, num_chunks, f, c, bit, example
-        packed_type_t mask, chunk
+        size_t Ne, Nf, num_chunks, f, c, bit
+        packed_type_t chunk
         packed_type_t[:, :] packed
         np.ndarray[np.uint8_t, ndim=2] padded
 
@@ -23,12 +39,13 @@ cpdef pack_bool_matrix(np.ndarray mat):
     padded = np.zeros((num_chunks * PACKED_SIZE, Nf), dtype=np.uint8)
     padded[:Ne, :] = mat
     # build packed matrix
-    packed = np.zeros((Nf, num_chunks), dtype=np.uint64)
+    packed = np.empty((Nf, num_chunks), dtype=np.uint64)
     for f in range(Nf):
         for c in range(num_chunks):
+            chunk = 0
             for bit in range(PACKED_SIZE):
-                # packed[f, c] |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << (PACKED_SIZE-bit-1))
-                packed[f, c] |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << bit)
+                chunk |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << bit)
+            packed[f, c] = chunk
     return np.asarray(packed)
 
 
@@ -41,16 +58,9 @@ cpdef unpack_bool_matrix(packed_type_t[:, :] packed_mat, size_t Ne):
     Nf, num_chunks = packed_mat.shape[0], packed_mat.shape[1]
     unpacked = np.zeros((num_chunks*PACKED_SIZE, Nf), dtype=np.uint8)
     for f in range(Nf):
+        example = 0
         for c in range(num_chunks):
-            # mask = 1
-            # example = (c + 1) * PACKED_SIZE - 1
-            # chunk = packed_mat[f, c]
-            # for bit in range(PACKED_SIZE):
-            #     unpacked[example, f] += ((chunk & mask) >> bit)
-            #     mask <<= 1
-            #     example -= 1
             mask = 1
-            example = c * PACKED_SIZE
             chunk = packed_mat[f, c]
             for bit in range(PACKED_SIZE):
                 unpacked[example, f] += ((chunk & mask) >> bit)
