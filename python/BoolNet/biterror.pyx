@@ -73,13 +73,7 @@ cdef class StandardE1(StandardEvaluator):
         super().__init__(Ne, No, cols, msb)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
-        cdef size_t i
-        cdef double result = 0.0
-
-        for i in range(self.No):
-            result += popcount_matrix(E) / self.divisor
-
-        return result
+        return popcount_matrix(E) / self.divisor
 
 
 cdef class StandardE2(StandardEvaluator):
@@ -96,9 +90,9 @@ cdef class StandardE2(StandardEvaluator):
         cdef double result = 0.0
             
         for i in range(self.No):
-            result += popcount_vector(E[i, :]) / self.divisor * self.weight_vector[i] 
+            result += popcount_vector(E[i, :]) * self.weight_vector[i] 
 
-        return result
+        return result / self.divisor
 
 
 cdef class StandardE3(StandardEvaluator):
@@ -115,9 +109,9 @@ cdef class StandardE3(StandardEvaluator):
         for i in range(self.No):
             for c in range(self.cols):
                 self.row_disjunction[c] |= E[r, c]
-            result += popcount_vector(self.row_disjunction) / self.divisor
+            result += popcount_vector(self.row_disjunction)
             r += self.step
-        return result
+        return result / self.divisor
 
 
 cdef class StandardE4(StandardEvaluator):
@@ -125,22 +119,28 @@ cdef class StandardE4(StandardEvaluator):
         super().__init__(Ne, No, cols, msb)
         row_width = cols * PACKED_SIZE
         self.end_subtractor = row_width - Ne % row_width
+        print(Ne)
+        print(row_width)
+        print(self.end_subtractor)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
-        cdef double result = 0.0
+        cdef double result
         
         r = self.start
+        print(self.end_subtractor)
+        print(np.asarray(E[r, :]))
         row_sum = floodcount_vector(E[r, :], self.end_subtractor)
-        result = row_sum / self.divisor
+        print(row_sum)
+        result = row_sum
 
         r += self.step
         for i in range(self.No-1):
             row_sum = max(row_sum, floodcount_vector(E[r, :], self.end_subtractor))
-            result += row_sum / self.divisor
+            result += row_sum
             r += self.step
 
-        return result
+        return result / self.divisor
 
 
 cdef class StandardE5(StandardEvaluator):
@@ -158,7 +158,7 @@ cdef class StandardE5(StandardEvaluator):
         for i in range(self.No):
             row_sum = floodcount_vector(E[r, :], self.end_subtractor)
             if row_sum > 0:
-                return (self.row_width / self.divisor * i) + (row_sum / self.divisor)
+                return (self.row_width * i + row_sum) / self.divisor
             r += self.step
         return 0.0
 
@@ -177,7 +177,7 @@ cdef class StandardE6(StandardEvaluator):
         for i in range(self.No):
             row_sum = popcount_vector(E[r, :])
             if row_sum > 0:
-                return (self.row_width / self.divisor * i) + (row_sum / self.divisor)
+                return (self.row_width * i + row_sum) / self.divisor
             r += self.step
         return 0.0
 
