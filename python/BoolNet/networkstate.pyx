@@ -14,6 +14,7 @@ from BoolNet.packing import packed_type
 cdef class StaticNetworkState:
     cdef:
         readonly unsigned int Ne, Ni, No, Ng, cols
+        readonly metric
         packed_type_t[:, :] activation, inputs, outputs,
         packed_type_t[:, :] target, error
         packed_type_t zero_mask
@@ -24,7 +25,7 @@ cdef class StaticNetworkState:
                  packed_type_t[:, :] inputs,
                  packed_type_t[:, :] target,
                  unsigned int Ne,
-                 metric):
+                 metric=None):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
@@ -66,8 +67,13 @@ cdef class StaticNetworkState:
         self.network.first_unevaluated_gate = 0
 
     def set_metric(self, metric):
-        eval_class, msb = STANDARD_EVALUATORS[metric]
-        self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
+        self.metric = metric
+        if metric is not None:
+            eval_class, msb = STANDARD_EVALUATORS[metric]
+            self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
+        else:
+            self.err_evaluator = None
+
 
     property input_matrix:
         def __get__(self):
@@ -92,9 +98,9 @@ cdef class StaticNetworkState:
             self.evaluate()
             return self.error
 
-    def metric_value(self, metric):
+    def metric_value(self):
         self.evaluate()
-        return self.err_evaluator(self.error)
+        return self.err_evaluator.evaluate(self.error)
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -232,12 +238,12 @@ cdef class StaticNetworkState:
                 'this evaluator was instantiatied with ({}).').format(network.Ng, self.Ng))
         if not isinstance(network, BoolNetwork):
             raise ValueError('\"network\" parameter not a subclass of \"BoolNetwork\"')
-        if network.Ni != self.inputs.shape[0]:
+        if network.Ni != self.Ni:
             raise ValueError(('Network input # ({}) does not match input '
-                             '({}).').format(network.No, self.inputs.shape[0]))
-        if network.No != self.target.shape[0]:
+                             '({}).').format(network.No, self.Ni))
+        if network.No != self.No:
             raise ValueError(('Network output # ({}) does not match target '
-                             '({}).').format(network.No, self.target.shape[0]))
+                             '({}).').format(network.No, self.No))
 
 # cdef class DynamicNetworkState(StaticNetworkState):
 
