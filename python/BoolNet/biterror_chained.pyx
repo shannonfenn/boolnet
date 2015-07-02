@@ -9,30 +9,23 @@ from BoolNet.packing import packed_type
 
 
 chained_evaluators = {
-    E1: ChainedEvaluator,
-    E2L: ChainedE2,
-    E2M: ChainedE2,
-    E3L: ChainedE3,
-    E3M: ChainedE3,
-    E4L: ChainedE4,
-    E4M: ChainedE4,
-    E5L: ChainedE5,
-    E5M: ChainedE5,
-    E6L: ChainedE6,
-    E6M: ChainedE6,
-    E7L: ChainedE7,
-    E7M: ChainedE7,
+    E1: ChainedE1,
+    E2L: ChainedE2, E2M: ChainedE2,
+    E3L: ChainedE3, E3M: ChainedE3,
+    E4L: ChainedE4, E4M: ChainedE4,
+    E5L: ChainedE5, E5M: ChainedE5,
+    E6L: ChainedE6, E6M: ChainedE6,
+    E7L: ChainedE7, E7M: ChainedE7,
     ACCURACY: ChainedAccuracy,
     PER_OUTPUT: ChainedPerOutput
 }
 
 
 cdef class ChainedEvaluator:
-    cdef size_t Ne, No, cols, start, step
+    cdef size_t No, cols, start, step
     cdef double divisor
 
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        self.Ne = Ne
         self.No = No
         self.divisor = No * Ne
         self.cols = cols
@@ -49,12 +42,14 @@ cdef class ChainedPerOutput:
         size_t No, start, step
         double divisor
         np.uint64_t[:] row_accumulator
+        double[:] accumulator
 
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         self.No = No
         self.divisor = No * Ne
+        self.accumulator = np.zeros(self.No, dtype=np.float64)
 
-    cpdef void reset(self) except *:
+    cpdef reset(self):
         self.row_accumulator[:] = 0
 
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, bint last=False):
@@ -64,12 +59,11 @@ cdef class ChainedPerOutput:
 
     cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E):
         cdef size_t i
-        cdef double[:] result = np.zeros(self.No, dtype=np.float64)
 
         self.partial_evaluation(E)
         for i in range(self.No):
-            result[i] = self.row_accumulator[i] / self.divisor
-        return result
+            self.accumulator[i] = self.row_accumulator[i] / self.divisor
+        return self.accumulator
 
 
 cdef class ChainedAccuracy(ChainedEvaluator):
@@ -98,7 +92,7 @@ cdef class ChainedAccuracy(ChainedEvaluator):
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
         self.partial_evaluation(E)
-        return self.row_accumulator / self.divisor
+        return self.accumulator / self.divisor
 
 
 cdef class ChainedE1(ChainedEvaluator):
@@ -134,7 +128,11 @@ cdef class ChainedE2(ChainedE1):
 
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
-        self.divisor = self.Ne * (self.No + 1.0) * self.No / 2.0
+        self.divisor = Ne * (No + 1.0) * No / 2.0
+        if msb:
+            self.weight_vector = np.arange(1, No+1, dtype=np.float64)
+        else:
+            self.weight_vector = np.arange(No, 0, -1, dtype=np.float64)
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
         cdef size_t i
@@ -244,7 +242,7 @@ cdef class ChainedE5(ChainedEvaluator):
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
         self.last_calc(E)
         if self.err_rows > 0:
-            return self.row_width / self.divisor * (self.err_rows - 1) + self.row_accumulator
+            return (self.row_width - self.end_subtractor) / self.divisor * (self.err_rows - 1) + self.row_accumulator
         else:
             return 0.0
 
@@ -280,6 +278,7 @@ cdef class ChainedE7(ChainedEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_width = self.cols * PACKED_SIZE
+        self.row_width -= self.row_width - Ne % self.row_width
         self.reset()
 
     cpdef reset(self):
