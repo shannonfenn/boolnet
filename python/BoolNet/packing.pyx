@@ -1,4 +1,4 @@
-# cython: profile=False
+# cython: language_level=3, profile=False
 import numpy as np
 cimport numpy as np
 from libc.limits cimport ULLONG_MAX

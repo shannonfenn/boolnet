@@ -1,3 +1,4 @@
+# cython: language_level=3
 # cython: profile=False
 # distutils: libraries = gsl, gslcblas
 
