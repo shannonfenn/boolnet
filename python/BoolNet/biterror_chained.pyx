@@ -47,7 +47,7 @@ cdef class ChainedPerOutput:
 
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         self.No = No
-        self.divisor = No * Ne
+        self.divisor = Ne
         self.accumulator = np.zeros(self.No, dtype=np.float64)
 
     cpdef reset(self):
@@ -74,8 +74,9 @@ cdef class ChainedAccuracy(ChainedEvaluator):
 
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
-        self.row_disjunction = np.zeros(cols, dtype=packed_type)
+        self.divisor = Ne
         self.accumulator = 0
+        self.row_disjunction = np.zeros(cols, dtype=packed_type)
 
     cpdef reset(self):
         self.accumulator = 0
@@ -225,7 +226,7 @@ cdef class ChainedE5(ChainedEvaluator):
             row_sum = floodcount_vector(E[r, :], <int>last * self.end_subtractor)
             if row_sum > 0:
                 self.row_accumulator = row_sum
-                self.err_rows = i
+                self.err_rows = self.No - i
                 return
             r += self.step
 
@@ -262,7 +263,7 @@ cdef class ChainedE6(ChainedE5):
             if row_sum > 0:
                 # more important feature has error so overwrite accumulator
                 self.row_accumulator = row_sum
-                self.err_rows = i
+                self.err_rows = self.No - i
                 return
             r = self.start + self.step
 
@@ -293,7 +294,7 @@ cdef class ChainedE7(ChainedEvaluator):
         for i in range(self.err_rows, self.No):
             for c in range(self.cols):
                 if E[r, c] > 0:
-                    self.err_rows = i
+                    self.err_rows = self.No - i
                     return
             r += self.step
 
