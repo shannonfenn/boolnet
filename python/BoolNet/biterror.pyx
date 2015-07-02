@@ -36,10 +36,10 @@ cdef class StandardEvaluator:
             self.step = 1
 
 
-cdef class StandardPerOutput:
+cdef class StandardPerOutput(StandardEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        self.No = No
-        self.divisor = No * Ne
+        super().__init__(Ne, No, cols, msb)
+        self.divisor = Ne
         self.accumulator = np.zeros(self.No, dtype=np.float64)
 
     cpdef double[:] evaluate(self, packed_type_t[:, ::1] E):
@@ -54,6 +54,7 @@ cdef class StandardAccuracy(StandardEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_disjunction = np.zeros(cols, dtype=packed_type)
+        self.divisor = Ne
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, c
@@ -65,7 +66,7 @@ cdef class StandardAccuracy(StandardEvaluator):
                 self.row_disjunction[c] |= E[r, c]
             r += self.step
 
-        return popcount_vector(self.row_disjunction) / self.divisor
+        return 1.0 - popcount_vector(self.row_disjunction) / self.divisor
 
 
 cdef class StandardE1(StandardEvaluator):
@@ -119,19 +120,13 @@ cdef class StandardE4(StandardEvaluator):
         super().__init__(Ne, No, cols, msb)
         row_width = cols * PACKED_SIZE
         self.end_subtractor = row_width - Ne % row_width
-        print(Ne)
-        print(row_width)
-        print(self.end_subtractor)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
         cdef double result
         
         r = self.start
-        print(self.end_subtractor)
-        print(np.asarray(E[r, :]))
         row_sum = floodcount_vector(E[r, :], self.end_subtractor)
-        print(row_sum)
         result = row_sum
 
         r += self.step
@@ -146,9 +141,8 @@ cdef class StandardE4(StandardEvaluator):
 cdef class StandardE5(StandardEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
-        self.row_width = self.cols * PACKED_SIZE
-        self.end_subtractor = self.row_width - Ne % self.row_width
-        self.row_width -= self.end_subtractor
+        self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
+        self.row_width = Ne
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
@@ -158,7 +152,7 @@ cdef class StandardE5(StandardEvaluator):
         for i in range(self.No):
             row_sum = floodcount_vector(E[r, :], self.end_subtractor)
             if row_sum > 0:
-                return (self.row_width * i + row_sum) / self.divisor
+                return (self.row_width * (self.No - i - 1) + row_sum) / self.divisor
             r += self.step
         return 0.0
 
@@ -177,7 +171,7 @@ cdef class StandardE6(StandardEvaluator):
         for i in range(self.No):
             row_sum = popcount_vector(E[r, :])
             if row_sum > 0:
-                return (self.row_width * i + row_sum) / self.divisor
+                return (self.row_width * (self.No - i - 1) + row_sum) / self.divisor
             r += self.step
         return 0.0
 
@@ -194,6 +188,6 @@ cdef class StandardE7(StandardE6):
         for i in range(self.No):
             for c in range(self.cols):
                 if E[r, c] > 0:
-                    return self.row_width / self.divisor * (i + 1)
+                    return self.row_width / self.divisor * (self.No - i)
             r += self.step
         return 0.0

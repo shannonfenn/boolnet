@@ -9,11 +9,8 @@ cdef class StandardEvaluator:
     cdef double divisor
 
 
-cdef class StandardPerOutput:
-    cdef:
-        size_t No, start, step
-        double divisor
-        double[:] accumulator
+cdef class StandardPerOutput(StandardEvaluator):
+    cdef double[:] accumulator
 
     cpdef double[:] evaluate(self, packed_type_t[:, ::1] E)
 
