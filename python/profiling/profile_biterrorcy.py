@@ -12,7 +12,7 @@ sys.path.append(os.path.expanduser('~/HMRI/code/python/'))
 import pyximport
 pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
 
-from BoolNet.BitError import all_metrics, metric_name, metric_value
+from BoolNet.metric_names import all_metrics, metric_name, metric_value
 
 from BoolNet.Packing import pack_bool_matrix, packed_type, generate_end_mask
 

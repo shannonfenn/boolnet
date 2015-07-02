@@ -2,7 +2,7 @@ from datetime import datetime
 import random
 from BoolNet.boolnetwork import BoolNetwork
 from BoolNet.boolnetwork_rand import RandomBoolNetwork
-from BoolNet.BitError import Metric, metric_from_name
+from BoolNet.metric_names import Metric, metric_from_name
 from BoolNet.Learners import basic_learn, stratified_learn
 import BoolNet.fastrand as fastrand
 import BoolNet.Optimisers as Optimisers

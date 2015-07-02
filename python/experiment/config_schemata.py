@@ -4,7 +4,7 @@ from good import message, Allow, Optional
 
 from experiment.boolmapping import BoolMapping
 from BoolNet.LearnBoolNet import LEARNERS, OPTIMISERS
-from BoolNet.BitError import all_metric_names
+from BoolNet.metric_names import all_metric_names
 
 metrics = list(all_metric_names())
 

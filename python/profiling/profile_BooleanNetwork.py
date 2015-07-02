@@ -14,9 +14,7 @@ pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
 
 from BoolNet.NetworkEvaluator import NetworkEvaluator
 from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
-from BoolNet.BitError import (all_metrics, metric_name, Metric, E1, E2_MSB, E2_LSB, E3_MSB, E3_LSB,
-                              E4_MSB, E4_LSB, E5_MSB, E5_LSB, E6_MSB, E6_LSB, E7_MSB, E7_LSB,
-                              ACCURACY, PER_OUTPUT)
+from BoolNet.metric_names import all_metrics, metric_name, Metric
 from BoolNet.BooleanNetwork import BooleanNetwork
 from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
 from BoolNet.Packing import pack_bool_matrix

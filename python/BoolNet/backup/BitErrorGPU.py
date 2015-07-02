@@ -1,5 +1,6 @@
-from BoolNet.BitError import (E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
-                      E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT)
+from BoolNet.metric_names import (
+    E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
+    E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT)
 import numpy as np
 from math import ceil
 # CUDA
