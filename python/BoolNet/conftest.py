@@ -6,30 +6,16 @@ import os
 import numpy as np
 from BoolNet.boolnetwork import BoolNetwork, RandomBoolNetwork
 from BoolNet.packing import pack_bool_matrix
-from BoolNet.BitError import all_metrics
+from BoolNet.metric_names import all_metrics
+import pyximport
+pyximport.install()
+import BoolNet.networkstate
+
 
 if os.path.basename(os.getcwd()) == 'BoolNet':
     TEST_LOCATION = 'test/'
 else:
     TEST_LOCATION = 'BoolNet/test/'
-
-
-# ################ Command line options #################### #
-def pytest_addoption(parser):
-    parser.addoption('--evaluator', action='store', default='cys',
-                     help='evaluator: [py | cys | cyd | gpu]')
-
-
-def pytest_runtest_setup(item):
-    if ('gpu' in item.keywords and
-       item.config.getoption('--evaluator') != 'gpu'):
-        pytest.skip('need \'gpu\' option to run')
-    if ('cython' in item.keywords and
-       item.config.getoption('--evaluator') not in ['cys', 'cyd']):
-        pytest.skip('need \'cy\' option to run')
-    if ('python' in item.keywords and
-       item.config.getoption('--evaluator') != 'py'):
-        pytest.skip('need \'py\' option to run')
 
 
 # ############ Helpers for fixtures ############# #
@@ -86,24 +72,13 @@ def harness_to_fixture(stream, evaluator_class):
 
 
 # #################### Fixtures ############################ #
-@pytest.fixture
+# @pytest.fixture(params=['static', 'dynamic'])
+@pytest.fixture(params=['static'])
 def evaluator_class(request):
-    if request.config.getoption("--evaluator") == 'gpu':
-        import BoolNet.NetworkEvaluatorGPU
-        return BoolNet.NetworkEvaluatorGPU.NetworkEvaluatorGPU
-    elif request.config.getoption("--evaluator") == 'cys':
-        import pyximport
-        pyximport.install()
-        import BoolNet.networkstate
+    if request.param == 'static':
         return BoolNet.networkstate.StaticNetworkState
-    elif request.config.getoption("--evaluator") == 'cyd':
-        import pyximport
-        pyximport.install()
-        import BoolNet.networkstate
-        return BoolNet.networkstate.DynamicNetworkState
     else:
-        import BoolNet.NetworkEvaluator
-        return BoolNet.NetworkEvaluator.NetworkEvaluator
+        return BoolNet.networkstate.DynamicNetworkSta
 
 
 @pytest.fixture(params=list(all_metrics()))
