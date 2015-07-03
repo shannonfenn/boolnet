@@ -13,7 +13,7 @@ import argparse                     # CLI
 import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
-from BoolNet.LearnBoolNet import learn_bool_net
+from boolnet.learning.learn_boolnet import learn_bool_net
 import experiment.config_tools as config_tools
 
 
@@ -222,7 +222,3 @@ def main():
         notify(pb, settings['name'], result_dir, total_time)
     except PushbulletError as err:
         print('Failed to send PushBullet notification: {}.'.format(err))
-
-
-if __name__ == '__main__':
-    main()
