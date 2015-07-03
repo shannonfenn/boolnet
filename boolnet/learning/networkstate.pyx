@@ -13,7 +13,7 @@ from boolnet.bintools.packing import packed_type
 
 cdef class StaticNetworkState:
     cdef:
-        readonly unsigned int Ne, Ni, No, Ng, cols
+        readonly size_t Ne, Ni, No, Ng, cols
         readonly metric
         packed_type_t[:, :] activation, inputs, outputs,
         packed_type_t[:, :] target, error
@@ -21,11 +21,8 @@ cdef class StaticNetworkState:
         StandardEvaluator err_evaluator
         public object network
 
-    def __init__(self, network,
-                 packed_type_t[:, :] inputs,
-                 packed_type_t[:, :] target,
-                 unsigned int Ne,
-                 metric=None):
+    def __init__(self, network, packed_type_t[:, :] inputs,
+                 packed_type_t[:, :] target, size_t Ne, metric=None):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
@@ -110,9 +107,9 @@ cdef class StaticNetworkState:
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
         cdef:
-            unsigned int r
-            unsigned int rows = matrix.shape[0]
-            unsigned int cols = matrix.shape[1]
+            size_t r
+            size_t rows = matrix.shape[0]
+            size_t cols = matrix.shape[1]
 
         for r in range(rows):
             matrix[r, cols-1] &= self.zero_mask
@@ -245,43 +242,197 @@ cdef class StaticNetworkState:
             raise ValueError(('Network output # ({}) does not match target '
                              '({}).').format(network.No, self.No))
 
- #cdef class DynamicNetworkState(StaticNetworkState):
+ cdef class ChainedNetworkState:
+    cdef:
+        readonly size_t Ne, Ni, No, Ng, cols
+        readonly metric
+        packed_type_t[:, :] activation, inputs, outputs,
+        packed_type_t[:, :] target, error
+        packed_type_t zero_mask
+        ChainedEvaluator err_evaluator
+        public object network
 
- #    def __init__(self, network, example_generator, unsigned int Ne):
- #        ''' Sets up the activation and error matrices for a new network.
- #            Note: This copies the provided network, so do not expect modifications
- #                  to pass through transparently without reacquiring the new alias.'''
- #        # check invariants hold
- #        _check_invariants(network, inputs, target, Ne)
+    def __init__(self, network, example_generator, window_size):
+        ''' Sets up the activation and error matrices for a new network.
+            Note: This copies the provided network, so do not expect modifications
+                  to pass through transparently without reacquiring the new alias.'''
+        if not isinstance(window_size, int) or window_size <= 0:
+            raise ValueError('Invalid window_size.')
 
- #        self.Ne = Ne
- #        self.Ni = inputs.shape[0]
- #        self.No = target.shape[0]
+        self.Ne = example_generator.Ne
+        self.Ni = example_generator.Ni
+        self.No = example_generator.No
+        self.cols = window_size
+        self.block_width = (self.cols * PACKED_SIZE)
+        if self.Ne % self.block_width == 0:
+           self.blocks = self.Ne //
 
- #        # transpose and pack into integers
- #        self.target = np.array(target)
-
- #        self.zero_mask = generate_end_mask(Ne)
+        self.zero_mask = generate_end_mask(self.Ne)
         
- #        # instantiate a matrix for activation
- #        self.activation = np.empty((network.Ng + self.Ni, inputs.shape[1]), dtype=packed_type)
- #        # copy inputs into activation matrix
- #        self.activation[:self.Ni, :] = inputs
- #        # create input and output view into activation matrix
- #        self.inputs = self.activation[:self.Ni, :]
- #        self.outputs = self.activation[-self.No:, :]
+        self.target = np.empty((self.No, self.cols), dtype=packed_type)
+        # instantiate a matrix for activation
+        self.activation = np.empty((network.Ng + self.Ni, self.cols), dtype=packed_type)
+        # copy inputs into activation matrix
+        self.activation[:self.Ni, :] = inputs
+        # create input and output view into activation matrix
+        self.inputs = self.activation[:self.Ni, :]
+        self.outputs = self.activation[-<int>self.No:, :]
 
- #        # instantiate matrices for error
- #        self.error = np.empty_like(self.target)
- #        self.error_scratch = np.empty_like(self.target)
+        # instantiate matrices for error
+        self.error = np.empty_like(self.target)
+        self.error_scratch = np.empty_like(self.target)
 
- #        # prevent another evaluator causing problems with this network
- #        self.network = deepcopy(network)
- #        # force reevaluation of the copied network
- #        self.network._evaluated = False
- #        self.network.first_unevaluated_gate = 0
+        self.set_network(network)
+        self.set_metric(metric)
 
- #    def metric_value(self, metric):
- #        self.evaluate()
- #        return biterror.metric_value(self.error, self.error_scratch,
- #                                           self.Ne, self.zero_mask, metric)
+    def set_network(self, network):
+        # check invariants hold
+        self._check_network_invariants(network)
+        self.Ng = network.Ng
+        # prevent another evaluator causing problems with this network
+        self.network = deepcopy(network)
+        # force reevaluation of the copied network
+        self.network._evaluated = False
+        self.network.first_unevaluated_gate = 0
+
+    def set_metric(self, metric):
+        self.metric = metric
+        if metric is not None:
+            eval_class, msb = CHAINED_EVALUATORS[metric]
+            self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
+        else:
+            self.err_evaluator = None
+
+    def metric_value(self):
+        # THIS IS WHERE THE MAGIC NEEDS TO HAPPEN
+
+        # LOOP
+        #   load next inp / tgt pair
+        #   evaluate network
+        #   partialevaluate metric value
+        # END LOOP
+        # finalise metric value
+        self.evaluate()
+        return self.err_evaluator.evaluate(self.error)
+
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.nonecheck(False)
+    @cython.cdivision(True)
+    cdef void _zero_mask_last_column(self, packed_type_t[:,:] matrix):
+        # when evaluating make a zeroing-mask '11110000' to AND the last
+        # column in the error matrix with to clear the value back to zero
+        cdef:
+            size_t r
+            size_t rows = matrix.shape[0]
+            size_t cols = matrix.shape[1]
+
+        for r in range(rows):
+            matrix[r, cols-1] &= self.zero_mask
+
+    cpdef evaluate(self):
+        ''' Evaluate the activation and error matrices if the
+            network has been modified since the last evaluation. '''
+        if hasattr(self.network, 'transfer_functions'):
+            self._evaluate_random()
+        else:
+            self._evaluate_NAND()
+
+        self._zero_mask_last_column(self.activation)   # this does output_matrix as well (since it is a view)
+        self._zero_mask_last_column(self.error)
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.nonecheck(False)
+    @cython.cdivision(True)
+    cdef void _evaluate_random(self):
+        ''' Evaluate the activation and error matrices for the network
+            getting node TFs from network. '''
+        cdef:
+            size_t Ni, No, Ng, cols, c, g, o, in1, in2, start
+            packed_type_t[:, :] activation, outputs, error, target
+            np.uint8_t[:] transfer_functions
+            np.uint32_t[:, :] gates
+            f_type func
+
+        Ng = self.Ng
+        Ni = self.Ni
+        No = self.No
+        # local memoryviews to avoid 'self' evaluation later
+        activation = self.activation
+        outputs = self.outputs
+        error = self.error
+        target = self.target
+        gates = self.network.gates
+        transfer_functions = self.network.transfer_functions
+
+        cols = activation.shape[1]
+
+        # evaluate the state matrix
+        start = self.network.first_unevaluated_gate
+
+        for g in range(start, Ng):
+            in1 = gates[g, 0]
+            in2 = gates[g, 1]
+            func = function_list[transfer_functions[g]]
+            for c in range(cols):
+                activation[Ni+g, c] = func(activation[in1, c], activation[in2, c])
+
+        # evaluate the error matrix
+        for o in range(No):
+            for c in range(cols):
+                error[o, c] = (target[o, c] ^ outputs[o, c])
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.nonecheck(False)
+    @cython.cdivision(True)
+    cdef void _evaluate_NAND(self):
+        ''' Evaluate the activation and error matrices for the network
+            assuming each node TF is NAND. '''
+        cdef:
+            size_t Ni, No, Ng, cols, c, g, o, in1, in2, start
+            packed_type_t[:, :] activation, outputs, error, target
+            np.uint32_t[:, :] gates
+                
+        Ng = self.Ng
+        Ni = self.Ni
+        No = self.No
+
+        # local memoryviews to avoid 'self' evaluation later
+        activation = self.activation
+        outputs = self.outputs
+        error = self.error
+        target = self.target
+        gates = self.network.gates
+        
+        cols = activation.shape[1]
+
+        # evaluate the state matrix
+        start = self.network.first_unevaluated_gate
+        for g in range(start, Ng):
+            in1 = gates[g, 0]
+            in2 = gates[g, 1]
+            for c in range(cols):
+                activation[Ni+g, c] = ~(activation[in1, c] & activation[in2, c])
+
+        # evaluate the error matrix
+        for o in range(No):
+            for c in range(cols):
+                error[o, c] = (target[o, c] ^ outputs[o, c])
+
+
+    cdef _check_network_invariants(self, network):
+        if self.Ng > 0 and network.Ng != self.Ng:
+            raise ValueError(
+                ('Network gate # ({}) does not match that of the network '
+                'this evaluator was instantiatied with ({}).').format(network.Ng, self.Ng))
+        if not isinstance(network, BoolNetwork):
+            raise ValueError('\"network\" parameter not a subclass of \"BoolNetwork\"')
+        if network.Ni != self.Ni:
+            raise ValueError(('Network input # ({}) does not match input '
+                             '({}).').format(network.No, self.Ni))
+        if network.No != self.No:
+            raise ValueError(('Network output # ({}) does not match target '
+                             '({}).').format(network.No, self.No))
