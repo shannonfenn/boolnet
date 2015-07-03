@@ -3,7 +3,7 @@ from numpy.testing import assert_array_equal as assert_array_equal
 from numpy.random import randint as randint
 from BoolNet.packing import (packed_type, pack_bool_matrix, pack_chunk,
                              unpack_bool_matrix, unpack_bool_vector)
-from pytest import fixture
+from pytest import fixture, fail
 from itertools import zip_longest
 
 
@@ -24,40 +24,50 @@ def matrix_pair(shape):
     return (M1, M2)
 
 
-@fixture(params=randint(low=1, high=100, size=20))
+@fixture(params=randint(low=1, high=64, size=20))
 def chunk_instance(request):
-    size = (64, request.param)
-    return np.array(randint(low=0, high=2, size=size), dtype=np.uint8)
+    No = request.param
+    M = randint(low=0, high=2**(No-1), size=64)
+    M = np.array(M, dtype=packed_type)
+    return (No, M)
 
 
 @fixture
-def chunk_offset_instance(chunk_instance):
+def chunk_offset_instance():
     cols = randint(low=3, high=10)
     offset = randint(low=0, high=cols)
-    return (chunk_instance, cols, offset)
+    return cols, offset
+
+
+def check_equal_transposed(M, M_p):
+    No = M_p.size
+    for i in range(64):
+        for k in range(No):
+            expected = M[i] & (np.uint64(1) << np.uint64(k)) != 0
+            actual = M_p[k] & (np.uint64(1) << np.uint64(i)) != 0
+            if actual != expected:
+                fail('arrays differ at ({}, {}) actual={}, expected={}'.format(
+                    i, k, actual, expected))
 
 
 def test_pack_chunk(chunk_instance):
-    _, No = chunk_instance.shape
-    packed_mat = np.zeros((No, 1), dtype=packed_type)
-    pack_chunk(chunk_instance, packed_mat, 0)
-    for i in range(No):
-        expected = pack_row(chunk_instance[:, i])[0]
-        actual = packed_mat[i]
-        assert expected == actual
+    No = chunk_instance[0]
+    M = chunk_instance[1]
+    M_p = np.zeros((No, 1), dtype=packed_type)
+    pack_chunk(M, M_p, No, 0)
+
+    check_equal_transposed(M, M_p[:, 0])
 
 
-def test_pack_chunk_offset(chunk_offset_instance):
-    chunk_instance = chunk_offset_instance[0]
-    cols = chunk_offset_instance[1]
-    offset = chunk_offset_instance[2]
-    _, No = chunk_instance.shape
-    packed_mat = np.zeros((No, cols), dtype=packed_type)
-    pack_chunk(chunk_instance, packed_mat, offset)
-    for i in range(No):
-        expected = pack_row(chunk_instance[:, i])[0]
-        actual = packed_mat[i, offset]
-        assert expected == actual
+def test_pack_chunk_offset(chunk_instance, chunk_offset_instance):
+    No = chunk_instance[0]
+    M = chunk_instance[1]
+    cols = chunk_offset_instance[0]
+    offset = chunk_offset_instance[1]
+
+    M_p = np.zeros((No, cols), dtype=packed_type)
+    pack_chunk(M, M_p, No, offset)
+    check_equal_transposed(M, M_p[:, offset])
 
 
 def test_packing_invertibility(single_matrix):

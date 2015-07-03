@@ -10,19 +10,18 @@ PACKED_HIGH_BIT_SET = 0x8000000000000000
 packed_type = np.uint64
 
 
-cpdef pack_chunk(np.uint8_t[:, :] mat, packed_type_t[:, :] packed, size_t column):
+cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column):
+    ''' This method assumed mat.shape[0] >= 64.'''
     cdef:
-        size_t Nf, f, bit
-        packed_type_t chunk
-
-    assert mat.shape[0] == PACKED_SIZE
-
-    Nf = mat.shape[1]
+        size_t f, bit
+        packed_type_t chunk, mask
     # build packed matrix
+    mask = 1
     for f in range(Nf):
         chunk = 0
         for bit in range(PACKED_SIZE):
-            chunk |= <packed_type_t>(mat[bit, f]) << bit
+            chunk |= (((mat[bit] & mask) >> f) << bit)
+        mask <<= 1
         packed[f, column] = chunk
 
 
