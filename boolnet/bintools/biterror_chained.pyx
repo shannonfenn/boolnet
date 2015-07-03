@@ -9,16 +9,16 @@ from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
 from boolnet.bintools.packing import packed_type
 
 
-chained_evaluators = {
-    E1: ChainedE1,
-    E2L: ChainedE2, E2M: ChainedE2,
-    E3L: ChainedE3, E3M: ChainedE3,
-    E4L: ChainedE4, E4M: ChainedE4,
-    E5L: ChainedE5, E5M: ChainedE5,
-    E6L: ChainedE6, E6M: ChainedE6,
-    E7L: ChainedE7, E7M: ChainedE7,
-    ACCURACY: ChainedAccuracy,
-    PER_OUTPUT: ChainedPerOutput
+CHAINED_EVALUATORS = {
+    E1:  (ChainedE1, False),
+    E2L: (ChainedE2, False), E2M: (ChainedE2, True),
+    E3L: (ChainedE3, False), E3M: (ChainedE3, True),
+    E4L: (ChainedE4, False), E4M: (ChainedE4, True),
+    E5L: (ChainedE5, False), E5M: (ChainedE5, True),
+    E6L: (ChainedE6, False), E6M: (ChainedE6, True),
+    E7L: (ChainedE7, False), E7M: (ChainedE7, True),
+    ACCURACY: (ChainedAccuracy, False),
+    PER_OUTPUT: (ChainedPerOutput, False)
 }
 
 
