@@ -4,6 +4,7 @@ from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.metric_names import Metric, metric_from_name
 from boolnet.learning.learners import basic_learn, stratified_learn
 from boolnet.learning.optimisers import SA, LAHC
+from boolnet.learning.networkstate import StaticNetworkState, ChainedNetworkState
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import functools
@@ -41,7 +42,7 @@ def learn_bool_net(task):
     return _learn_bool_net(*task)
 
 
-def _learn_bool_net(parameters, evaluator_class):
+def _learn_bool_net(parameters):
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']
     metric = metric_from_name(parameters['optimiser']['metric'])
@@ -82,8 +83,8 @@ def _learn_bool_net(parameters, evaluator_class):
             parameters['network']['node_funcs']))
 
     # make evaluators for the training and test sets
-    training_evaluator = evaluator_class(initial_network, training_set.inputs,
-                                         training_set.target, training_set.Ne)
+    training_evaluator = StaticNetworkState(initial_network, training_set.inputs,
+                                            training_set.target, training_set.Ne)
 
     learner = LEARNERS[learner_name]
     optimiser = OPTIMISERS[optimiser_name]
@@ -97,8 +98,8 @@ def _learn_bool_net(parameters, evaluator_class):
 
     end_time = datetime.now()
 
-    test_evaluator = evaluator_class(training_evaluator.network, test_set.inputs,
-                                     test_set.target, test_set.Ne)
+    test_evaluator = ChainedNetworkState(training_evaluator.network, test_set.inputs,
+                                         test_set.target, test_set.Ne)
 
     results = {
         'Ni':                       Ni,
@@ -118,8 +119,7 @@ def _learn_bool_net(parameters, evaluator_class):
         'test_accuracy':            test_evaluator.metric_value(Metric.ACCURACY),
         'final_network':            final_network.gates,
         'Ne':                       training_set.Ne,
-        'time':                     (end_time - start_time).total_seconds(),
-        'evaluator':                evaluator_class.__name__
+        'time':                     (end_time - start_time).total_seconds()
         }
 
     if learner_result.feature_sets:
