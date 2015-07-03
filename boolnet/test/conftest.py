@@ -89,10 +89,6 @@ def metric(request):
 
 @yield_fixture(params=glob.glob(TEST_LOCATION + '/error matrices/*.yaml'))
 def error_matrix_harness(request):
-    for name in glob.glob('error matrices/*.yaml'):
-        print(name)
-    print(TEST_LOCATION)
-    print(request.param)
     with open(request.param) as f:
         test = yaml.safe_load(f)
         E = np.array(test['error matrix'], dtype=int)
