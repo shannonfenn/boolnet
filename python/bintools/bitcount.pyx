@@ -1,6 +1,6 @@
 # cython: language_level=3
 # distutils: libraries = gmp
-from BoolNet.packing cimport PACKED_HIGH_BIT_SET, PACKED_SIZE
+from boolnet.bintools.packing cimport PACKED_HIGH_BIT_SET, PACKED_SIZE
 
 # @cython.boundscheck(False)
 # @cython.wraparound(False)

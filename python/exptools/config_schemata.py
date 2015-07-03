@@ -2,9 +2,9 @@ import numpy as np
 from good import Schema, Required, In, All, Any, Range, Type, IsDir
 from good import message, Allow, Optional
 
-from experiment.boolmapping import BoolMapping
-from BoolNet.LearnBoolNet import LEARNERS, OPTIMISERS
-from BoolNet.metric_names import all_metric_names
+from boolnet.exptools.boolmapping import BoolMapping
+from boolnet.learning.learn_boolnet import LEARNERS, OPTIMISERS
+from boolnet.bintools.metric_names import all_metric_names
 
 metrics = list(all_metric_names())
 

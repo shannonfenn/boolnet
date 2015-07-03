@@ -1,22 +1,21 @@
 from datetime import datetime
 import random
-from BoolNet.boolnetwork import BoolNetwork
-from BoolNet.boolnetwork_rand import RandomBoolNetwork
-from BoolNet.metric_names import Metric, metric_from_name
-from BoolNet.Learners import basic_learn, stratified_learn
-import BoolNet.fastrand as fastrand
-import BoolNet.Optimisers as Optimisers
+from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
+from boolnet.bintools.metric_names import Metric, metric_from_name
+from boolnet.learning.learners import basic_learn, stratified_learn
+from boolnet.learning.optimisers import SA, LAHC
+import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import functools
 import sys
 
 
 OPTIMISERS = {
-    # 'TS': Optimisers.TabuSearch(),
-    'SA': Optimisers.SA(),
-    # 'SA-VN': Optimisers.SA_VN(),
-    'LAHC': Optimisers.LAHC(),
-    # 'LAHC-VN': Optimisers.LAHC_VN()
+    'SA': SA(),
+    'LAHC': LAHC(),
+    # 'TS': TabuSearch(),
+    # 'SA-VN': SA_VN(),
+    # 'LAHC-VN': LAHC_VN()
     }
 
 

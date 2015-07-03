@@ -1,10 +1,10 @@
 import numpy as np
 try:
-    import BoolNet.NetworkAlgorithms as NetworkAlgorithms
+    import boolnet.network.algorithms as algorithms
 except ImportError:
     import pyximport
     pyximport.install()
-    import BoolNet.NetworkAlgorithms as NetworkAlgorithms
+    import boolnet.network.algorithms as algorithms
 
 
 class BoolNetwork:
@@ -141,7 +141,7 @@ class BoolNetwork:
         else:
             sourceable = None
 
-        return NetworkAlgorithms.random_move(self._gates, changeable, sourceable, self.Ni)
+        return algorithms.random_move(self._gates, changeable, sourceable, self.Ni)
 
     def connected_gates(self, No=None):
         ''' This detects which gates and inputs are connected to the output
@@ -151,8 +151,7 @@ class BoolNetwork:
         if No is None:
             No = self.No
 
-        return NetworkAlgorithms.connected_sources(
-            self._gates, self._connected, self.Ni, No)
+        return algorithms.connected_sources(self._gates, self._connected, self.Ni, No)
 
     # def percolate_connected_gates(self):
     #     ''' This detects which gates are disconnected from the

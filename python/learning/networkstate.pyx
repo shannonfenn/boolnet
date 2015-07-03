@@ -4,11 +4,11 @@ import numpy as np
 cimport numpy as np
 from copy import deepcopy
 
-from BoolNet.boolnetwork import BoolNetwork
-from BoolNet.biterror import STANDARD_EVALUATORS
-from BoolNet.biterror cimport StandardEvaluator
-from BoolNet.packing cimport packed_type_t, generate_end_mask, f_type, function_list
-from BoolNet.packing import packed_type
+from boolnet.network.boolnetwork import BoolNetwork
+from boolnet.bintools.biterror import STANDARD_EVALUATORS
+from boolnet.bintools.biterror cimport StandardEvaluator
+from boolnet.bintools.packing cimport packed_type_t, generate_end_mask, f_type, function_list
+from boolnet.bintools.packing import packed_type
 
 
 cdef class StaticNetworkState:

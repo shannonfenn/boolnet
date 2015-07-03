@@ -1,8 +1,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal as assert_array_equal
 from numpy.random import randint as randint
-from BoolNet.packing import (packed_type, pack_bool_matrix, pack_chunk,
-                             unpack_bool_matrix, unpack_bool_vector)
+from boolnet.bintools.packing import (packed_type, pack_bool_matrix, pack_chunk,
+                                      unpack_bool_matrix, unpack_bool_vector)
 from pytest import fixture, fail
 from itertools import zip_longest
 

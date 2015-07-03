@@ -1,8 +1,8 @@
-from BoolNet.metric_names import metric_name
+from boolnet.bintools.metric_names import metric_name
 import numpy as np
 import pyximport
 pyximport.install()
-from BoolNet.biterror import STANDARD_EVALUATORS
+from boolnet.bintools.biterror import STANDARD_EVALUATORS
 
 
 # @pytest.mark.python

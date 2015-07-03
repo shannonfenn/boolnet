@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from itertools import chain
 import numpy as np
 from numpy.random import randint
-from BoolNet.boolnetwork import BoolNetwork
+from boolnet.network.boolnetwork import BoolNetwork
 import networkx as nx
 import pytest
 xfail = pytest.mark.xfail

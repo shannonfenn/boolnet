@@ -1,6 +1,6 @@
 from collections import namedtuple
-from BoolNet.packing import pack_bool_matrix, unpack_bool_matrix
-from BoolNet.boolnetwork import BoolNetwork
+from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
+from boolnet.network.boolnetwork import BoolNetwork
 import numpy as np
 import pytest
 

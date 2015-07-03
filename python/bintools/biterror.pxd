@@ -1,7 +1,7 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 import cython
-from BoolNet.packing cimport packed_type_t
+from boolnet.bintools.packing cimport packed_type_t
 
 
 cdef class StandardEvaluator:

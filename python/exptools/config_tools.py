@@ -5,8 +5,8 @@ from os.path import join, splitext
 import numpy as np
 import json
 
-from experiment.boolmapping import BoolMapping
-from experiment.config_schemata import config_schema
+from boolnet.exptools.boolmapping import BoolMapping
+from boolnet.exptools.config_schemata import config_schema
 
 
 Instance = namedtuple('Instance', [

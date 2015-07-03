@@ -1,5 +1,5 @@
 # cython: language_level=3
-from BoolNet.packing cimport packed_type_t
+from boolnet.bintools.packing cimport packed_type_t
 
 cdef extern from "gmp.h":
     # unsigned long int mpn_popcount (mp_limb_t *s1p, mp_size_t n)

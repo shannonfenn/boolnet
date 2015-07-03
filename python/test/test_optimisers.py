@@ -1,4 +1,4 @@
-from BoolNet.Optimisers import SA, stepped_exp_decrease, geometric
+from boolnet.learning.pptimisers import SA, stepped_exp_decrease, geometric
 from math import exp
 import numpy as np
 import random

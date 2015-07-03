@@ -4,12 +4,12 @@ import glob
 import yaml
 import os
 import numpy as np
-from BoolNet.boolnetwork import BoolNetwork, RandomBoolNetwork
-from BoolNet.packing import pack_bool_matrix
-from BoolNet.metric_names import all_metrics
+from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
+from boolnet.bintools.packing import pack_bool_matrix
+from boolnet.bintools.metric_names import all_metrics
 import pyximport
 pyximport.install()
-import BoolNet.networkstate
+import boolnet.learning.networkstate as networkstate
 
 
 if os.path.basename(os.getcwd()) == 'BoolNet':
@@ -76,9 +76,9 @@ def harness_to_fixture(stream, evaluator_class):
 @pytest.fixture(params=['static'])
 def evaluator_class(request):
     if request.param == 'static':
-        return BoolNet.networkstate.StaticNetworkState
+        return networkstate.StaticNetworkState
     else:
-        return BoolNet.networkstate.DynamicNetworkSta
+        return networkstate.DynamicNetworkState
 
 
 @pytest.fixture(params=list(all_metrics()))

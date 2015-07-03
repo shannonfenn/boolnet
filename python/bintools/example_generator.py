@@ -1,5 +1,5 @@
 import numpy as np
-from BoolNet.packing import PACKED_SIZE, packed_type, pack_chunk
+from boolnet.bintools.packing import PACKED_SIZE, packed_type, pack_chunk
 
 
 class PackedExampleGenerator:

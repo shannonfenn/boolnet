@@ -3,7 +3,7 @@ from math import exp
 from copy import copy
 from itertools import chain, repeat
 from collections import deque
-from BoolNet.metric_names import metric_from_name
+from boolnet.bintools.metric_names import metric_from_name
 import sys
 import logging
 

@@ -1,4 +1,4 @@
-from BoolNet.Packing cimport pack_bool_matrix, packed_type_t
+from boolnet.bintools.packing cimport pack_bool_matrix, packed_type_t
 
 FUNCTIONS = {
     'add':  bin_add,

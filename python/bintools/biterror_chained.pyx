@@ -1,12 +1,12 @@
-from BoolNet.metric_names import (
+from boolnet.bintools.metric_names import (
     E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
     E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT, Metric)
 import numpy as np
 cimport numpy as np
 import cython
-from BoolNet.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
-from BoolNet.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
-from BoolNet.packing import packed_type
+from boolnet.bintools.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
+from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
+from boolnet.bintools.packing import packed_type
 
 
 chained_evaluators = {

@@ -1,4 +1,5 @@
-from BoolNet.bitcount import floodcount_vector, floodcount_chunk, popcount_vector, popcount_chunk
+from boolnet.bintools.bitcount import (floodcount_vector, floodcount_chunk,
+                                       popcount_vector, popcount_chunk)
 import numpy as np
 from pytest import fixture
 

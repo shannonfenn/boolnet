@@ -3,8 +3,8 @@ from collections import namedtuple
 import numpy as np
 import kFS
 import logging
-from BoolNet.metric_names import Metric
-from BoolNet.packing import unpack_bool_matrix, unpack_bool_vector
+from boolnet.bintools.metric_names import Metric
+from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 
 
 Result = namedtuple('Result', [
