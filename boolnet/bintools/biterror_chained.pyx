@@ -23,9 +23,6 @@ CHAINED_EVALUATORS = {
 
 
 cdef class ChainedEvaluator:
-    cdef size_t No, cols, start, step
-    cdef double divisor
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         self.No = No
         self.divisor = No * Ne
@@ -39,12 +36,6 @@ cdef class ChainedEvaluator:
 
 
 cdef class ChainedPerOutput:
-    cdef:
-        size_t No, start, step
-        double divisor
-        np.uint64_t[:] row_accumulator
-        double[:] accumulator
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         self.No = No
         self.divisor = Ne
@@ -68,10 +59,6 @@ cdef class ChainedPerOutput:
 
 
 cdef class ChainedAccuracy(ChainedEvaluator):
-    cdef:
-        packed_type_t[:] row_disjunction
-        np.uint64_t accumulator
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.divisor = Ne
@@ -98,9 +85,6 @@ cdef class ChainedAccuracy(ChainedEvaluator):
 
 
 cdef class ChainedE1(ChainedEvaluator):
-    cdef:
-        np.uint64_t[:] row_accumulator
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_accumulator = np.zeros(No, dtype=np.uint64)
@@ -126,8 +110,6 @@ cdef class ChainedE1(ChainedEvaluator):
 
 
 cdef class ChainedE2(ChainedE1):
-    cdef double[:] weight_vector
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.divisor = Ne * (No + 1.0) * No / 2.0
@@ -149,8 +131,6 @@ cdef class ChainedE2(ChainedE1):
 
 
 cdef class ChainedE3(ChainedE1):
-    cdef packed_type_t[:] row_disjunction
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_disjunction = np.zeros(cols, dtype=packed_type)
@@ -168,8 +148,6 @@ cdef class ChainedE3(ChainedE1):
 
 
 cdef class ChainedE4(ChainedE1):
-    cdef size_t row_width, end_subtractor
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_width = cols * PACKED_SIZE
@@ -205,8 +183,6 @@ cdef class ChainedE4(ChainedE1):
 
 
 cdef class ChainedE5(ChainedEvaluator):
-    cdef size_t row_width, err_rows, row_accumulator, end_subtractor
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_width = self.cols * PACKED_SIZE
@@ -275,8 +251,6 @@ cdef class ChainedE6(ChainedE5):
 
 
 cdef class ChainedE7(ChainedEvaluator):
-    cdef size_t row_width, err_rows
-
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.row_width = self.cols * PACKED_SIZE
