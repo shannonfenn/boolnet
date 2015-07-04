@@ -2,6 +2,7 @@ from boolnet.bintools.metric_names import metric_name
 import numpy as np
 import pyximport
 pyximport.install()
+from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 
 
@@ -12,6 +13,37 @@ from boolnet.bintools.biterror import STANDARD_EVALUATORS
 #     expected = error_matrix_harness[metric_name(metric)]
 #     assert np.array_equal(actual, expected)
 
+# def test_biterror_chained(packed_error_matrix_harness, metric):
+#     Ne = packed_error_matrix_harness['Ne']
+#     E = packed_error_matrix_harness['packed error matrix']
+#     No, cols = E.shape
+
+#     eval_class, msb = CHAINED_EVALUATORS[metric]
+#     C = np.random.randint(cols, size=5)
+#     for c in C:
+#         error_evaluator = eval_class(Ne, No, c, msb)
+#         steps = cols // c + 1 if cols % c else cols // c
+#         for i in range(steps-1):
+#             window = np.array(E[:, i*c:(i+1)*c])
+#             error_evaluator.partial_evaluation(window)
+#         window = np.array(E[:, (steps-1)*c:])
+#         actual = error_evaluator.final_evaluation(window)
+#         expected = packed_error_matrix_harness[metric_name(metric)]
+#         assert np.array_equal(actual, expected)
+
+
+def test_biterror_packed(packed_error_matrix_harness, metric):
+    Ne = packed_error_matrix_harness['Ne']
+    E = packed_error_matrix_harness['packed error matrix']
+    No, cols = E.shape
+    eval_class, msb = STANDARD_EVALUATORS[metric]
+    error_evaluator = eval_class(Ne, No, cols, msb)
+
+    actual = error_evaluator.evaluate(E)
+    expected = packed_error_matrix_harness[metric_name(metric)]
+
+    assert np.array_equal(actual, expected)
+
 
 def test_biterror(error_matrix_harness, metric):
     Ne = error_matrix_harness['Ne']
@@ -21,7 +53,6 @@ def test_biterror(error_matrix_harness, metric):
     error_evaluator = eval_class(Ne, No, cols, msb)
 
     actual = error_evaluator.evaluate(E)
-
     expected = error_matrix_harness[metric_name(metric)]
 
     assert np.array_equal(actual, expected)

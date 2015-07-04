@@ -1,9 +1,7 @@
-# content of conftest.py
-import pytest
 import glob
 import yaml
-import os
 import numpy as np
+from pytest import fixture, yield_fixture
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.packing import pack_bool_matrix
 from boolnet.bintools.metric_names import all_metrics
@@ -12,10 +10,7 @@ pyximport.install()
 import boolnet.learning.networkstate as networkstate
 
 
-if os.path.basename(os.getcwd()) == 'BoolNet':
-    TEST_LOCATION = 'test/'
-else:
-    TEST_LOCATION = 'BoolNet/test/'
+TEST_LOCATION = 'boolnet/test/'
 
 
 # ############ Helpers for fixtures ############# #
@@ -73,7 +68,7 @@ def harness_to_fixture(stream, evaluator_class):
 
 # #################### Fixtures ############################ #
 # @pytest.fixture(params=['static', 'dynamic'])
-@pytest.fixture(params=['static'])
+@fixture(params=['static'])
 def evaluator_class(request):
     if request.param == 'static':
         return networkstate.StaticNetworkState
@@ -81,18 +76,29 @@ def evaluator_class(request):
         return networkstate.DynamicNetworkState
 
 
-@pytest.fixture(params=list(all_metrics()))
+@fixture(params=list(all_metrics()))
 def metric(request):
     return request.param
 
 
-# @pytest.fixture(scope='module', autouse=True)
+# @fixture(scope='module', autouse=True)
 # def compile_BoolNetwork():
 #     # compilation fixture
 #     subprocess.check_call(['python3', 'setup.py', 'build_ext', '--inplace'])
+@fixture(params=[
+    TEST_LOCATION + '/packed error matrices/big',
+    TEST_LOCATION + '/packed error matrices/sparse'])
+def packed_error_matrix_harness(request):
+    print(request.param + '.npy')
+    E = np.load(request.param + '.npy')
+    with open(request.param + '.yaml') as f:
+        test = yaml.safe_load(f)
+    test['packed error matrix'] = pack_bool_matrix(E)
+    test['Ne'] = E.shape[0]
+    return test
 
 
-@pytest.yield_fixture(params=glob.glob(TEST_LOCATION + '/error matrices/*.yaml'))
+@yield_fixture(params=glob.glob(TEST_LOCATION + '/error matrices/*.yaml'))
 def error_matrix_harness(request):
     with open(request.param) as f:
         test = yaml.safe_load(f)
@@ -102,38 +108,38 @@ def error_matrix_harness(request):
         yield test
 
 
-@pytest.fixture(params=['sample', 'full'])
+@fixture(params=['sample', 'full'])
 def network_type(request):
     return request.param
 
 
-@pytest.yield_fixture(params=glob.glob(TEST_LOCATION + 'networks/*.yaml'))
+@yield_fixture(params=glob.glob(TEST_LOCATION + 'networks/*.yaml'))
 def any_test_network(request, evaluator_class):
     with open(request.param) as f:
         yield harness_to_fixture(f, evaluator_class)
 
 
-@pytest.yield_fixture(params=list(harnesses_with_property(
+@yield_fixture(params=list(harnesses_with_property(
     'invariant under single move')))
 def single_move_invariant(request, evaluator_class):
     with open(request.param) as f:
         yield harness_to_fixture(f, evaluator_class)
 
 
-@pytest.yield_fixture(params=list(harnesses_with_property(
+@yield_fixture(params=list(harnesses_with_property(
     'invariant under multiple moves')))
 def multiple_move_invariant(request, evaluator_class):
     with open(request.param) as f:
         yield harness_to_fixture(f, evaluator_class)
 
 
-@pytest.yield_fixture
+@yield_fixture
 def single_layer_zero(evaluator_class):
     with open(TEST_LOCATION + 'networks/single_layer_zero.yaml') as f:
         yield harness_to_fixture(f, evaluator_class)
 
 
-@pytest.yield_fixture
+@yield_fixture
 def adder2(evaluator_class):
     with open(TEST_LOCATION + 'networks/adder2.yaml') as f:
         yield harness_to_fixture(f, evaluator_class)
