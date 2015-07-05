@@ -89,12 +89,10 @@ def metric(request):
     TEST_LOCATION + '/packed error matrices/big',
     TEST_LOCATION + '/packed error matrices/sparse'])
 def packed_error_matrix_harness(request):
-    print(request.param + '.npy')
-    E = np.load(request.param + '.npy')
     with open(request.param + '.yaml') as f:
         test = yaml.safe_load(f)
-    test['packed error matrix'] = pack_bool_matrix(E)
-    test['Ne'] = E.shape[0]
+    print(request.param + '.npy')
+    test['packed error matrix'] = np.load(request.param + '.npy')
     return test
 
 
