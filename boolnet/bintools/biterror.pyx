@@ -24,10 +24,13 @@ STANDARD_EVALUATORS = {
 
 
 cdef class StandardEvaluator:
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
+    def __init__(self, size_t Ne, size_t No, bint msb):
         self.No = No
         self.divisor = No * Ne
-        self.cols = cols
+        if Ne % PACKED_SIZE == 0:
+            self.cols = Ne // PACKED_SIZE
+        else:
+            self.cols = Ne // PACKED_SIZE + 1
         if msb:
             self.start = No-1
             self.step = -1
@@ -37,8 +40,8 @@ cdef class StandardEvaluator:
 
 
 cdef class StandardPerOutput(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
         self.divisor = Ne
         self.accumulator = np.zeros(self.No, dtype=np.float64)
 
@@ -51,9 +54,9 @@ cdef class StandardPerOutput(StandardEvaluator):
 
 
 cdef class StandardAccuracy(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
-        self.row_disjunction = np.zeros(cols, dtype=packed_type)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
+        self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
         self.divisor = Ne
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
@@ -70,16 +73,16 @@ cdef class StandardAccuracy(StandardEvaluator):
 
 
 cdef class StandardE1(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         return popcount_matrix(E) / self.divisor
 
 
 cdef class StandardE2(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
         self.divisor = Ne * (No + 1.0) * No / 2.0
         if msb:
             self.weight_vector = np.arange(1, No+1, dtype=np.float64)
@@ -97,9 +100,9 @@ cdef class StandardE2(StandardEvaluator):
 
 
 cdef class StandardE3(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
-        self.row_disjunction = np.zeros(cols, dtype=packed_type)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
+        self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, c
@@ -116,9 +119,9 @@ cdef class StandardE3(StandardEvaluator):
 
 
 cdef class StandardE4(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
-        row_width = cols * PACKED_SIZE
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
+        row_width = self.cols * PACKED_SIZE
         self.end_subtractor = row_width - Ne % row_width
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
@@ -139,8 +142,8 @@ cdef class StandardE4(StandardEvaluator):
 
 
 cdef class StandardE5(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
         self.row_width = Ne
 
@@ -158,8 +161,8 @@ cdef class StandardE5(StandardEvaluator):
 
 
 cdef class StandardE6(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
         self.row_width = self.cols * PACKED_SIZE
         self.row_width -= self.row_width - Ne % self.row_width
 
@@ -177,8 +180,8 @@ cdef class StandardE6(StandardEvaluator):
 
 
 cdef class StandardE7(StandardE6):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, c

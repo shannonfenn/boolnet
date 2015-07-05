@@ -68,7 +68,7 @@ cdef class StaticNetworkState:
         self.metric = metric
         if metric is not None:
             eval_class, msb = STANDARD_EVALUATORS[metric]
-            self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
+            self.err_evaluator = eval_class(self.Ne, self.No, msb)
         else:
             self.err_evaluator = None
 
@@ -300,7 +300,7 @@ cdef class ChainedNetworkState:
         self.metric = metric
         if metric is not None:
             eval_class, msb = CHAINED_EVALUATORS[metric]
-            self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
+            self.err_evaluator = eval_class(self.Ne, self.No, msb)
         else:
             self.err_evaluator = None
 
