@@ -18,33 +18,17 @@ from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
 
 #     cdef void __check_invariants(self)
 
+cpdef enum Operator:
+    ADD,
+    SUB,
+    MUL
 
-# cdef class OperatorExampleFactory():
-#     cdef:
-#         size_t Ne, Nb, Ni
-#         size_t[:] indices
-#         bint inc
-
-#     def __init__(self, generator_factory, operator, Ne, Nb, include):
-#         self.gen_fac = generator_factory
-#         self.op = operator
-#         self.Ne = Ne
-#         self.Nb = Nb
-#         self.Ni = 2*Nb
-#         self.include = include
-
-#     cpdef __iter__(self):
-#         if self.include:
-#             return OperatorIncludeIterator(self.gen_fac(), self.op, self.Nb, self.Ne)
-#         else:
-#             return OperatorExcludeIterator(self.gen_fac(), self.op, self.Nb, self.Ne)
-
-#     cpdef __len__(self):
-#         return self.Ne
-
-#     cpdef __check_invariants(self):
-#         if not isinstance(self.Nb, int) or self.Nb <= 0:
-#             raise ValueError('Invalid operand width (must be a positive integer).')
+cdef class OperatorExampleFactory:
+    cdef:
+        size_t Ne, Nb, Ni
+        size_t[:] indices
+        bint inc
+        Operator op
 
 
 cdef class BinaryOperatorIterator:
@@ -52,15 +36,36 @@ cdef class BinaryOperatorIterator:
 
 
 cdef class BinaryOperatorIncludeIterator(BinaryOperatorIterator):
-    cdef size_t[:] include_list
+    cdef object include_iter
+
+
+cdef class AddIncludeIterator(BinaryOperatorIncludeIterator):
+    pass
+
+
+cdef class SubIncludeIterator(BinaryOperatorIncludeIterator):
+    pass
+
+
+cdef class MulIncludeIterator(BinaryOperatorIncludeIterator):
+    pass
 
 
 cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):    
-    cdef size_t[:] exclude_list
+    cdef:
+        size_t index, ex_index, num_elements
+        object ex_iter
+
     cdef void _sync(self)
 
 
-# cdef class AddIncludeOperator(BinaryOperatorIncludeIterator)
+cdef class AddExcludeIterator(BinaryOperatorExcludeIterator):
+    pass
 
-        
-# cdef class AddExcludeOperator(BinaryOperatorExcludeIterator)
+
+cdef class SubExcludeIterator(BinaryOperatorExcludeIterator):
+    pass
+
+
+cdef class MulExcludeIterator(BinaryOperatorExcludeIterator):
+    pass
