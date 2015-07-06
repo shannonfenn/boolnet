@@ -14,6 +14,11 @@ import boolnet.learning.networkstate as networkstate
 TEST_LOCATION = 'boolnet/test/'
 
 
+@fixture
+def test_location():
+    return TEST_LOCATION
+
+
 # ############ Helpers for fixtures ############# #
 def harnesses_with_property(bool_property_name):
     for name in glob.glob(TEST_LOCATION + 'networks/*.yaml'):
