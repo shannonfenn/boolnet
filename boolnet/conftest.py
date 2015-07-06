@@ -1,9 +1,10 @@
 import glob
 import yaml
 import numpy as np
+import os.path
 from pytest import fixture, yield_fixture
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
-from boolnet.bintools.packing import pack_bool_matrix
+from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
 from boolnet.bintools.metric_names import all_metrics
 import pyximport
 pyximport.install()
@@ -81,29 +82,16 @@ def metric(request):
     return request.param
 
 
-# @fixture(scope='module', autouse=True)
-# def compile_BoolNetwork():
-#     # compilation fixture
-#     subprocess.check_call(['python3', 'setup.py', 'build_ext', '--inplace'])
-@fixture(params=[
-    TEST_LOCATION + '/packed error matrices/big',
-    TEST_LOCATION + '/packed error matrices/sparse'])
-def packed_error_matrix_harness(request):
-    with open(request.param + '.yaml') as f:
-        test = yaml.safe_load(f)
-    print(request.param + '.npy')
-    test['packed error matrix'] = np.load(request.param + '.npy')
-    return test
-
-
-@yield_fixture(params=glob.glob(TEST_LOCATION + '/error matrices/*.yaml'))
+@fixture(params=glob.glob(TEST_LOCATION + '/error matrices/*.yaml'))
 def error_matrix_harness(request):
     with open(request.param) as f:
         test = yaml.safe_load(f)
-        E = np.array(test['error matrix'], dtype=int)
-        test['packed error matrix'] = pack_bool_matrix(E)
-        test['Ne'] = E.shape[0]
-        yield test
+    folder = os.path.dirname(request.param)
+    Ep = np.load(os.path.join(folder, test['name'] + '.npy'))
+    E = unpack_bool_matrix(Ep, test['Ne'])
+    test['packed error matrix'] = Ep
+    test['unpacked error matrix'] = E
+    return test
 
 
 @fixture(params=['sample', 'full'])
