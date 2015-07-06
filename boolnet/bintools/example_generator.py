@@ -1,5 +1,6 @@
 import numpy as np
-from boolnet.bintools.packing import PACKED_SIZE, packed_type, pack_chunk
+from boolnet.bintools.packing import packed_type, pack_chunk
+from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
 
 
 class PackedExampleGenerator:
@@ -55,9 +56,9 @@ class OperatorExampleFactory():
         self.Ne = Ne
         self.Nb = Nb
         self.Ni = 2*Nb
-        self.include
+        self.include = include
 
-    def __iter(self):
+    def __iter__(self):
         if self.include:
             return OperatorIncludeIterator(self.gen_fac(), self.op, self.Nb, self.Ne)
         else:
@@ -105,7 +106,7 @@ class OperatorExcludeIterator():
 
         try:
             self.next_exclude = next(self.exclude_iter)
-        except IndexError:
+        except StopIteration:
             self.next_exclude = -1
 
         self._sync()
@@ -126,13 +127,14 @@ class OperatorExcludeIterator():
         return inp, out
 
     def _sync(self):
-        try:
-            while self.index == self.next_exclude:
-                self.index += 1
-                self.next_exclude = next(self.exclude_iter)
-        except StopIteration:
-            # no more exlude indices
-            self.next_exclude = -1
+        if self.next_exclude >= 0:
+            try:
+                while self.index == self.next_exclude:
+                    self.index += 1
+                    self.next_exclude = next(self.exclude_iter)
+            except StopIteration:
+                # no more exlude indices
+                self.next_exclude = -1
 
     def __len__(self):
         return self.remaining
