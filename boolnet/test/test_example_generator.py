@@ -1,29 +1,15 @@
 import operator
+import os.path
 import numpy as np
+from copy import copy
 from pytest import fixture
-from numpy.testing import assert_array_almost_equal as assert_array_almost_equal
+from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.packing import packed_type, pack_bool_matrix
-from boolnet.bintools.example_generator import ADD, SUB, MUL, OperatorExampleFactory
+from boolnet.bintools.example_generator import (ADD, SUB, MUL, OperatorExampleFactory,
+                                                PackedExampleGenerator)
 
 
-class TestExampleGenerator:
-    @fixture(params=[
-        dict(name='add4', operator=ADD),
-        dict(name='add8', operator=ADD),
-        dict(name='sub4', operator=SUB),
-        dict(name='sub8', operator=SUB),
-        dict(name='mul2', operator=MUL),
-        dict(name='mul4', operator=MUL),
-        dict(name='mul6', operator=MUL),
-        dict(name='mul2-overflow', operator=MUL),
-        dict(name='mul4-overflow', operator=MUL),
-        dict(name='mul6-overflow', operator=MUL)
-    ])
-    def file_func_inst(self, request, test_location):
-        d = request.param
-        d['name'] = test_location + d['name']
-        return d
-
+class TestExampleFactory:
     @fixture(params=[
         (ADD, operator.add),
         (SUB, operator.sub),
@@ -47,7 +33,6 @@ class TestExampleGenerator:
             indices, Ne, Nb, binary_op[0], True)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
-            print(i, inp, tgt)
             assert i == inp
             expected_out = binary_op[1](int(i // upper), int(i % upper))
             if expected_out < 0:
@@ -66,86 +51,74 @@ class TestExampleGenerator:
         factory = OperatorExampleFactory(
             ex_indices, Ne, Nb, binary_op[0], False)
 
-        # print(Nb, upper, Ne)
-        # print(ex_indices)
-        # print(max_indices)
         for i, (inp, tgt) in zip(indices, iter(factory)):
-            # print(i, inp, tgt)
             assert i == inp
             expected_out = binary_op[1](int(i // upper), int(i % upper))
             if expected_out < 0:
                 expected_out += upper
             assert expected_out == tgt
 
-    # @fixture
-    # def include_indices(file_func_inst):
-    #     op = file_func_inst['operator']
-    #     with np.load(file_func_inst['name'] + '.npz') as data:
-    #         inp = data['target_matrix']
-    #         tgt = data['input_matrix']
-    #     Ne, Ni = inp.shape
-    #     _, No = tgt.shape
-    #     inp_p = pack_bool_matrix(inp)
-    #     tgt_p = pack_bool_matrix(tgt)
 
-    #     indices = np.random.choice(Ne, 100)
+class TestExampleGenerator:
+    op_map = {'add': ADD, 'sub': SUB, 'mul': MUL}
 
-    #     factory = OperatorExampleFactory(indices, op, Ne, No, False)
-    #     return (factory, inp_p, tgt_p)
+    @fixture(params=[
+        'add4.npz', 'add8.npz', 'sub4.npz', 'sub8.npz',
+        'mul2.npz', 'mul3.npz', 'mul4.npz', 'mul6.npz'])
+    def file_func_inst(self, request, test_location):
+        return test_location, request.param
 
-    # @fixture
-    # def exclude_instance(file_func_inst):
-    #     op = file_func_inst['operator']
-    #     with np.load(file_func_inst['name'] + '.npz') as data:
-    #         inp = data['target_matrix']
-    #         tgt = data['input_matrix']
-    #     Ne, Ni = inp.shape
-    #     _, No = tgt.shape
-    #     inp_p = pack_bool_matrix(inp)
-    #     tgt_p = pack_bool_matrix(tgt)
+    @fixture(params=[True, False])
+    def include(self, request):
+        return request.param
 
-    #     indices = np.random.choice(Ne, Ne // 2)
+    def load_file_func_instance(self, instance):
+        location, name = instance
+        fname = os.path.join(location, 'functions', name)
+        with np.load(fname) as data:
+            inp = data['input_matrix']
+            tgt = data['target_matrix']
+        return self.op_map[name[:3]], inp, tgt
 
-    #     factory = OperatorExampleFactory(indices, op, Ne, No, True)
-    #     return (factory, inp_p, tgt_p)
+    def build_generator_instance(self, instance, include):
+        op, inp, tgt = self.load_file_func_instance(instance)
 
-    # @fixture
-    # def include_instance(binary_function):
-    #     op = binary_function['operator']
-    #     with np.load(binary_function['name'] + '.npz') as data:
-    #         inp = data['target_matrix']
-    #         tgt = data['input_matrix']
-    #     Ne, Ni = inp.shape
-    #     _, No = tgt.shape
-    #     inp_p = pack_bool_matrix(inp)
-    #     tgt_p = pack_bool_matrix(tgt)
+        Ne, Ni = inp.shape
+        _, No = tgt.shape
 
-    #     indices = np.random.choice(Ne, 100)
+        indices = np.random.choice(Ne, min(100, Ne), replace=False)
+        indices = np.sort(indices)
+        inp = inp[indices, :]
+        tgt = tgt[indices, :]
+        inp_p = pack_bool_matrix(inp)
+        tgt_p = pack_bool_matrix(tgt)
+        if not include:
+            indices = [i for i in range(Ne) if i not in indices]
+        indices = np.array(indices, dtype=packed_type)
 
-    #     factory = OperatorExampleFactory(indices, op, Ne, No, False)
-    #     return (factory, inp_p, tgt_p)
+        factory = OperatorExampleFactory(indices, Ne, Ni//2, op, include)
 
-    # @fixture
-    # def exclude_instance(binary_function):
-    #     op = binary_function['operator']
-    #     with np.load(binary_function['name'] + '.npz') as data:
-    #         inp = data['target_matrix']
-    #         tgt = data['input_matrix']
-    #     Ne, Ni = inp.shape
-    #     _, No = tgt.shape
-    #     inp_p = pack_bool_matrix(inp)
-    #     tgt_p = pack_bool_matrix(tgt)
+        gen = PackedExampleGenerator(factory, No)
+        return (gen, inp_p, tgt_p)
 
-    #     indices = np.random.choice(Ne, Ne // 2)
+    @fixture(params=[0, np.random.rand(), 1])
+    def block_fraction(self, request):
+        return request.param
 
-    #     factory = OperatorExampleFactory(indices, op, Ne, No, True)
-    #     return (factory, inp_p, tgt_p)
+    def test_packed_generation(self, file_func_inst, include, block_fraction):
+        generator_instance = self.build_generator_instance(file_func_inst, include)
+        generator, expected_inp, expected_tgt = generator_instance
 
-    # def test_include_factory_input(self, include_instance):
-    #     factory, expected, _ = include_instance
+        actual_inp = np.zeros_like(expected_inp)
+        actual_tgt = np.zeros_like(expected_tgt)
+        Ni, cols = expected_inp.shape
+        No, _ = expected_tgt.shape
+        block_width = max(1, cols * block_fraction)
 
-    #     actual = np.zeros_like(expected)
-
-
-        
-    #     example_factory = OperatorExampleFactory()
+        i = 0
+        while generator:
+            generator.next_examples(actual_inp[:, i: i + block_width],
+                                    actual_tgt[:, i: i + block_width])
+            i += block_width
+        assert_array_equal(expected_inp, actual_inp)
+        assert_array_equal(expected_tgt, actual_tgt)

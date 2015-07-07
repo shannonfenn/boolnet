@@ -1,58 +1,74 @@
 import numpy as np
-from boolnet.bintools.packing import packed_type, pack_chunk
-from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
+from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
+from boolnet.bintools.packing import packed_type
 
 
-# cdef class PackedExampleGenerator:
-#     ''' presently feature sizes greater than 64 are not handled.'''
+cdef class PackedExampleGenerator:
+    ''' presently feature sizes greater than 64 are not handled.'''
+    # Ni_p = Ni // 64 if Ni % 64 == 0 else Ni // 64 + 1
+    # No_p = No // 64 if No % 64 == 0 else No // 64 + 1
+    # self.inp_block = np.zeros((PACKED_SIZE, Ni_p), dtype=np.uint64)
+    # self.tgt_block = np.zeros((PACKED_SIZE, No_p), dtype=np.uint64)
+    def __init__(self, OperatorExampleFactory example_factory, size_t No):
+        self.No = No
+        self.Ne = example_factory.Ne
+        self.Ni = example_factory.Ni
+        self.example_factory = example_factory
 
-#     # Ni_p = Ni // 64 if Ni % 64 == 0 else Ni // 64 + 1
-#     # No_p = No // 64 if No % 64 == 0 else No // 64 + 1
-#     # self.inp_block = np.zeros((PACKED_SIZE, Ni_p), dtype=np.uint64)
-#     # self.out_block = np.zeros((PACKED_SIZE, No_p), dtype=np.uint64)
-#     def __init__(self, No, example_factory):
-#         self.No = No
-#         self.Ne = example_factory.Ne
-#         self.Ni = example_factory.Ni
-#         self.example_factory = example_factory
+        self.inp_block = np.zeros(PACKED_SIZE, dtype=packed_type)
+        self.tgt_block = np.zeros(PACKED_SIZE, dtype=packed_type)
+        self.reset()
 
-#         self.inp_block = np.zeros(PACKED_SIZE, dtype=np.uint64)
-#         self.out_block = np.zeros(PACKED_SIZE, dtype=np.uint64)
-#         self.inp_block_packed = np.zeros(self.Ni, dtype=packed_type)
-#         self.out_block_packed = np.zeros(self.No, dtype=packed_type)
-#         self.reset()
+    cpdef reset(self):
+        self.example_iter = iter(self.example_factory)
 
-#     cpdef reset(self):
-#         self.example_iter = iter(self.example_factory)
+    cpdef next_examples(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target):
+        cdef size_t i, remaining, remaining_blocks, blocks
+        remaining = len(self.example_iter)
+        
+        if remaining == 0:
+            raise IndexError('ExampleGenerator - past end of examples.')
+        if inputs.shape[0] != self.Ni:
+            raise IndexError('ExampleGenerator - inputs does not match Ni in shape.')
+        if target.shape[0] != self.No:
+            raise IndexError('ExampleGenerator - target does not match No in shape.')
+        
+        blocks = inputs.shape[1]
+        remaining_blocks = remaining // PACKED_SIZE
+        if remaining % PACKED_SIZE:
+            remaining_blocks += 1
 
-#     cpdef next_examples(self, inputs, target):
-#         remaining = len(self.example_iter)
-#         if remaining == 0:
-#             raise IndexError('ExampleGenerator - past end of examples.')
-#         cols, No = inputs.shape
-#         remaining_cols = remaining // PACKED_SIZE
-#         for c in range(min(cols, remaining_cols)):
-#             self._get_block(inputs, target, c)
+        for i in range(min(blocks, remaining_blocks)):
+            self._get_block(inputs, target, i)
 
-#     cpdef _get_block(self, inputs, target, col):
-#         remaining = len(self.example_iter)
-#         for i in range(min(remaining, PACKED_SIZE)):
-#             self.inp_block[i], self.tgt_block[i] = next(self.example_iter)
+    def __bool__(self):
+        return len(self.example_iter) > 0
 
-#         pack_chunk(self.inp_block, inputs, col)
-#         pack_chunk(self.tgt_block, target, col)
+    # cdef void _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t col):
+    cdef _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t block):
+        cdef size_t remaining = len(self.example_iter)
 
-#     cpdef __check_invariants(self):
-#         if self.Ni > 64 or self.No > 64:
-#             raise ValueError('Ni or No greater than 64.')
-#         if not isinstance(self.No, int) or self.No <= 0:
-#             raise ValueError('Invalid output width (must be a positive integer).')
+        if remaining >= PACKED_SIZE:
+            remaining = PACKED_SIZE
+
+        for i in range(remaining):
+            self.inp_block[i], self.tgt_block[i] = next(self.example_iter)
+
+        for i in range(remaining, PACKED_SIZE):
+            self.inp_block[i], self.tgt_block[i] = 0, 0
+
+        pack_chunk(self.inp_block, inputs, self.Ni, block)
+        pack_chunk(self.tgt_block, target, self.No, block)
+
+    cdef void __check_invariants(self):
+        if self.Ni > 64 or self.No > 64:
+            raise ValueError('Ni or No greater than 64 not supported.')
 
 
 cdef class OperatorExampleFactory:
-    def __init__(self, size_t[:] indices, size_t Ne, size_t Nb,
-                 Operator operator, bint inc):
+    def __init__(self, size_t[:] indices, size_t Ne, size_t Nb, Operator operator, bint inc):
         print('lah')
+        self.__check_operator(operator)
         self.indices = np.array(indices)
         self.op = operator
         self.Ne = Ne
@@ -61,7 +77,6 @@ cdef class OperatorExampleFactory:
         self.inc = inc
 
     def __iter__(self):
-        print('lah2')
         if self.inc:
             print('lah2True')
             if self.op == ADD:
@@ -84,6 +99,10 @@ cdef class OperatorExampleFactory:
 
     def __len__(self):
         return self.Ne
+
+    cdef __check_operator(self, Operator op):
+        if op not in [ADD, SUB, MUL]:
+            raise ValueError('Invalid operator value ({})'.format(op))
 
 
 cdef class BinaryOperatorIterator:

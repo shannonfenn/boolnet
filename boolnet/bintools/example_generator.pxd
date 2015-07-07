@@ -1,27 +1,30 @@
 import numpy as np
-from boolnet.bintools.packing import packed_type, pack_chunk
-from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
+from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
 
-
-# cdef class PackedExampleGenerator:
-#     ''' presently feature sizes greater than 64 are not handled.'''
-#     cdef:
-#         size_t No, Ne, Ni
-#         object example_factory
-#         packed_type_t[:] inp_block, out_block, inp_block_packed, out_block_packed
-
-#     cpdef reset(self)
-
-#     cpdef next_examples(self, inputs, target)
-
-#     cdef void _get_block(self, inputs, target, col)
-
-#     cdef void __check_invariants(self)
 
 cpdef enum Operator:
     ADD,
     SUB,
     MUL
+
+
+cdef class PackedExampleGenerator:
+    ''' presently feature sizes greater than 64 are not handled.'''
+    cdef:
+        size_t No, Ne, Ni
+        OperatorExampleFactory example_factory
+        packed_type_t[:] inp_block, tgt_block
+        object example_iter
+
+    cpdef reset(self)
+
+    cpdef next_examples(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target)
+
+    # cdef void _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t col)
+    cdef _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t col)
+
+    cdef void __check_invariants(self)
+
 
 cdef class OperatorExampleFactory:
     cdef:
@@ -29,7 +32,7 @@ cdef class OperatorExampleFactory:
         size_t[:] indices
         bint inc
         Operator op
-
+    cdef __check_operator(self, Operator op)
 
 cdef class BinaryOperatorIterator:
     cdef size_t Nb, divisor, remaining
