@@ -14,7 +14,7 @@ cpdef enum Operator:
 cdef class PackedExampleGenerator:
     ''' presently feature sizes greater than 64 are not handled.'''
     cdef:
-        size_t No, Ne, Ni
+        readonly size_t No, Ne, Ni
         OperatorExampleFactory example_factory
         packed_type_t[:] inp_block, tgt_block
         object example_iter
@@ -31,14 +31,14 @@ cdef class PackedExampleGenerator:
 
 cdef class OperatorExampleFactory:
     cdef:
-        size_t Ne, Nb, Ni
+        size_t Ne, Nb, Ni, max_elements
         size_t[:] indices
         bint inc
         Operator op
     cdef __check_operator(self, Operator op)
 
 cdef class BinaryOperatorIterator:
-    cdef size_t Nb, divisor, remaining
+    cdef size_t divisor, remaining
 
 
 cdef class BinaryOperatorIncludeIterator(BinaryOperatorIterator):

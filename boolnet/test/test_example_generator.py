@@ -32,8 +32,7 @@ class TestExampleFactory:
         indices = np.random.choice(max_indices, Ne, replace=False)
         indices = np.array(indices, dtype=np.uint64)
 
-        factory = OperatorExampleFactory(
-            indices, Ne, Nb, binary_op[0], True)
+        factory = OperatorExampleFactory(indices, Nb, binary_op[0])
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -51,8 +50,7 @@ class TestExampleFactory:
         ex_indices = np.array(ex_indices, dtype=np.uint64)
         indices = (i for i in range(max_indices) if i not in ex_indices)
 
-        factory = OperatorExampleFactory(
-            ex_indices, Ne, Nb, binary_op[0], False)
+        factory = OperatorExampleFactory(ex_indices, Nb, binary_op[0], max_indices)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -99,7 +97,8 @@ class TestExampleGenerator:
             indices = [i for i in range(Ne) if i not in indices]
         indices = np.array(indices, dtype=packed_type)
 
-        factory = OperatorExampleFactory(indices, Ne, Ni//2, op, include)
+        factory = OperatorExampleFactory(indices, Ni//2, op,
+                                         0 if include else Ne)
 
         gen = PackedExampleGenerator(factory, No)
         return (gen, inp_p, tgt_p)

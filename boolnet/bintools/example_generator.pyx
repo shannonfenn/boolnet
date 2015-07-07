@@ -66,14 +66,20 @@ cdef class PackedExampleGenerator:
 
 
 cdef class OperatorExampleFactory:
-    def __init__(self, size_t[:] indices, size_t Ne, size_t Nb, Operator operator, bint inc):
+    def __init__(self, indices, size_t Nb, Operator operator, size_t max_elements=0):
         self.__check_operator(operator)
-        self.indices = np.array(indices)
+        self.indices = np.array(indices, dtype=np.uintp)
         self.op = operator
-        self.Ne = Ne
+        self.max_elements = max_elements
+        self.inc = (max_elements == 0)
+        if self.inc:
+            self.Ne = self.indices.size
+        else:
+            if max_elements < self.indices.size:
+                raise ValueError('Exclude list larger than max_elements.')
+            self.Ne = max_elements - self.indices.size
         self.Nb = Nb
         self.Ni = 2*Nb
-        self.inc = inc
 
     def __iter__(self):
         if self.inc:
@@ -91,17 +97,17 @@ cdef class OperatorExampleFactory:
                 return MulIncludeIterator(self.indices, self.Nb)
         else:
             if self.op == ZERO:
-                return ZeroExcludeIterator(self.indices, self.Nb, self.Ne)
+                return ZeroExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == AND:
-                return AndExcludeIterator(self.indices, self.Nb, self.Ne)
+                return AndExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == OR:
-                return OrExcludeIterator(self.indices, self.Nb, self.Ne)
+                return OrExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == ADD:
-                return AddExcludeIterator(self.indices, self.Nb, self.Ne)
+                return AddExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == SUB:
-                return SubExcludeIterator(self.indices, self.Nb, self.Ne)
+                return SubExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == MUL:
-                return MulExcludeIterator(self.indices, self.Nb, self.Ne)
+                return MulExcludeIterator(self.indices, self.Nb, self.max_elements)
 
     def __len__(self):
         return self.Ne
@@ -112,10 +118,11 @@ cdef class OperatorExampleFactory:
 
 
 cdef class BinaryOperatorIterator:
-    def __init__(self, Nb, num_elements):
-        self.Nb = Nb
+    def __init__(self, size_t Nb, size_t Ne):
+        if Nb == 0:
+            raise ValueError('Zero bitwidth not allowed.')
         self.divisor = 2**Nb
-        self.remaining = num_elements
+        self.remaining = Ne
 
     def __iter__(self):
         return self
@@ -191,6 +198,8 @@ cdef class MulIncludeIterator(BinaryOperatorIncludeIterator):
 
 cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):
     def __init__(self, size_t[:] exclude_list, size_t Nb, size_t num_elements):
+        if num_elements < exclude_list.size:
+            raise ValueError('Exclude list larger than num_elements.')
         super().__init__(Nb, num_elements - exclude_list.size)
         self.num_elements = num_elements
         self.ex_iter = iter(exclude_list)
@@ -267,7 +276,12 @@ cdef class SubExcludeIterator(BinaryOperatorExcludeIterator):
             raise StopIteration
         cdef size_t inp, out 
         inp = self.index
-        out = (inp // self.divisor) - (inp % self.divisor)
+        upper = (inp // self.divisor)
+        lower = (inp % self.divisor)
+        if upper >= lower:
+            out = upper - lower
+        else:
+            out = self.divisor - lower + upper
         self.index += 1
         self.remaining -= 1
         self._sync()
