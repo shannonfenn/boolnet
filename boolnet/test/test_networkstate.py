@@ -1,4 +1,3 @@
-from collections import namedtuple
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
 from boolnet.network.boolnetwork import BoolNetwork
 import numpy as np
@@ -7,9 +6,6 @@ import pytest
 
 import pyximport
 pyximport.install()
-
-
-Move = namedtuple('Move', ['gate', 'terminal', 'source'])
 
 
 # ############# General helpers ################# #
@@ -100,13 +96,11 @@ class TestStandard:
         actual = eval_func(evaluator.error_matrix)
         assert_array_equal(actual, expected)
 
-        move = Move(gate=1, source=4, terminal=True)
+        test_case = single_layer_zero['multiple_moves_test_case'][4]
 
-        net.move_to_neighbour(move)
+        net.move_to_neighbour(test_case.move)
         actual = eval_func(evaluator.error_matrix)
-        expected = np.array([
-            [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1],
-            [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]], dtype=np.byte)
+        expected = test_case.expected
         assert_array_equal(actual, expected)
 
     def test_multiple_moves_error_matrix(self, single_layer_zero, network_type):
@@ -116,10 +110,7 @@ class TestStandard:
 
         test_case = single_layer_zero['multiple_moves_test_case']
 
-        for step in test_case:
-            move = step['move']
-            move = Move(gate=move['gate'], source=move['source'], terminal=move['terminal'])
-            expected = np.array(step['expected'], dtype=np.uint8)
+        for move, expected in test_case:
             net.move_to_neighbour(move)
             actual = eval_func(evaluator.error_matrix)
             assert_array_equal(actual, expected)
@@ -132,13 +123,10 @@ class TestStandard:
 
         test_case = single_layer_zero['multiple_moves_test_case']
 
-        for step in test_case:
-            move = step['move']
-            move = Move(gate=move['gate'], source=move['source'], terminal=move['terminal'])
+        for move, _ in test_case:
             net.move_to_neighbour(move)
 
-        for step in reversed(test_case):
-            expected = np.array(step['expected'], dtype=np.uint8)
+        for _, expected in reversed(test_case):
             actual = eval_func(evaluator.error_matrix)
             assert_array_equal(expected, actual)
             net.revert_move()
