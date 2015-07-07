@@ -11,6 +11,7 @@ from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.biterror_chained cimport ChainedEvaluator
 from boolnet.bintools.packing cimport packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE
 from boolnet.bintools.packing import packed_type
+from boolnet.bintools.example_generator cimport PackedExampleGenerator
 
 
 cdef class NetworkState:
@@ -49,7 +50,7 @@ cdef class NetworkState:
         self.set_network(network)
         self.set_metric(metric)
 
-    def set_network(self, network):
+    cpdef set_network(self, network):
         # check invariants hold
         self._check_network_invariants(network)
         self.Ng = network.Ng
@@ -59,28 +60,10 @@ cdef class NetworkState:
         self.network._evaluated = False
         self.network.first_unevaluated_gate = 0
 
-    def set_metric(self, metric):
+    cpdef set_metric(self, metric):
         pass
 
-    def metric_value(self):
-        pass
-
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.nonecheck(False)
-    @cython.cdivision(True)
-    cdef void _zero_mask_last_column(self, packed_type_t[:,:] matrix):
-        # when evaluating make a zeroing-mask '11110000' to AND the last
-        # column in the error matrix with to clear the value back to zero
-        cdef:
-            size_t r
-            size_t rows = matrix.shape[0]
-            size_t cols = matrix.shape[1]
-
-        for r in range(rows):
-            matrix[r, cols-1] &= self.zero_mask
-
-    cpdef evaluate(self):
+    cpdef metric_value(self):
         pass
 
     @cython.boundscheck(False)
@@ -193,7 +176,7 @@ cdef class StaticNetworkState(NetworkState):
         self.inputs[...] = inputs
         self.target[...] = target
 
-    def set_metric(self, metric):
+    cpdef set_metric(self, metric):
         self.metric = metric
         if metric is not None:
             eval_class, msb = STANDARD_EVALUATORS[metric]
@@ -224,7 +207,7 @@ cdef class StaticNetworkState(NetworkState):
             self.evaluate()
             return self.error
 
-    def metric_value(self):
+    cpdef metric_value(self):
         self.evaluate()
         return self.err_evaluator.evaluate(self.error)
 
@@ -240,10 +223,25 @@ cdef class StaticNetworkState(NetworkState):
         else:
             self._evaluate_NAND()
 
-        self._zero_mask_last_column(self.activation)   # this does output_matrix as well (since it is a view)
-        self._zero_mask_last_column(self.error)
+        self._apply_zero_mask(self.activation)   # this does output_matrix as well (since it is a view)
+        self._apply_zero_mask(self.error)
 
         self.network._evaluated = True
+
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.nonecheck(False)
+    @cython.cdivision(True)
+    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
+        # when evaluating make a zeroing-mask '11110000' to AND the last
+        # column in the error matrix with to clear the value back to zero
+        cdef:
+            size_t r
+            size_t rows = matrix.shape[0]
+            size_t cols = matrix.shape[1]
+
+        for r in range(rows):
+            matrix[r, cols-1] &= self.zero_mask
 
     cdef _check_instance_invariants(self, packed_type_t[:, :] inputs,
                                     packed_type_t[:, :] target, size_t Ne):
@@ -260,50 +258,82 @@ cdef class StaticNetworkState(NetworkState):
 
 
 cdef class ChainedNetworkState(NetworkState):
-    cdef ChainedEvaluator err_evaluator
+    cdef:
+        ChainedEvaluator err_evaluator
+        PackedExampleGenerator example_generator
+        size_t blocks, zero_mask_cols
 
-    def __init__(self, network, example_generator, window_size, metric=None):
+    def __init__(self, network, PackedExampleGenerator example_generator, size_t window_size, metric=None):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
-        if not isinstance(window_size, int) or window_size <= 0:
-            raise ValueError('Invalid window_size.')
-
-        super().__init__(network, example_generator.Ne, example_generator.Ni.
+        super().__init__(network, example_generator.Ne, example_generator.Ni,
                          example_generator.No, window_size, metric)
-        self.block_width = (self.cols * PACKED_SIZE)
-        if self.Ne % self.block_width == 0:
-            self.blocks = self.Ne // self.block_width
-        else:
-            self.blocks = self.Ne // self.block_width + 1
+        block_width = (self.cols * PACKED_SIZE)
+        self.blocks = self.Ne // block_width
+        if self.Ne % block_width:
+            self.blocks += 1
 
-    def set_metric(self, metric):
+        # work out the number of columns remaining after blocking
+        # as this determines the zero_mask width
+        total_cols = self.Ne // PACKED_SIZE
+        if self.Ne % PACKED_SIZE:
+            total_cols += 1 
+        remaining_cols = total_cols % self.cols
+        if remaining_cols > 0:
+            self.zero_mask_cols = self.cols - remaining_cols + 1
+        else:
+            self.zero_mask_cols = 1
+        self.example_generator = example_generator
+
+    cpdef set_metric(self, metric):
         self.metric = metric
         if metric is not None:
             eval_class, msb = CHAINED_EVALUATORS[metric]
-            self.err_evaluator = eval_class(self.Ne, self.No, msb)
+            self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
         else:
             self.err_evaluator = None
 
-    def metric_value(self):
-        # THIS IS WHERE THE MAGIC NEEDS TO HAPPEN
+    cpdef metric_value(self):
+        cdef:
+            bint is_nand
+            size_t block
+        
+        is_nand = not hasattr(self.network, 'transfer_functions')
+        
+        self.example_generator.reset()
+        self.err_evaluator.reset()
 
-        # LOOP
-        #   load next inp / tgt pair
-        #   evaluate network
-        #   partialevaluate metric value
-        # END LOOP
-        # finalise metric value
-        self.evaluate()
-        return self.err_evaluator.evaluate(self.error)
+        for block in range(self.blocks):
+            self.example_generator.next_examples(self.inputs, self.target)
+            print(np.asarray(self.inputs))
+            print(np.asarray(self.target))
+            if is_nand:
+                self._evaluate_NAND()
+            else:
+                self._evaluate_random()
+            print(np.asarray(self.outputs))
+            # on the last iteration we must not perform a partial evaluation
+            if block < self.blocks - 1:
+                self.err_evaluator.partial_evaluation(self.error)
+        
+        self._apply_zero_mask(self.error)
+        print(np.asarray(self.error))
+        return self.err_evaluator.final_evaluation(self.error)
 
-    cpdef evaluate(self):
-        ''' Evaluate the activation and error matrices if the
-            network has been modified since the last evaluation. '''
-        if hasattr(self.network, 'transfer_functions'):
-            self._evaluate_random()
-        else:
-            self._evaluate_NAND()
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    @cython.nonecheck(False)
+    @cython.cdivision(True)
+    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
+        # when evaluating make a zeroing-mask '11110000' to AND the last
+        # column in the error matrix with to clear the value back to zero
+        cdef:
+            size_t r, c
+            size_t rows = matrix.shape[0]
+            size_t cols = matrix.shape[1]
 
-        self._zero_mask_last_column(self.activation)   # this does output_matrix as well (since it is a view)
-        self._zero_mask_last_column(self.error)
+        for r in range(rows):
+            matrix[r, cols-self.zero_mask_cols] &= self.zero_mask
+            for c in range(1, self.zero_mask_cols):
+                matrix[r, cols-c-1] = 0
