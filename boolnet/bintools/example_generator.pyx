@@ -67,7 +67,6 @@ cdef class PackedExampleGenerator:
 
 cdef class OperatorExampleFactory:
     def __init__(self, size_t[:] indices, size_t Ne, size_t Nb, Operator operator, bint inc):
-        print('lah')
         self.__check_operator(operator)
         self.indices = np.array(indices)
         self.op = operator
@@ -78,23 +77,30 @@ cdef class OperatorExampleFactory:
 
     def __iter__(self):
         if self.inc:
-            print('lah2True')
-            if self.op == ADD:
-                print('lah2Add')
+            if self.op == ZERO:
+                return ZeroIncludeIterator(self.indices, self.Nb)
+            elif self.op == AND:
+                return AndIncludeIterator(self.indices, self.Nb)
+            elif self.op == OR:
+                return OrIncludeIterator(self.indices, self.Nb)
+            elif self.op == ADD:
                 return AddIncludeIterator(self.indices, self.Nb)
             elif self.op == SUB:
-                print('lah2Sub')
                 return SubIncludeIterator(self.indices, self.Nb)
-            if self.op == MUL:
-                print('lah2Mul')
+            elif self.op == MUL:
                 return MulIncludeIterator(self.indices, self.Nb)
         else:
-            print('lah2False')
-            if self.op == ADD:
+            if self.op == ZERO:
+                return ZeroExcludeIterator(self.indices, self.Nb, self.Ne)
+            elif self.op == AND:
+                return AndExcludeIterator(self.indices, self.Nb, self.Ne)
+            elif self.op == OR:
+                return OrExcludeIterator(self.indices, self.Nb, self.Ne)
+            elif self.op == ADD:
                 return AddExcludeIterator(self.indices, self.Nb, self.Ne)
             elif self.op == SUB:
                 return SubExcludeIterator(self.indices, self.Nb, self.Ne)
-            if self.op == MUL:
+            elif self.op == MUL:
                 return MulExcludeIterator(self.indices, self.Nb, self.Ne)
 
     def __len__(self):
@@ -123,6 +129,32 @@ cdef class BinaryOperatorIncludeIterator(BinaryOperatorIterator):
         super().__init__(Nb, include_list.size)
         self.include_iter = iter(include_list)
 
+
+cdef class ZeroIncludeIterator(BinaryOperatorIncludeIterator):
+    def __next__(self):
+        cdef size_t inp, out 
+        inp = next(self.include_iter)
+        out = 0
+        self.remaining -= 1
+        return inp, out
+
+
+cdef class AndIncludeIterator(BinaryOperatorIncludeIterator):
+    def __next__(self):
+        cdef size_t inp, out 
+        inp = next(self.include_iter)
+        out = (inp // self.divisor) & (inp % self.divisor)
+        self.remaining -= 1
+        return inp, out
+
+
+cdef class OrIncludeIterator(BinaryOperatorIncludeIterator):
+    def __next__(self):
+        cdef size_t inp, out 
+        inp = next(self.include_iter)
+        out = (inp // self.divisor) | (inp % self.divisor)
+        self.remaining -= 1
+        return inp, out
 
 
 cdef class AddIncludeIterator(BinaryOperatorIncludeIterator):
@@ -178,16 +210,51 @@ cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):
             except StopIteration:
                 self.ex_index = self.num_elements
 
-        
+
+cdef class ZeroExcludeIterator(BinaryOperatorExcludeIterator):
+    def __next__(self):
+        if self.remaining <= 0:
+            raise StopIteration
+        cdef size_t inp = self.index
+        self.index += 1
+        self.remaining -= 1
+        self._sync()
+        return inp, 0
+
+
+cdef class AndExcludeIterator(BinaryOperatorExcludeIterator):
+    def __next__(self):
+        if self.remaining <= 0:
+            raise StopIteration
+        cdef size_t inp, out 
+        inp = self.index
+        out = (inp // self.divisor) & (inp % self.divisor)
+        self.index += 1
+        self.remaining -= 1
+        self._sync()
+        return inp, out
+
+
+cdef class OrExcludeIterator(BinaryOperatorExcludeIterator):
+    def __next__(self):
+        if self.remaining <= 0:
+            raise StopIteration
+        cdef size_t inp, out 
+        inp = self.index
+        out = (inp // self.divisor) | (inp % self.divisor)
+        self.index += 1
+        self.remaining -= 1
+        self._sync()
+        return inp, out
+
+
 cdef class AddExcludeIterator(BinaryOperatorExcludeIterator):
     def __next__(self):
-        print('in')
         if self.remaining <= 0:
             raise StopIteration
         cdef size_t inp, out 
         inp = self.index
         out = (inp // self.divisor) + (inp % self.divisor)
-        print(inp, out)
         self.index += 1
         self.remaining -= 1
         self._sync()

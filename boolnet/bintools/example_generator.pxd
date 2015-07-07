@@ -3,9 +3,12 @@ from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
 
 
 cpdef enum Operator:
+    ZERO,
+    AND,
+    OR,
     ADD,
     SUB,
-    MUL
+    MUL,
 
 
 cdef class PackedExampleGenerator:
@@ -42,6 +45,18 @@ cdef class BinaryOperatorIncludeIterator(BinaryOperatorIterator):
     cdef object include_iter
 
 
+cdef class ZeroIncludeIterator(BinaryOperatorIncludeIterator):
+    pass
+
+
+cdef class AndIncludeIterator(BinaryOperatorIncludeIterator):
+    pass
+
+
+cdef class OrIncludeIterator(BinaryOperatorIncludeIterator):
+    pass
+
+
 cdef class AddIncludeIterator(BinaryOperatorIncludeIterator):
     pass
 
@@ -60,6 +75,18 @@ cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):
         object ex_iter
 
     cdef void _sync(self)
+
+
+cdef class ZeroExcludeIterator(BinaryOperatorExcludeIterator):
+    pass
+
+
+cdef class AndExcludeIterator(BinaryOperatorExcludeIterator):
+    pass
+
+
+cdef class OrExcludeIterator(BinaryOperatorExcludeIterator):
+    pass
 
 
 cdef class AddExcludeIterator(BinaryOperatorExcludeIterator):
