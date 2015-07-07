@@ -17,7 +17,7 @@ gates:
 max depths: [4]
 # state can be extracted from full state table
 samples: [2, 6, 7, 8, 9, 10, 12, 14]
-target function: or
+target function: unary_or
 target matrix:
     full:
         - [0]

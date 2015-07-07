@@ -79,45 +79,64 @@ cdef class OperatorExampleFactory:
                 raise ValueError('Exclude list larger than max_elements.')
             self.Ne = max_elements - self.indices.size
         self.Nb = Nb
-        self.Ni = 2*Nb
+        if operator in [UNARY_AND, UNARY_OR]:
+            self.Ni = Nb
+        else:
+            self.Ni = 2*Nb
 
     def __iter__(self):
         if self.inc:
             if self.op == ZERO:
                 return ZeroIncludeIterator(self.indices, self.Nb)
+            elif self.op == UNARY_AND:
+                return UnaryANDIncludeIterator(self.indices, self.Nb)
+            elif self.op == UNARY_OR:
+                return UnaryORIncludeIterator(self.indices, self.Nb)
             elif self.op == AND:
-                return AndIncludeIterator(self.indices, self.Nb)
+                return ANDIncludeIterator(self.indices, self.Nb)
             elif self.op == OR:
-                return OrIncludeIterator(self.indices, self.Nb)
+                return ORIncludeIterator(self.indices, self.Nb)
             elif self.op == ADD:
                 return AddIncludeIterator(self.indices, self.Nb)
             elif self.op == SUB:
                 return SubIncludeIterator(self.indices, self.Nb)
             elif self.op == MUL:
                 return MulIncludeIterator(self.indices, self.Nb)
+            elif self.op == AND:
+                return UnaryANDIncludeIterator(self.indices, self.Nb)
+            elif self.op == OR:
+                return UnaryORIncludeIterator(self.indices, self.Nb)
         else:
             if self.op == ZERO:
                 return ZeroExcludeIterator(self.indices, self.Nb, self.max_elements)
+            elif self.op == UNARY_AND:
+                return UnaryANDExcludeIterator(self.indices, self.Nb, self.max_elements)
+            elif self.op == UNARY_OR:
+                return UnaryORExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == AND:
-                return AndExcludeIterator(self.indices, self.Nb, self.max_elements)
+                return ANDExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == OR:
-                return OrExcludeIterator(self.indices, self.Nb, self.max_elements)
+                return ORExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == ADD:
                 return AddExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == SUB:
                 return SubExcludeIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == MUL:
                 return MulExcludeIterator(self.indices, self.Nb, self.max_elements)
+            elif self.op == AND:
+                return UnaryANDExcludeIterator(self.indices, self.Nb, self.max_elements)
+            elif self.op == OR:
+                return UnaryORExcludeIterator(self.indices, self.Nb, self.max_elements)
 
     def __len__(self):
         return self.Ne
 
     cdef __check_operator(self, Operator op):
-        if op not in [ZERO, AND, OR, ADD, SUB, MUL]:
+        if op not in [ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL]:
             raise ValueError('Invalid operator value ({})'.format(op))
 
 
-cdef class BinaryOperatorIterator:
+cdef class OperatorIterator:
     def __init__(self, size_t Nb, size_t Ne):
         if Nb == 0:
             raise ValueError('Zero bitwidth not allowed.')
@@ -131,13 +150,13 @@ cdef class BinaryOperatorIterator:
         return self.remaining
 
 
-cdef class BinaryOperatorIncludeIterator(BinaryOperatorIterator):
+cdef class OperatorIncludeIterator(OperatorIterator):
     def __init__(self, size_t[:] include_list, size_t Nb):
         super().__init__(Nb, include_list.size)
         self.include_iter = iter(include_list)
 
 
-cdef class ZeroIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class ZeroIncludeIterator(OperatorIncludeIterator):
     def __next__(self):
         cdef size_t inp, out 
         inp = next(self.include_iter)
@@ -146,7 +165,29 @@ cdef class ZeroIncludeIterator(BinaryOperatorIncludeIterator):
         return inp, out
 
 
-cdef class AndIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class UnaryANDIncludeIterator(OperatorIncludeIterator):
+    def __init__(self, size_t[:] include_list, size_t Nb):
+        super().__init__(include_list, Nb)
+        self.all_ones = 2**Nb - 1
+
+    def __next__(self):
+        cdef size_t inp, out 
+        inp = next(self.include_iter)
+        out = 1 if inp == self.all_ones else 0
+        self.remaining -= 1
+        return inp, out
+
+
+cdef class UnaryORIncludeIterator(OperatorIncludeIterator):
+    def __next__(self):
+        cdef size_t inp, out 
+        inp = next(self.include_iter)
+        out = 0 if inp == 0 else 1
+        self.remaining -= 1
+        return inp, out
+
+
+cdef class ANDIncludeIterator(OperatorIncludeIterator):
     def __next__(self):
         cdef size_t inp, out 
         inp = next(self.include_iter)
@@ -155,7 +196,7 @@ cdef class AndIncludeIterator(BinaryOperatorIncludeIterator):
         return inp, out
 
 
-cdef class OrIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class ORIncludeIterator(OperatorIncludeIterator):
     def __next__(self):
         cdef size_t inp, out 
         inp = next(self.include_iter)
@@ -164,7 +205,7 @@ cdef class OrIncludeIterator(BinaryOperatorIncludeIterator):
         return inp, out
 
 
-cdef class AddIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class AddIncludeIterator(OperatorIncludeIterator):
     def __next__(self):
         cdef size_t inp, out 
         inp = next(self.include_iter)
@@ -173,7 +214,7 @@ cdef class AddIncludeIterator(BinaryOperatorIncludeIterator):
         return inp, out
 
 
-cdef class SubIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class SubIncludeIterator(OperatorIncludeIterator):
     def __next__(self):
         cdef size_t inp, out, upper, lower
         inp = next(self.include_iter)
@@ -187,7 +228,7 @@ cdef class SubIncludeIterator(BinaryOperatorIncludeIterator):
         return inp, out
 
 
-cdef class MulIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class MulIncludeIterator(OperatorIncludeIterator):
     def __next__(self):
         cdef size_t inp, out 
         inp = next(self.include_iter)
@@ -196,7 +237,7 @@ cdef class MulIncludeIterator(BinaryOperatorIncludeIterator):
         return inp, out
 
 
-cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):
+cdef class OperatorExcludeIterator(OperatorIterator):
     def __init__(self, size_t[:] exclude_list, size_t Nb, size_t num_elements):
         if num_elements < exclude_list.size:
             raise ValueError('Exclude list larger than num_elements.')
@@ -220,7 +261,7 @@ cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):
                 self.ex_index = self.num_elements
 
 
-cdef class ZeroExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class ZeroExcludeIterator(OperatorExcludeIterator):
     def __next__(self):
         if self.remaining <= 0:
             raise StopIteration
@@ -231,7 +272,37 @@ cdef class ZeroExcludeIterator(BinaryOperatorExcludeIterator):
         return inp, 0
 
 
-cdef class AndExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class UnaryANDExcludeIterator(OperatorExcludeIterator):
+    def __init__(self, size_t[:] exclude_list, size_t Nb, size_t num_elements):
+        super().__init__(exclude_list, Nb, num_elements)
+        self.all_ones = 2**Nb - 1
+
+    def __next__(self):
+        if self.remaining <= 0:
+            raise StopIteration
+        cdef size_t inp, out 
+        inp = self.index
+        out = 1 if inp == self.all_ones else 0
+        self.index += 1
+        self.remaining -= 1
+        self._sync()
+        return inp, out
+
+
+cdef class UnaryORExcludeIterator(OperatorExcludeIterator):
+    def __next__(self):
+        if self.remaining <= 0:
+            raise StopIteration
+        cdef size_t inp, out 
+        inp = self.index
+        out = 0 if inp == 0 else 1
+        self.index += 1
+        self.remaining -= 1
+        self._sync()
+        return inp, out
+
+
+cdef class ANDExcludeIterator(OperatorExcludeIterator):
     def __next__(self):
         if self.remaining <= 0:
             raise StopIteration
@@ -244,7 +315,7 @@ cdef class AndExcludeIterator(BinaryOperatorExcludeIterator):
         return inp, out
 
 
-cdef class OrExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class ORExcludeIterator(OperatorExcludeIterator):
     def __next__(self):
         if self.remaining <= 0:
             raise StopIteration
@@ -257,7 +328,7 @@ cdef class OrExcludeIterator(BinaryOperatorExcludeIterator):
         return inp, out
 
 
-cdef class AddExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class AddExcludeIterator(OperatorExcludeIterator):
     def __next__(self):
         if self.remaining <= 0:
             raise StopIteration
@@ -270,7 +341,7 @@ cdef class AddExcludeIterator(BinaryOperatorExcludeIterator):
         return inp, out
 
 
-cdef class SubExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class SubExcludeIterator(OperatorExcludeIterator):
     def __next__(self):
         if self.remaining <= 0:
             raise StopIteration
@@ -288,7 +359,7 @@ cdef class SubExcludeIterator(BinaryOperatorExcludeIterator):
         return inp, out
 
 
-cdef class MulExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class MulExcludeIterator(OperatorExcludeIterator):
     def __next__(self):
         if self.remaining <= 0:
             raise StopIteration

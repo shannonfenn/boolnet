@@ -4,13 +4,12 @@ import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.packing import packed_type, pack_bool_matrix
-from boolnet.bintools.example_generator import ZERO, AND, OR, ADD, SUB, MUL
+from boolnet.bintools.example_generator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
 from boolnet.bintools.example_generator import OperatorExampleFactory, PackedExampleGenerator
 
 
 class TestExampleFactory:
     @fixture(params=[
-        (ZERO, lambda x, y: 0),
         (AND, operator.__and__),
         (OR, operator.__or__),
         (ADD, operator.add),
@@ -20,7 +19,15 @@ class TestExampleFactory:
     def binary_op(self, request):
         return request.param
 
-    @fixture(params=list(range(1, 10)))
+    @fixture(params=[
+        (ZERO, lambda x, m: 0),
+        (UNARY_OR, lambda x, m: int(x > 0)),
+        (UNARY_AND, lambda x, m: int(x == m - 1))
+    ])
+    def unary_op(self, request):
+        return request.param
+
+    @fixture(params=list(range(1, 7)))
     def operand_width(self, request):
         return request.param
 
@@ -57,6 +64,35 @@ class TestExampleFactory:
             expected_out = binary_op[1](int(i // upper), int(i % upper))
             if expected_out < 0:
                 expected_out += upper
+            assert expected_out == tgt
+
+    def test_unary_operator_factory_include(self, unary_op, operand_width):
+        Nb = int(operand_width)
+        max_indices = 2**Nb
+        Ne = np.random.randint(min(100, max_indices))
+        indices = np.random.choice(max_indices, Ne, replace=False)
+        indices = np.array(indices, dtype=np.uint64)
+
+        factory = OperatorExampleFactory(indices, Nb, unary_op[0])
+
+        for i, (inp, tgt) in zip(indices, iter(factory)):
+            assert i == inp
+            expected_out = unary_op[1](i, max_indices)
+            assert expected_out == tgt
+
+    def test_unary_operator_factory_exclude(self, unary_op, operand_width):
+        Nb = operand_width
+        max_indices = 2**Nb
+        Ne = np.random.randint(min(100, max_indices))
+        ex_indices = np.sort(np.random.choice(max_indices, Ne, replace=False))
+        ex_indices = np.array(ex_indices, dtype=np.uint64)
+        indices = (i for i in range(max_indices) if i not in ex_indices)
+
+        factory = OperatorExampleFactory(ex_indices, Nb, unary_op[0], max_indices)
+
+        for i, (inp, tgt) in zip(indices, iter(factory)):
+            assert i == inp
+            expected_out = unary_op[1](i, max_indices)
             assert expected_out == tgt
 
 

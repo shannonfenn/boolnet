@@ -6,6 +6,8 @@ cpdef enum Operator:
     ZERO,
     AND,
     OR,
+    UNARY_AND,
+    UNARY_OR,
     ADD,
     SUB,
     MUL,
@@ -37,39 +39,48 @@ cdef class OperatorExampleFactory:
         Operator op
     cdef __check_operator(self, Operator op)
 
-cdef class BinaryOperatorIterator:
+
+cdef class OperatorIterator:
     cdef size_t divisor, remaining
 
 
-cdef class BinaryOperatorIncludeIterator(BinaryOperatorIterator):
+cdef class OperatorIncludeIterator(OperatorIterator):
     cdef object include_iter
 
 
-cdef class ZeroIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class ZeroIncludeIterator(OperatorIncludeIterator):
     pass
 
 
-cdef class AndIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class UnaryANDIncludeIterator(OperatorIncludeIterator):
+    cdef size_t all_ones
+
+
+cdef class UnaryORIncludeIterator(OperatorIncludeIterator):
     pass
 
 
-cdef class OrIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class ANDIncludeIterator(OperatorIncludeIterator):
     pass
 
 
-cdef class AddIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class ORIncludeIterator(OperatorIncludeIterator):
     pass
 
 
-cdef class SubIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class AddIncludeIterator(OperatorIncludeIterator):
     pass
 
 
-cdef class MulIncludeIterator(BinaryOperatorIncludeIterator):
+cdef class SubIncludeIterator(OperatorIncludeIterator):
     pass
 
 
-cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):    
+cdef class MulIncludeIterator(OperatorIncludeIterator):
+    pass
+
+
+cdef class OperatorExcludeIterator(OperatorIterator):    
     cdef:
         size_t index, ex_index, num_elements
         object ex_iter
@@ -77,25 +88,33 @@ cdef class BinaryOperatorExcludeIterator(BinaryOperatorIterator):
     cdef void _sync(self)
 
 
-cdef class ZeroExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class ZeroExcludeIterator(OperatorExcludeIterator):
     pass
 
 
-cdef class AndExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class UnaryANDExcludeIterator(OperatorExcludeIterator):
+    cdef size_t all_ones
+
+
+cdef class UnaryORExcludeIterator(OperatorExcludeIterator):
     pass
 
 
-cdef class OrExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class ANDExcludeIterator(OperatorExcludeIterator):
     pass
 
 
-cdef class AddExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class ORExcludeIterator(OperatorExcludeIterator):
     pass
 
 
-cdef class SubExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class AddExcludeIterator(OperatorExcludeIterator):
     pass
 
 
-cdef class MulExcludeIterator(BinaryOperatorExcludeIterator):
+cdef class SubExcludeIterator(OperatorExcludeIterator):
+    pass
+
+
+cdef class MulExcludeIterator(OperatorExcludeIterator):
     pass

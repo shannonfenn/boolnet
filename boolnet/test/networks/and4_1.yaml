@@ -14,7 +14,7 @@ gates:
 max depths: [4]
 # state can be extracted from full state table
 samples: [2, 3, 4, 5, 7, 8, 9, 11, 12, 13, 14, 15]
-target function: and
+target function: unary_and
 target matrix:
     full:
         - [0]
@@ -72,6 +72,22 @@ error matrix:
         - [0]
 metric value:
     sample:
+        e1: 0.0
+        e2M: 0.0
+        e2L: 0.0
+        e3M: 0.0
+        e3L: 0.0
+        e7M: 0.0
+        e7L: 0.0
+        e4M: 0.0
+        e4L: 0.0
+        e5M: 0.0
+        e5L: 0.0
+        e6M: 0.0
+        e6L: 0.0
+        accuracy: 1.0
+        per_output: [0.0]
+    test:
         e1: 0.0
         e2M: 0.0
         e2L: 0.0
