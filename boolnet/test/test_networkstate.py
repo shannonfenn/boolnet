@@ -2,6 +2,7 @@ from collections import namedtuple
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
 from boolnet.network.boolnetwork import BoolNetwork
 import numpy as np
+from numpy.testing import assert_array_equal as assert_array_equal
 import pytest
 
 import pyximport
@@ -26,92 +27,71 @@ def packed_zeros(shape):
     return pack_bool_matrix(np.zeros(shape, dtype=np.uint8))
 
 
-# ################### Exception Testing ################### #
-@pytest.mark.parametrize("net, Ni, Tshape, Ne", [
-    (BoolNetwork([(0, 1)], 1, 1), 1, (2**4, 1), 2**4),  # Ne != inputs.Ne
-    (BoolNetwork([(0, 1)], 1, 1), 4, (2, 1), 2**4),     # Ne != target.Ne
-    (BoolNetwork([(0, 1)], 1, 1), 1, (2, 4), 4),        # net.No != #targets
-    (BoolNetwork([(0, 1)], 1, 1), 2, (1, 4), 4),        # net.Ni != #inputs
-    (BoolNetwork([(0, 1)], 1, 1), 2, (2, 4), 4)         # both
-])
-def test_construction_exceptions(net, Ni, Tshape, Ne, evaluator_class):
-    inp = all_possible_inputs(Ni)
-    tgt = packed_zeros(Tshape)
-    with pytest.raises(ValueError):
-        evaluator_class(net, inp, tgt, Ne)
-
-
 # ################### Functionality Testing ################### #
-class TestFunctionality:
+class TestStandard:
+
+    # ################### Exception Testing ################### #
+    @pytest.mark.parametrize("net, Ni, Tshape, Ne", [
+        (BoolNetwork([(0, 1)], 1, 1), 1, (2**4, 1), 2**4),  # Ne != inputs.Ne
+        (BoolNetwork([(0, 1)], 1, 1), 4, (2, 1), 2**4),     # Ne != target.Ne
+        (BoolNetwork([(0, 1)], 1, 1), 1, (2, 4), 4),        # net.No != #targets
+        (BoolNetwork([(0, 1)], 1, 1), 2, (1, 4), 4),        # net.Ni != #inputs
+        (BoolNetwork([(0, 1)], 1, 1), 2, (2, 4), 4)         # both
+    ])
+    def test_construction_exceptions(self, net, Ni, Tshape, Ne, evaluator_class):
+        inp = all_possible_inputs(Ni)
+        tgt = packed_zeros(Tshape)
+        with pytest.raises(ValueError):
+            evaluator_class(net, inp, tgt, Ne)
+
+    def build_instance(self, instance_dict, network_type, field):
+        evaluator = instance_dict['evaluator'][network_type]
+        Ne = instance_dict['Ne'][network_type]
+        expected = np.array(instance_dict[field][network_type], dtype=np.uint8)
+        eval_func = lambda mat: unpack_bool_matrix(mat, Ne)
+        return evaluator, expected, eval_func
 
     def test_input_matrix(self, any_test_network, network_type):
-        evaluator = any_test_network['evaluator'][network_type]
-        Ne = any_test_network['target matrix'][network_type].shape[0]
-        actual = unpack_bool_matrix(evaluator.input_matrix, Ne)
-        Ni = any_test_network['Ni']
-        activation = np.array(any_test_network['activation matrix'][network_type], dtype=np.uint8)
-        expected = activation[:, :Ni]
-        assert np.array_equal(actual, expected)
+        evaluator, expected, eval_func = self.build_instance(
+            any_test_network, network_type, 'input matrix')
+        actual = eval_func(evaluator.input_matrix)
+        assert_array_equal(actual, expected)
 
     def test_target_matrix(self, any_test_network, network_type):
-        evaluator = any_test_network['evaluator'][network_type]
-        Ne = any_test_network['target matrix'][network_type].shape[0]
-        actual = unpack_bool_matrix(evaluator.target_matrix, Ne)
-        expected = np.array(any_test_network['target matrix'][network_type], dtype=np.uint8)
-        assert np.array_equal(actual, expected)
+        evaluator, expected, eval_func = self.build_instance(
+            any_test_network, network_type, 'target matrix')
+        actual = eval_func(evaluator.target_matrix)
+        assert_array_equal(actual, expected)
 
     def test_output_matrix(self, any_test_network, network_type):
-        evaluator = any_test_network['evaluator'][network_type]
-        Ne = any_test_network['target matrix'][network_type].shape[0]
-        No = any_test_network['No']
-
-        activation = np.array(any_test_network['activation matrix'][network_type], dtype=np.uint8)
-        expected = activation[:, -No:]
-        actual = unpack_bool_matrix(evaluator.output_matrix, Ne)
-
-        assert np.array_equal(actual, expected)
-
-    # def test_truth_table(self, any_test_network, network_type):
-    #     evaluator = any_test_network['evaluator'][network_type]
-    #     Ne = any_test_network['target matrix'][network_type].shape[0]
-    #     actual = unpack_bool_matrix(evaluator.truth_table(0), Ne)
-    #     activation = np.array(any_test_network['activation matrix']['full'], dtype=np.uint8)
-    #     expected = activation[:, -any_test_network['No']:]
-    #     assert np.array_equal(actual, expected)
+        evaluator, expected, eval_func = self.build_instance(
+            any_test_network, network_type, 'output matrix')
+        actual = eval_func(evaluator.output_matrix)
+        assert_array_equal(actual, expected)
 
     def test_activation_matrix(self, any_test_network, network_type):
-        evaluator = any_test_network['evaluator'][network_type]
-        Ne = any_test_network['target matrix'][network_type].shape[0]
-        actual = unpack_bool_matrix(evaluator.activation_matrix, Ne)
-        expected = np.array(
-            any_test_network['activation matrix'][network_type],
-            dtype=np.byte)
-        assert np.array_equal(actual, expected)
+        evaluator, expected, eval_func = self.build_instance(
+            any_test_network, network_type, 'activation matrix')
+        actual = eval_func(evaluator.activation_matrix)
+        assert_array_equal(actual, expected)
+
+    def output_different_helper(self, instance, network_type):
+        evaluator, _, eval_func = self.build_instance(instance, network_type,
+                                                      'error matrix')
+        net = evaluator.network
+        for k in range(10):
+            old_error = eval_func(evaluator.error_matrix)
+            net.move_to_neighbour(net.random_move())
+            assert not np.array_equal(eval_func(evaluator.error_matrix), old_error)
+            net.revert_move()
 
     def test_single_move_output_different(
             self, single_move_invariant, network_type):
-        evaluator = single_move_invariant['evaluator'][network_type]
-        net = evaluator.network
-        Ne = single_move_invariant['target matrix'][network_type].shape[0]
-        for k in range(100):
-            old_error = np.array(evaluator.error_matrix, copy=True)
-            net.move_to_neighbour(net.random_move())
-            assert not np.array_equal(
-                unpack_bool_matrix(evaluator.error_matrix, Ne),
-                old_error)
-            net.revert_move()
+        self.output_different_helper(single_move_invariant, network_type)
 
     def test_multiple_move_output_different(
             self, multiple_move_invariant, network_type):
-        evaluator = multiple_move_invariant['evaluator'][network_type]
-        net = evaluator.network
-        Ne = multiple_move_invariant['target matrix'][network_type].shape[0]
-        for k in range(100):
-            old_error = np.array(evaluator.error_matrix, copy=True)
-            net.move_to_neighbour(net.random_move())
-            assert not np.array_equal(
-                unpack_bool_matrix(evaluator.error_matrix, Ne),
-                old_error)
+        self.output_different_helper(multiple_move_invariant, network_type)
 
     def test_move_with_initial_evaluation(
             self, single_layer_zero, network_type):
@@ -122,7 +102,7 @@ class TestFunctionality:
         actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
         expected = single_layer_zero['error matrix'][network_type]
 
-        assert np.array_equal(actual, expected)
+        assert_array_equal(actual, expected)
 
         move = Move(gate=1, source=4, terminal=True)
 
@@ -133,7 +113,7 @@ class TestFunctionality:
             [1, 0], [1, 0], [1, 0], [0, 1],
             [1, 1], [1, 1], [1, 1], [0, 1],
             [1, 0], [1, 0], [1, 0], [0, 1]], dtype=np.byte)
-        assert np.array_equal(actual, expected)
+        assert_array_equal(actual, expected)
 
     def test_multiple_moves_error_matrix(
             self, single_layer_zero, network_type):
@@ -172,7 +152,7 @@ class TestFunctionality:
         for move, expectation in zip(moves, expected):
             net.move_to_neighbour(move)
             actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
-            assert np.array_equal(actual, expectation)
+            assert_array_equal(actual, expectation)
 
     def test_multiple_reverts_error_matrix(
             self, single_layer_zero, network_type):
@@ -213,7 +193,7 @@ class TestFunctionality:
         Ne = single_layer_zero['target matrix'][network_type].shape[0]
         for expectation in reversed(expected):
             actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
-            assert np.array_equal(actual, expectation)
+            assert_array_equal(actual, expectation)
             net.revert_move()
 
     def test_error_matrix(self, any_test_network, network_type):
@@ -221,7 +201,7 @@ class TestFunctionality:
         Ne = any_test_network['target matrix'][network_type].shape[0]
         actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
         expected = any_test_network['error matrix'][network_type]
-        assert np.array_equal(actual, expected)
+        assert_array_equal(actual, expected)
 
     def test_metric_value(self, any_test_network, metric, network_type):
         # a value may not have been specified for all metrics
@@ -231,7 +211,7 @@ class TestFunctionality:
         actual = evaluator.metric_value()
         metric_values = any_test_network['metric value'][network_type]
         expected = metric_values[str(metric)]
-        assert np.array_equal(actual, expected)
+        assert_array_equal(actual, expected)
 
     def test_pre_evaluated_network(self, any_test_network):
         evaluator1 = any_test_network['evaluator']['sample']
@@ -248,10 +228,10 @@ class TestFunctionality:
         # check sample evaluator is still giving original results
         expected = unpack_bool_matrix(evaluator1.activation_matrix, Ne1)
         actual = any_test_network['activation matrix']['sample']
-        assert np.array_equal(expected, actual)
+        assert_array_equal(expected, actual)
 
         # check full evaluator is still giving original results
         evaluator2.set_network(net)
         expected = unpack_bool_matrix(evaluator2.activation_matrix, Ne2)
         actual = any_test_network['activation matrix']['full']
-        assert np.array_equal(expected, actual)
+        assert_array_equal(expected, actual)

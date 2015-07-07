@@ -35,20 +35,34 @@ def harness_to_fixture(stream, evaluator_class):
     gates = np.array(test['gates'], np.uint32)
     samples = np.array(test['samples'], np.uint32)
 
+    # add non-existant sub-dictionaries
+    test['input matrix'] = {}
+    test['output matrix'] = {}
+
     full_target = np.array(test['target matrix']['full'], dtype=np.uint8)
     full_activation = np.array(test['activation matrix']['full'], dtype=np.uint8)
     full_error = np.array(test['error matrix']['full'], dtype=np.uint8)
     full_inputs = full_activation[:, :Ni]
     test['target matrix']['full'] = full_target
+    test['input matrix']['full'] = full_inputs
+    test['output matrix']['full'] = full_activation[:, -No:]
     test['activation matrix']['full'] = full_activation
     test['error matrix']['full'] = full_error
+
     # generate sample versions
     sample_target = full_target[samples]
     sample_inputs = full_inputs[samples]
+    sample_activation = full_activation[samples]
     # add sample version of expectations to test
     test['target matrix']['sample'] = sample_target
-    test['activation matrix']['sample'] = full_activation[samples]
+    test['input matrix']['sample'] = sample_inputs
+    test['output matrix']['sample'] = sample_activation[:, -No:]
+    test['activation matrix']['sample'] = sample_activation
     test['error matrix']['sample'] = full_error[samples]
+
+    test['Ne'] = {'full': full_activation.shape[0],
+                  'sample': sample_activation.shape[0]}
+
     # add network to test
     if 'transfer functions' in test:
         tf = test['transfer functions']
