@@ -8,6 +8,7 @@ gates: [[0, 1]]
 max depths: [1]
 # state can be extracted from full state table
 samples: [0, 1, 2, 3]
+target function: zero
 target matrix: 
     full:
         - [0]
