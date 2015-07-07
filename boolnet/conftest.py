@@ -2,6 +2,7 @@ import glob
 import yaml
 import numpy as np
 import os.path
+from collections import namedtuple
 from pytest import fixture, yield_fixture
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
@@ -138,10 +139,25 @@ def multiple_move_invariant(request, evaluator_class):
         yield harness_to_fixture(f, evaluator_class)
 
 
-@yield_fixture
+Move = namedtuple('Move', ['gate', 'terminal', 'source'])
+MoveAndExpected = namedtuple('MoveAnExpected', ['move', 'expected'])
+
+
+@fixture
 def single_layer_zero(evaluator_class):
     with open(TEST_LOCATION + 'networks/single_layer_zero.yaml') as f:
-        yield harness_to_fixture(f, evaluator_class)
+        instance = harness_to_fixture(f, evaluator_class)
+    test_case = instance['multiple_moves_test_case']
+
+    updated_test_case = []
+    for step in test_case:
+        move = Move(gate=step['move']['gate'],
+                    source=step['move']['source'],
+                    terminal=step['move']['terminal'])
+        expected = np.array(step['expected'], dtype=np.uint8)
+        updated_test_case.append(MoveAndExpected(move=move, expected=expected))
+    instance['multiple_moves_test_case'] = updated_test_case
+    return instance
 
 
 @yield_fixture
