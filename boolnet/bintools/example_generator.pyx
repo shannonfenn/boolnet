@@ -107,7 +107,7 @@ cdef class OperatorExampleFactory:
         return self.Ne
 
     cdef __check_operator(self, Operator op):
-        if op not in [ADD, SUB, MUL]:
+        if op not in [ZERO, AND, OR, ADD, SUB, MUL]:
             raise ValueError('Invalid operator value ({})'.format(op))
 
 

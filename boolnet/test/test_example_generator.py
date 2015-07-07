@@ -1,19 +1,22 @@
 import operator
 import os.path
 import numpy as np
-from copy import copy
 from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.packing import packed_type, pack_bool_matrix
-from boolnet.bintools.example_generator import (ADD, SUB, MUL, OperatorExampleFactory,
-                                                PackedExampleGenerator)
+from boolnet.bintools.example_generator import ZERO, AND, OR, ADD, SUB, MUL
+from boolnet.bintools.example_generator import OperatorExampleFactory, PackedExampleGenerator
 
 
 class TestExampleFactory:
     @fixture(params=[
+        (ZERO, lambda x, y: 0),
+        (AND, operator.__and__),
+        (OR, operator.__or__),
         (ADD, operator.add),
         (SUB, operator.sub),
-        (MUL, operator.mul)])
+        (MUL, operator.mul)
+    ])
     def binary_op(self, request):
         return request.param
 
