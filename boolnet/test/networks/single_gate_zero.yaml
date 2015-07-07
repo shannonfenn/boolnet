@@ -7,7 +7,7 @@ Ni: 2
 gates: [[0, 1]]
 max depths: [1]
 # state can be extracted from full state table
-samples: [0, 1, 2, 3]
+samples: [1, 2]
 target function: zero
 target matrix: 
     full:
@@ -30,34 +30,50 @@ error matrix:
         - [0]
 metric value:
     sample:
-        e1:                 0.75
-        e2M:       0.75
-        e2L:       0.75
-        e3M:   0.75
-        e3L:   0.75
-        e7M:  1.0
-        e7L:  1.0
-        e4L:             1.0
-        e4M:             1.0
-        e5L:             1.0
-        e5M:             1.0
-        e6L:             0.75
-        e6M:             0.75
-        accuracy:           0.25
-        per_output:  [0.75]
+        e1:         1.0
+        e2M:        1.0
+        e2L:        1.0
+        e3M:        1.0
+        e3L:        1.0
+        e7M:        1.0
+        e7L:        1.0
+        e4L:        1.0
+        e4M:        1.0
+        e5L:        1.0
+        e5M:        1.0
+        e6L:        1.0
+        e6M:        1.0
+        accuracy:   0.0
+        per_output: [1.0]
+    test:
+        e1:         0.5
+        e2M:        0.5
+        e2L:        0.5
+        e3M:        0.5
+        e3L:        0.5
+        e7M:        1.0
+        e7L:        1.0
+        e4L:        1.0
+        e4M:        1.0
+        e5L:        1.0
+        e5M:        1.0
+        e6L:        0.5
+        e6M:        0.5
+        accuracy:   0.5
+        per_output: [0.5]
     full:
-        e1:             0.75
-        e2M:       0.75
-        e2L:       0.75
-        e3M:   0.75
-        e3L:   0.75
-        e7M:  1.0
-        e7L:  1.0
-        e4L:             1.0
-        e4M:             1.0
-        e5L:             1.0
-        e5M:             1.0
-        e6L:             0.75
-        e6M:             0.75
-        accuracy:           0.25
-        per_output:  [0.75]
+        e1:         0.75
+        e2M:        0.75
+        e2L:        0.75
+        e3M:        0.75
+        e3L:        0.75
+        e7M:        1.0
+        e7L:        1.0
+        e4L:        1.0
+        e4M:        1.0
+        e5L:        1.0
+        e5M:        1.0
+        e6L:        0.75
+        e6M:        0.75
+        accuracy:   0.25
+        per_output: [0.75]

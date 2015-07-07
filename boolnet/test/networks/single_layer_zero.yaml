@@ -7,40 +7,7 @@ Ni: 4
 gates: [[0, 1], [2, 3]]
 max depths: [1, 1]
 # state can be extracted from full state table
-samples: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-metric value:
-    sample: 
-        e1:            0.75
-        e2M:      0.75
-        e2L:      0.75
-        e3L:  0.84375
-        e3M:  0.84375
-        e7L: 1.0
-        e7M: 1.0
-        e4M:            1.0
-        e4L:            1.0
-        e5L:            1.0
-        e5M:            1.0
-        e6L:            0.875
-        e6M:            0.875
-        accuracy:          0.0625
-        per_output: [0.75, 0.75]
-    full: 
-        e1:             0.75
-        e2M:       0.75
-        e2L:       0.75
-        e3M:   0.84375
-        e3L:   0.84375
-        e7M:  1.0
-        e7L:  1.0
-        e4M:             1.0
-        e4L:             1.0
-        e5M:             1.0
-        e5L:             1.0
-        e6M:             0.875
-        e6L:             0.875
-        accuracy:           0.0625
-        per_output:  [0.75, 0.75]
+samples: [0, 2, 6, 8, 9, 10, 14, 15]
 
 target function: zero
 target matrix: 
@@ -68,6 +35,56 @@ activation matrix:
 error matrix: 
     full:
         [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 0]]
+
+metric value:
+    sample: 
+        e1:         0.8125
+        e2L:        0.8333333333333334
+        e2M:        0.7916666666666666
+        e3L:        0.875
+        e3M:        0.8125
+        e7L:        1.0
+        e7M:        1.0
+        e4L:        1.0
+        e4M:        1.0
+        e5L:        1.0
+        e5M:        1.0
+        e6L:        0.9375
+        e6M:        0.875
+        accuracy:   0.125
+        per_output: [0.875, 0.75]
+    test: 
+        e1:         0.6875
+        e2L:        0.6666666666666666
+        e2M:        0.7083333333333334
+        e3L:        0.8125
+        e3M:        0.875
+        e7L:        1.0
+        e7M:        1.0
+        e4L:        1.0
+        e4M:        1.0
+        e5L:        1.0
+        e5M:        1.0
+        e6L:        0.8125
+        e6M:        0.875
+        accuracy:   0.0
+        per_output: [0.625, 0.75]
+    full: 
+        e1:         0.75
+        e2L:        0.75
+        e2M:        0.75
+        e3L:        0.84375
+        e3M:        0.84375
+        e7L:        1.0
+        e7M:        1.0
+        e4L:        1.0
+        e4M:        1.0
+        e5L:        1.0
+        e5M:        1.0
+        e6L:        0.875
+        e6M:        0.875
+        accuracy:   0.0625
+        per_output: [0.75, 0.75]
 
 multiple_moves_test_case:
     - move: {gate: 0, source: 1, terminal: False}
