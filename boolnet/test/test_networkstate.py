@@ -85,115 +85,62 @@ class TestStandard:
             assert not np.array_equal(eval_func(evaluator.error_matrix), old_error)
             net.revert_move()
 
-    def test_single_move_output_different(
-            self, single_move_invariant, network_type):
+    def test_single_move_output_different(self, single_move_invariant, network_type):
         self.output_different_helper(single_move_invariant, network_type)
 
-    def test_multiple_move_output_different(
-            self, multiple_move_invariant, network_type):
+    def test_multiple_move_output_different(self, multiple_move_invariant, network_type):
         self.output_different_helper(multiple_move_invariant, network_type)
 
-    def test_move_with_initial_evaluation(
-            self, single_layer_zero, network_type):
-        evaluator = single_layer_zero['evaluator'][network_type]
+    def test_move_with_initial_evaluation(self, single_layer_zero, network_type):
+        evaluator, expected, eval_func = self.build_instance(
+            single_layer_zero, network_type, 'error matrix')
+
         net = evaluator.network
-        Ne = single_layer_zero['target matrix'][network_type].shape[0]
 
-        actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
-        expected = single_layer_zero['error matrix'][network_type]
-
+        actual = eval_func(evaluator.error_matrix)
         assert_array_equal(actual, expected)
 
         move = Move(gate=1, source=4, terminal=True)
 
         net.move_to_neighbour(move)
-        actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
+        actual = eval_func(evaluator.error_matrix)
         expected = np.array([
-            [1, 1], [1, 1], [1, 1], [0, 1],
-            [1, 0], [1, 0], [1, 0], [0, 1],
-            [1, 1], [1, 1], [1, 1], [0, 1],
-            [1, 0], [1, 0], [1, 0], [0, 1]], dtype=np.byte)
+            [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1],
+            [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]], dtype=np.byte)
         assert_array_equal(actual, expected)
 
-    def test_multiple_moves_error_matrix(
-            self, single_layer_zero, network_type):
-        evaluator = single_layer_zero['evaluator'][network_type]
+    def test_multiple_moves_error_matrix(self, single_layer_zero, network_type):
+        evaluator, _, eval_func = self.build_instance(
+            single_layer_zero, network_type, 'error matrix')
         net = evaluator.network
 
-        moves = [Move(gate=0, source=1, terminal=False),
-                 Move(gate=1, source=0, terminal=True),
-                 Move(gate=0, source=0, terminal=True),
-                 Move(gate=1, source=3, terminal=True),
-                 Move(gate=1, source=4, terminal=True),
-                 Move(gate=1, source=4, terminal=False)]
+        test_case = single_layer_zero['multiple_moves_test_case']
 
-        expected = np.array([
-            # expected after move 1
-            [[1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 1], [0, 1], [0, 1],
-             [1, 1], [1, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 0], [0, 0]],
-            # expected after move 2
-            [[1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 0], [0, 1], [0, 0],
-             [1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 0], [0, 1], [0, 0]],
-            # expected after move 3
-            [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 0], [1, 1], [0, 0],
-             [1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 0], [1, 1], [0, 0]],
-            # expected after move 4
-            [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1],
-             [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 0]],
-            # expected after move 5
-            [[1, 1],  [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1],
-             [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]],
-            # expected after move 6
-            [[1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1],
-             [1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]]],
-            dtype=np.byte)
-
-        Ne = single_layer_zero['target matrix'][network_type].shape[0]
-        for move, expectation in zip(moves, expected):
+        for step in test_case:
+            move = step['move']
+            move = Move(gate=move['gate'], source=move['source'], terminal=move['terminal'])
+            expected = np.array(step['expected'], dtype=np.uint8)
             net.move_to_neighbour(move)
-            actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
-            assert_array_equal(actual, expectation)
+            actual = eval_func(evaluator.error_matrix)
+            assert_array_equal(actual, expected)
 
-    def test_multiple_reverts_error_matrix(
-            self, single_layer_zero, network_type):
-        evaluator = single_layer_zero['evaluator'][network_type]
+    def test_multiple_reverts_error_matrix(self, single_layer_zero, network_type):
+        evaluator, _, eval_func = self.build_instance(
+            single_layer_zero, network_type, 'error matrix')
+
         net = evaluator.network
 
-        moves = [Move(gate=0, source=1, terminal=False),
-                 Move(gate=1, source=0, terminal=True),
-                 Move(gate=0, source=0, terminal=True),
-                 Move(gate=1, source=3, terminal=True),
-                 Move(gate=1, source=4, terminal=True),
-                 Move(gate=1, source=4, terminal=False)]
+        test_case = single_layer_zero['multiple_moves_test_case']
 
-        expected = np.array([
-            # expected after move 1
-            [[1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 1], [0, 1], [0, 1],
-             [1, 1], [1, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 0], [0, 0]],
-            # expected after move 2
-            [[1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 0], [0, 1], [0, 0],
-             [1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 0], [0, 1], [0, 0]],
-            # expected after move 3
-            [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 0], [1, 1], [0, 0],
-             [1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 0], [1, 1], [0, 0]],
-            # expected after move 4
-            [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1],
-             [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 0]],
-            # expected after move 5
-            [[1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1],
-             [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]],
-            # expected after move 6
-            [[1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1],
-             [1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]]],
-            dtype=np.byte)
-
-        for move in moves:
+        for step in test_case:
+            move = step['move']
+            move = Move(gate=move['gate'], source=move['source'], terminal=move['terminal'])
             net.move_to_neighbour(move)
 
-        Ne = single_layer_zero['target matrix'][network_type].shape[0]
-        for expectation in reversed(expected):
-            actual = unpack_bool_matrix(evaluator.error_matrix, Ne)
-            assert_array_equal(actual, expectation)
+        for step in reversed(test_case):
+            expected = np.array(step['expected'], dtype=np.uint8)
+            actual = eval_func(evaluator.error_matrix)
+            assert_array_equal(expected, actual)
             net.revert_move()
 
     def test_error_matrix(self, any_test_network, network_type):
