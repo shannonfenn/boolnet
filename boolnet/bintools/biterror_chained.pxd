@@ -8,10 +8,8 @@ cdef class ChainedEvaluator:
     cdef double divisor
 
 
-cdef class ChainedPerOutput:
+cdef class ChainedPerOutput(ChainedEvaluator):
     cdef:
-        size_t No, start, step
-        double divisor
         np.uint64_t[:] row_accumulator
         double[:] accumulator
 

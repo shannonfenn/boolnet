@@ -37,8 +37,9 @@ cdef class ChainedEvaluator:
             self.step = 1
 
 
-cdef class ChainedPerOutput:
+cdef class ChainedPerOutput(ChainedEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
+        super().__init__(Ne, No, cols, msb)
         self.No = No
         self.divisor = Ne
         self.row_accumulator = np.zeros(self.No, dtype=np.uint64)
@@ -106,8 +107,13 @@ cdef class ChainedE1(ChainedEvaluator):
 
         self.partial_evaluation(E)
 
+        print(np.asarray(E))
+        print(np.asarray(self.row_accumulator))
+        print(self.divisor)
+
         for i in range(self.No):
             result += self.row_accumulator[i] / self.divisor
+            print(self.row_accumulator[i] / self.divisor)
 
         return result
 
