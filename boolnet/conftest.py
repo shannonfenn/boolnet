@@ -180,7 +180,12 @@ def error_matrix_harness(request):
 
 
 @fixture(params=['sample', 'full'])
-def network_type(request):
+def sample_type(request):
+    return request.param
+
+
+@fixture(params=glob.glob(TEST_LOCATION + 'networks/*.yaml'))
+def network_file_instance(request, evaluator_type):
     return request.param
 
 
@@ -223,9 +228,3 @@ def single_layer_zero(evaluator_type):
         updated_test_case.append(MoveAndExpected(move=move, expected=expected))
     instance['multiple_moves_test_case'] = updated_test_case
     return instance
-
-
-@yield_fixture
-def adder2(evaluator_type):
-    with open(TEST_LOCATION + 'networks/adder2.yaml') as f:
-        yield harness_to_fixture(f, evaluator_type)
