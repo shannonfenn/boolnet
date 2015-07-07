@@ -1,5 +1,6 @@
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
 from boolnet.network.boolnetwork import BoolNetwork
+from boolnet.learning.networkstate import StaticNetworkState
 import numpy as np
 from numpy.testing import assert_array_equal as assert_array_equal
 import pytest
@@ -34,11 +35,11 @@ class TestStandard:
         (BoolNetwork([(0, 1)], 1, 1), 2, (1, 4), 4),        # net.Ni != #inputs
         (BoolNetwork([(0, 1)], 1, 1), 2, (2, 4), 4)         # both
     ])
-    def test_construction_exceptions(self, net, Ni, Tshape, Ne, evaluator_class):
+    def test_static_construction_exceptions(self, net, Ni, Tshape, Ne):
         inp = all_possible_inputs(Ni)
         tgt = packed_zeros(Tshape)
         with pytest.raises(ValueError):
-            evaluator_class(net, inp, tgt, Ne)
+            StaticNetworkState(net, inp, tgt, Ne)
 
     def build_instance(self, instance_dict, network_type, field):
         evaluator = instance_dict['evaluator'][network_type]

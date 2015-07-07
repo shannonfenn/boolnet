@@ -259,7 +259,7 @@ cdef class StaticNetworkState(NetworkState):
                              inputs.shape[1], target.shape[1]))
 
 
-cdef class ChainedNetworkState:
+cdef class ChainedNetworkState(NetworkState):
     cdef ChainedEvaluator err_evaluator
 
     def __init__(self, network, example_generator, window_size, metric=None):

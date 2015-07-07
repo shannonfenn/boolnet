@@ -7,9 +7,9 @@ from pytest import fixture, yield_fixture
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
 from boolnet.bintools.metric_names import all_metrics
+from boolnet.learning.networkstate import StaticNetworkState, ChainedNetworkState
 import pyximport
 pyximport.install()
-import boolnet.learning.networkstate as networkstate
 
 
 TEST_LOCATION = 'boolnet/test/'
@@ -29,7 +29,16 @@ def harnesses_with_property(bool_property_name):
                 yield name
 
 
-def harness_to_fixture(stream, evaluator_class):
+def harness_to_fixture(stream, evaluator_type):
+    if evaluator_type == 'static':
+        return static_harness_to_fixture(stream)
+    elif evaluator_type == 'chained':
+            return static_harness_to_fixture(stream)
+    else:
+        raise ValueError('Unimplemented evaluator: ' + evaluator_type)
+
+
+def static_harness_to_fixture(stream):
     test = yaml.safe_load(stream)
     Ni = test['Ni']
     No = test['No']
@@ -74,27 +83,83 @@ def harness_to_fixture(stream, evaluator_class):
     Ne_full = full_inputs.shape[0]
     # add evaluators to test
     test['evaluator'] = {
-        'sample': evaluator_class(test['network'],
-                                  pack_bool_matrix(sample_inputs),
-                                  pack_bool_matrix(sample_target),
-                                  Ne_sample),
-        'full': evaluator_class(test['network'],
-                                pack_bool_matrix(full_inputs),
-                                pack_bool_matrix(full_target),
-                                Ne_full)
+        'sample': StaticNetworkState(test['network'],
+                                     pack_bool_matrix(sample_inputs),
+                                     pack_bool_matrix(sample_target),
+                                     Ne_sample),
+        'full': StaticNetworkState(test['network'],
+                                   pack_bool_matrix(full_inputs),
+                                   pack_bool_matrix(full_target),
+                                   Ne_full)
+    }
+
+    return test
+
+
+def chained_harness_to_fixture(stream):
+    test = yaml.safe_load(stream)
+    Ni = test['Ni']
+    No = test['No']
+    gates = np.array(test['gates'], np.uint32)
+    samples = np.array(test['samples'], np.uint32)
+
+    # add non-existant sub-dictionaries
+    test['input matrix'] = {}
+    test['output matrix'] = {}
+
+    full_target = np.array(test['target matrix']['full'], dtype=np.uint8)
+    full_activation = np.array(test['activation matrix']['full'], dtype=np.uint8)
+    full_error = np.array(test['error matrix']['full'], dtype=np.uint8)
+    full_inputs = full_activation[:, :Ni]
+    test['target matrix']['full'] = full_target
+    test['input matrix']['full'] = full_inputs
+    test['output matrix']['full'] = full_activation[:, -No:]
+    test['activation matrix']['full'] = full_activation
+    test['error matrix']['full'] = full_error
+
+    # generate sample versions
+    sample_target = full_target[samples]
+    sample_inputs = full_inputs[samples]
+    sample_activation = full_activation[samples]
+    # add sample version of expectations to test
+    test['target matrix']['sample'] = sample_target
+    test['input matrix']['sample'] = sample_inputs
+    test['output matrix']['sample'] = sample_activation[:, -No:]
+    test['activation matrix']['sample'] = sample_activation
+    test['error matrix']['sample'] = full_error[samples]
+
+    test['Ne'] = {'full': full_activation.shape[0],
+                  'sample': sample_activation.shape[0]}
+
+    # add network to test
+    if 'transfer functions' in test:
+        tf = test['transfer functions']
+        test['network'] = RandomBoolNetwork(gates, Ni, No, tf)
+    else:
+        test['network'] = BoolNetwork(gates, Ni, No)
+    Ne_sample = sample_inputs.shape[0]
+    Ne_full = full_inputs.shape[0]
+    # add evaluators to test
+    test['evaluator'] = {
+        'sample': StaticNetworkState(test['network'],
+                                     pack_bool_matrix(sample_inputs),
+                                     pack_bool_matrix(sample_target),
+                                     Ne_sample),
+        'full': StaticNetworkState(test['network'],
+                                   pack_bool_matrix(full_inputs),
+                                   pack_bool_matrix(full_target),
+                                   Ne_full)
     }
 
     return test
 
 
 # #################### Fixtures ############################ #
-# @pytest.fixture(params=['static', 'dynamic'])
+
+# @fixture(params=['static', 'chained'])
 @fixture(params=['static'])
-def evaluator_class(request):
-    if request.param == 'static':
-        return networkstate.StaticNetworkState
-    else:
-        return networkstate.DynamicNetworkState
+def evaluator_type(request):
+    return request.param
 
 
 @fixture(params=list(all_metrics()))
@@ -120,23 +185,23 @@ def network_type(request):
 
 
 @yield_fixture(params=glob.glob(TEST_LOCATION + 'networks/*.yaml'))
-def any_test_network(request, evaluator_class):
+def any_test_network(request, evaluator_type):
     with open(request.param) as f:
-        yield harness_to_fixture(f, evaluator_class)
+        yield harness_to_fixture(f, evaluator_type)
 
 
 @yield_fixture(params=list(harnesses_with_property(
     'invariant under single move')))
-def single_move_invariant(request, evaluator_class):
+def single_move_invariant(request, evaluator_type):
     with open(request.param) as f:
-        yield harness_to_fixture(f, evaluator_class)
+        yield harness_to_fixture(f, evaluator_type)
 
 
 @yield_fixture(params=list(harnesses_with_property(
     'invariant under multiple moves')))
-def multiple_move_invariant(request, evaluator_class):
+def multiple_move_invariant(request, evaluator_type):
     with open(request.param) as f:
-        yield harness_to_fixture(f, evaluator_class)
+        yield harness_to_fixture(f, evaluator_type)
 
 
 Move = namedtuple('Move', ['gate', 'terminal', 'source'])
@@ -144,9 +209,9 @@ MoveAndExpected = namedtuple('MoveAnExpected', ['move', 'expected'])
 
 
 @fixture
-def single_layer_zero(evaluator_class):
+def single_layer_zero(evaluator_type):
     with open(TEST_LOCATION + 'networks/single_layer_zero.yaml') as f:
-        instance = harness_to_fixture(f, evaluator_class)
+        instance = harness_to_fixture(f, evaluator_type)
     test_case = instance['multiple_moves_test_case']
 
     updated_test_case = []
@@ -161,6 +226,6 @@ def single_layer_zero(evaluator_class):
 
 
 @yield_fixture
-def adder2(evaluator_class):
+def adder2(evaluator_type):
     with open(TEST_LOCATION + 'networks/adder2.yaml') as f:
-        yield harness_to_fixture(f, evaluator_class)
+        yield harness_to_fixture(f, evaluator_type)
