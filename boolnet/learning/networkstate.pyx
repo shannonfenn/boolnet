@@ -6,6 +6,7 @@ cimport numpy as np
 from copy import deepcopy
 
 from boolnet.network.boolnetwork import BoolNetwork
+from boolnet.bintools.metrics cimport Metric
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 from boolnet.bintools.biterror cimport StandardEvaluator
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
@@ -15,6 +16,15 @@ from boolnet.bintools.packing import packed_type
 from boolnet.bintools.example_generator cimport PackedExampleGenerator
 
 
+cpdef standard_from_chained(ChainedEvaluator chained):
+    cdef packed_type_t[:, :] inp, tgt
+    inp = np.empty((chained.Ni, chained.Ne), dtype=packed_type)
+    tgt = np.empty((chained.No, chained.Ne), dtype=packed_type)
+    chained.example_generator.reset()
+    chained.example_generator.next_examples(inp, tgt)
+    return StandardEvaluator(inp, tgt, chained.Ne)
+
+
 cdef class NetworkState:
     cdef:
         readonly size_t Ne, Ni, No, Ng, cols
@@ -22,8 +32,9 @@ cdef class NetworkState:
         packed_type_t[:, :] activation, inputs, outputs, target, error
         packed_type_t zero_mask
         public object network
+        dict err_evaluators
 
-    def __init__(self, network, size_t Ne, size_t Ni, size_t No, size_t cols, metric=None):
+    def __init__(self, network, size_t Ne, size_t Ni, size_t No, size_t cols):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
@@ -49,7 +60,7 @@ cdef class NetworkState:
         self.error = np.empty_like(self.target)
 
         self.set_network(network)
-        self.set_metric(metric)
+        self.err_evaluators = dict()
 
     cpdef set_network(self, network):
         # check invariants hold
@@ -61,10 +72,10 @@ cdef class NetworkState:
         self.network._evaluated = False
         self.network.first_unevaluated_gate = 0
 
-    cpdef set_metric(self, metric):
+    cpdef add_metric(self, Metric metric):
         pass
 
-    cpdef metric_value(self):
+    cpdef metric_value(self, Metric metric):
         pass
 
     @cython.boundscheck(False)
@@ -164,26 +175,17 @@ cdef class NetworkState:
 
 
 cdef class StandardNetworkState(NetworkState):
-    cdef StandardEvaluator err_evaluator
 
     def __init__(self, network, packed_type_t[:, :] inputs,
-                 packed_type_t[:, :] target, size_t Ne, metric=None):
+                 packed_type_t[:, :] target, size_t Ne):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
         # check invariants hold
         self._check_instance_invariants(inputs, target, Ne)
-        super().__init__(network, Ne, inputs.shape[0], target.shape[0], inputs.shape[1], metric)
+        super().__init__(network, Ne, inputs.shape[0], target.shape[0], inputs.shape[1])
         self.inputs[...] = inputs
         self.target[...] = target
-
-    cpdef set_metric(self, metric):
-        self.metric = metric
-        if metric is not None:
-            eval_class, msb = STANDARD_EVALUATORS[metric]
-            self.err_evaluator = eval_class(self.Ne, self.No, msb)
-        else:
-            self.err_evaluator = None
 
     property input_matrix:
         def __get__(self):
@@ -208,9 +210,16 @@ cdef class StandardNetworkState(NetworkState):
             self.evaluate()
             return self.error
 
-    cpdef metric_value(self):
-        self.evaluate()
-        return self.err_evaluator.evaluate(self.error)
+    cpdef add_metric(self, Metric metric):
+        if metric not in self.err_evaluators:
+            eval_class, msb = STANDARD_EVALUATORS[metric]
+            self.err_evaluators[metric] = eval_class(self.Ne, self.No, msb)
+
+    cpdef metric_value(self, Metric metric):
+        self.add_metric(metric)
+        if self.network.changed:
+            self.evaluate()
+        return self.err_evaluators[metric].evaluate(self.error)
 
     cpdef evaluate(self):
         ''' Evaluate the activation and error matrices if the
@@ -227,7 +236,7 @@ cdef class StandardNetworkState(NetworkState):
         self._apply_zero_mask(self.activation)   # this does output_matrix as well (since it is a view)
         self._apply_zero_mask(self.error)
 
-        self.network._evaluated = True
+        self.network.changed = False
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
@@ -260,16 +269,17 @@ cdef class StandardNetworkState(NetworkState):
 
 cdef class ChainedNetworkState(NetworkState):
     cdef:
-        ChainedEvaluator err_evaluator
         PackedExampleGenerator example_generator
         size_t blocks, zero_mask_cols
+        dict metric_value_cache
+        bint evaluated
 
-    def __init__(self, network, PackedExampleGenerator example_generator, size_t window_size, metric=None):
+    def __init__(self, network, PackedExampleGenerator example_generator, size_t window_size):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
         super().__init__(network, example_generator.Ne, example_generator.Ni,
-                         example_generator.No, window_size, metric)
+                         example_generator.No, window_size)
         block_width = (self.cols * PACKED_SIZE)
         self.blocks = self.Ne // block_width
         if self.Ne % block_width:
@@ -286,24 +296,32 @@ cdef class ChainedNetworkState(NetworkState):
         else:
             self.zero_mask_cols = 1
         self.example_generator = example_generator
+        self.metric_value_cache = dict()
 
-    cpdef set_metric(self, metric):
-        self.metric = metric
-        if metric is not None:
+
+    cpdef add_metric(self, Metric metric):
+        if metric not in self.err_evaluators:
             eval_class, msb = CHAINED_EVALUATORS[metric]
-            self.err_evaluator = eval_class(self.Ne, self.No, self.cols, msb)
-        else:
-            self.err_evaluator = None
+            self.err_evaluators[metric] = eval_class(self.Ne, self.No, self.cols, msb)
+            self.metric_value_cache[metric] = None
+            self.network.changed = True
 
-    cpdef metric_value(self):
+    cpdef metric_value(self, Metric metric):
+        self.add_metric(metric)
+        if self.network.changed:
+            self.evaluate()
+        return self.metric_value_cache[metric]
+
+    cdef evaluate(self):
         cdef:
             bint is_nand
             size_t block
-        
+            dict evaluators = self.err_evaluators
+
         is_nand = not hasattr(self.network, 'transfer_functions')
-        
         self.example_generator.reset()
-        self.err_evaluator.reset()
+        for m in evaluators:
+            evaluators[m].reset()
 
         for block in range(self.blocks):
             self.example_generator.next_examples(self.inputs, self.target)
@@ -313,10 +331,13 @@ cdef class ChainedNetworkState(NetworkState):
                 self._evaluate_random()
             # on the last iteration we must not perform a partial evaluation
             if block < self.blocks - 1:
-                self.err_evaluator.partial_evaluation(self.error)
-        
+                for m in evaluators:
+                    evaluators[m].partial_evaluation(self.error)
+
         self._apply_zero_mask(self.error)
-        return self.err_evaluator.final_evaluation(self.error)
+        for m in evaluators:
+            self.metric_value_cache[m] = evaluators[m].final_evaluation(self.error)
+        self.network.changed = False
 
     @cython.boundscheck(False)
     @cython.wraparound(False)

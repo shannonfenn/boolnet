@@ -382,7 +382,6 @@ class TestStandard:
 class TestBoth:
     def test_metric_value(self, state, metric, sample_type):
         evaluator = state['evaluator'][sample_type]
-        evaluator.set_metric(metric)
         expected = state['metric value'][sample_type][metric_name(metric)]
-        actual = evaluator.metric_value()
+        actual = evaluator.metric_value(metric)
         assert_array_almost_equal(expected, actual)
