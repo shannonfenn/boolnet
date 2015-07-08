@@ -197,7 +197,7 @@ def get_config_indices(instances, config_settings):
     return config_indices
 
 
-def generate_configurations(settings, evaluator_class):
+def generate_configurations(settings):
     # CAUTION: Will modify the settings parameter!
     # the configurations approach involves essentially having
     # a new settings dict for each configuration and updating
@@ -235,5 +235,5 @@ def generate_configurations(settings, evaluator_class):
             config_schema(iteration_settings)
 
             # dump the iteration settings out
-            tasks.append((iteration_settings, evaluator_class))
+            tasks.append(iteration_settings)
     return tasks
