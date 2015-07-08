@@ -13,18 +13,28 @@ from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.biterror_chained cimport ChainedEvaluator
 from boolnet.bintools.packing cimport packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE
 from boolnet.bintools.packing import packed_type
-from boolnet.bintools.example_generator cimport PackedExampleGenerator
+from boolnet.bintools.example_generator cimport PackedExampleGenerator, OperatorExampleFactory
 
 
-cpdef standard_from_packed_generator(network, PackedExampleGenerator chained):
+cpdef standard_from_operator(network, indices, Nb, No, operator, N=0):
     cdef packed_type_t[:, :] inp, tgt
-    inp = np.empty((chained.Ni, chained.Ne), dtype=packed_type)
-    tgt = np.empty((chained.No, chained.Ne), dtype=packed_type)
-    chained.reset()
-    chained.next_examples(inp, tgt)
-    return StandardNetworkState(network, inp, tgt, chained.Ne)
+    ex_factory = OperatorExampleFactory(indices, Nb, operator, N)
+    packed_factory = PackedExampleGenerator(ex_factory, No)
+    Ne = packed_factory.Ne
+    Ni = packed_factory.Ni
+    inp = np.empty((Ni, Ne), dtype=packed_type)
+    tgt = np.empty((No, Ne), dtype=packed_type)
+    packed_factory.reset()
+    packed_factory.next_examples(inp, tgt)
+    return StandardNetworkState(network, inp, tgt, Ne)
 
 
+cpdef chained_from_operator(network, indices, Nb, No, operator, window_size, N=0):
+    ex_factory = OperatorExampleFactory(indices, Nb, operator, N)
+    packed_ex_factory = PackedExampleGenerator(ex_factory, No)
+    return ChainedNetworkState(network, packed_ex_factory, window_size)
+
+        
 cdef class NetworkState:
     cdef:
         readonly size_t Ne, Ni, No, Ng, cols
