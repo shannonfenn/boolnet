@@ -7,7 +7,7 @@ from boolnet.exptools.boolmapping import BoolMapping
 from boolnet.learning.learners import basic_learn, stratified_learn
 from boolnet.learning.optimisers import SA, LAHC
 from boolnet.learning.networkstate import (
-    StandardNetworkState, ChainedNetworkState, standard_from_chained)
+    StandardNetworkState, ChainedNetworkState, standard_from_packed_generator)
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import functools
@@ -49,7 +49,7 @@ def build_training_evaluator(network, mapping):
     if isinstance(mapping, BoolMapping):
         return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, PackedExampleGenerator):
-        return standard_from_chained(mapping)
+        return standard_from_packed_generator(mapping)
 
 
 def build_test_evaluator(network, mapping, parameters, guiding_metric):
