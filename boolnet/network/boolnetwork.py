@@ -10,7 +10,7 @@ except ImportError:
 class BoolNetwork:
 
     def __init__(self, initial_gates, Ni, No):
-        self._evaluated = False
+        self.changed = True
         self.first_unevaluated_gate = 0
         self._inverse_moves = []
 
@@ -48,8 +48,8 @@ class BoolNetwork:
         # could have a check for recurrence
 
     def __str__(self):
-        return ('Ni: {} Ng: {} evaluated: {} max node depths: {}\n'
-                'gates:\n{}').format(self.Ni, self.Ng, self._evaluated,
+        return ('Ni: {} Ng: {} changed: {} max node depths: {}\n'
+                'gates:\n{}').format(self.Ni, self.Ng, self.changed,
                                      self.max_node_depths(), self._gates)
 
     @property
@@ -81,7 +81,7 @@ class BoolNetwork:
         return depths[-No:]
 
     def force_reevaluation(self):
-        self._evaluated = False
+        self.changed = True
 
     def reconnect_masked_range(self):
         # this has the side effect of clearing the history since we don't
@@ -96,13 +96,13 @@ class BoolNetwork:
             # modify the connections of this gate with two random inputs
             self._gates[gate] = np.random.choice(valid_sources, size=2)
 
-        if self._evaluated:
-            self.first_unevaluated_gate = min(self._changeable)
-        else:
+        if self.changed:
             self.first_unevaluated_gate = min(self.first_unevaluated_gate,
                                               min(self._changeable))
+        else:
+            self.first_unevaluated_gate = min(self._changeable)
         # indicate the network must be reevaluated
-        self._evaluated = False
+        self.changed = True
 
     def _check_mask(self):
         # check for validity here rather than when attempting to
@@ -163,10 +163,10 @@ class BoolNetwork:
 
     def move_to_neighbour(self, move):
         # expects iterable with the form (gate, terminal, new_source)
-        if self._evaluated:
-            self.first_unevaluated_gate = move[0]
-        else:
+        if self.changed:
             self.first_unevaluated_gate = min(self.first_unevaluated_gate, move[0])
+        else:
+            self.first_unevaluated_gate = move[0]
 
         # record the inverse move
         inverse = (move[0], move[1], self._gates[move[0]][move[1]])
@@ -175,19 +175,19 @@ class BoolNetwork:
         # modify the connection
         self._gates[move[0]][move[1]] = move[2]
         # indicate the network must be reevaluated
-        self._evaluated = False
+        self.changed = True
 
     def revert_move(self):
         try:
             inverse = self._inverse_moves.pop()
-            if self._evaluated:
-                self.first_unevaluated_gate = inverse[0]
-            else:
+            if self.changed:
                 # if multiple moves are undone there are no issues with
                 # recomputation since the earliest gate ever changed will
                 # be the startpoint
                 self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse[0])
-            self._evaluated = False
+            else:
+                self.first_unevaluated_gate = inverse[0]
+            self.changed = True
             self._gates[inverse[0]][inverse[1]] = inverse[2]
 
         except IndexError:
