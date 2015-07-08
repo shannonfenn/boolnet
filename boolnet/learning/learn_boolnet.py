@@ -29,36 +29,45 @@ LEARNERS = {
     'stratified kfs': functools.partial(stratified_learn, use_kfs_masking=True)}
 
 
-def check_data(training_set, test_generator):
-    if training_set.Ni != test_generator.Ni:
+def check_data(training_mapping, test_mapping):
+    if not training_mapping.Ni:
+        raise ValueError('Training inputs empty!')
+    if not training_mapping.No:
+        raise ValueError('Training target empty!')
+    if not test_mapping.Ni:
+        raise ValueError('Test inputs empty!')
+    if not test_mapping.No:
+        raise ValueError('Test target empty!')
+    if training_mapping.Ni != test_mapping.Ni:
         raise ValueError('Training ({}) and Test ({}) Ni do not match.'.format(
-            training_set.Ni, test_generator.Ni))
-    if training_set.No != test_generator.No:
+            training_mapping.Ni, test_mapping.Ni))
+    if training_mapping.No != test_mapping.No:
         raise ValueError('Training ({}) and Test ({}) No do not match.'.format(
-            training_set.No, test_generator.No))
+            training_mapping.No, test_mapping.No))
 
 
 def build_training_evaluator(network, mapping):
     if isinstance(mapping, BoolMapping):
         return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, PackedExampleGenerator):
-        return standard_from_packed_generator(mapping)
+        return standard_from_packed_generator(network, mapping)
 
 
 def build_test_evaluator(network, mapping, parameters, guiding_metric):
     if isinstance(mapping, BoolMapping):
         evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, PackedExampleGenerator):
-        window_size = parameters['window_size']
+        window_size = parameters['data']['window_size']
         evaluator = ChainedNetworkState(network, mapping, window_size)
         # pre-add metrics to avoid redundant network evaluations
         evaluator.add_metric(guiding_metric)
-        evaluator.set_metric(E1)
-        evaluator.set_metric(ACCURACY)
+        evaluator.add_metric(E1)
+        evaluator.add_metric(ACCURACY)
     return evaluator
 
 
 def learn_bool_net(parameters):
+    print(parameters)
     # seed fast random number generator using system rng (which auto seeds on module import)
     random.seed()
     seed = random.randint(1, sys.maxsize)
@@ -67,8 +76,9 @@ def learn_bool_net(parameters):
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']
     metric = metric_from_name(parameters['optimiser']['metric'])
-    training_data = parameters['training_set']
-    test_data = parameters['test_set']
+    print(parameters['training_mapping'].Ni)
+    training_data = parameters['training_mapping']
+    test_data = parameters['test_mapping']
 
     check_data(training_data, test_data)
 
