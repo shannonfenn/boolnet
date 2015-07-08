@@ -1,10 +1,13 @@
 from datetime import datetime
 import random
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
-from boolnet.bintools.metric_names import Metric, metric_from_name
+from boolnet.bintools.metrics import E1, ACCURACY, PER_OUTPUT, metric_from_name
+from boolnet.bintools.example_generator import PackedExampleGenerator
+from boolnet.exptools.boolmapping import BoolMapping
 from boolnet.learning.learners import basic_learn, stratified_learn
 from boolnet.learning.optimisers import SA, LAHC
-from boolnet.learning.networkstate import StaticNetworkState, ChainedNetworkState
+from boolnet.learning.networkstate import (
+    StandardNetworkState, ChainedNetworkState, standard_from_chained)
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import functools
@@ -26,13 +29,13 @@ LEARNERS = {
     'stratified kfs': functools.partial(stratified_learn, use_kfs_masking=True)}
 
 
-def check_data(training_set, test_set):
-    if training_set.Ni != test_set.Ni:
+def check_data(training_set, test_generator):
+    if training_set.Ni != test_generator.Ni:
         raise ValueError('Training ({}) and Test ({}) Ni do not match.'.format(
-            training_set.Ni, test_set.Ni))
-    if training_set.No != test_set.No:
+            training_set.Ni, test_generator.Ni))
+    if training_set.No != test_generator.No:
         raise ValueError('Training ({}) and Test ({}) No do not match.'.format(
-            training_set.No, test_set.No))
+            training_set.No, test_generator.No))
 
 
 def learn_bool_net(task):
@@ -42,17 +45,37 @@ def learn_bool_net(task):
     return _learn_bool_net(*task)
 
 
+def build_training_evaluator(network, mapping):
+    if isinstance(mapping, BoolMapping):
+        return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
+    elif isinstance(mapping, PackedExampleGenerator):
+        return standard_from_chained(mapping)
+
+
+def build_test_evaluator(network, mapping, parameters, guiding_metric):
+    if isinstance(mapping, BoolMapping):
+        evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
+    elif isinstance(mapping, PackedExampleGenerator):
+        window_size = parameters['window_size']
+        evaluator = ChainedNetworkState(network, mapping, window_size)
+        # pre-add metrics to avoid redundant network evaluations
+        evaluator.add_metric(guiding_metric)
+        evaluator.set_metric(E1)
+        evaluator.set_metric(ACCURACY)
+    return evaluator
+
+
 def _learn_bool_net(parameters):
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']
     metric = metric_from_name(parameters['optimiser']['metric'])
-    training_set = parameters['training_set']
-    test_set = parameters['test_set']
+    training_data = parameters['training_set']
+    test_data = parameters['test_set']
 
-    check_data(training_set, test_set)
+    check_data(training_data, test_data)
 
-    Ni = training_set.Ni
-    No = training_set.No
+    Ni = training_data.Ni
+    No = training_data.No
 
     if 'initial_gates' in parameters:
         initial_gates = np.asarray(parameters['initial_gates'], dtype=np.int32)
@@ -83,8 +106,7 @@ def _learn_bool_net(parameters):
             parameters['network']['node_funcs']))
 
     # make evaluators for the training and test sets
-    training_evaluator = StaticNetworkState(initial_network, training_set.inputs,
-                                            training_set.target, training_set.Ne)
+    training_evaluator = build_training_evaluator(initial_network, training_data)
 
     learner = LEARNERS[learner_name]
     optimiser = OPTIMISERS[optimiser_name]
@@ -98,8 +120,7 @@ def _learn_bool_net(parameters):
 
     end_time = datetime.now()
 
-    test_evaluator = ChainedNetworkState(training_evaluator.network, test_set.inputs,
-                                         test_set.target, test_set.Ne)
+    test_evaluator = build_test_evaluator(initial_network, test_data, parameters, metric)
 
     results = {
         'Ni':                       Ni,
@@ -112,13 +133,13 @@ def _learn_bool_net(parameters):
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
         'training_error_guiding':   training_evaluator.metric_value(metric),
-        'training_error_simple':    training_evaluator.metric_value(Metric.E1),
-        'training_accuracy':        training_evaluator.metric_value(Metric.ACCURACY),
+        'training_error_simple':    training_evaluator.metric_value(E1),
+        'training_accuracy':        training_evaluator.metric_value(ACCURACY),
         'test_error_guiding':       test_evaluator.metric_value(metric),
-        'test_error_simple':        test_evaluator.metric_value(Metric.E1),
-        'test_accuracy':            test_evaluator.metric_value(Metric.ACCURACY),
+        'test_error_simple':        test_evaluator.metric_value(E1),
+        'test_accuracy':            test_evaluator.metric_value(ACCURACY),
         'final_network':            final_network.gates,
-        'Ne':                       training_set.Ne,
+        'Ne':                       training_data.Ne,
         'time':                     (end_time - start_time).total_seconds()
         }
 
@@ -126,10 +147,10 @@ def _learn_bool_net(parameters):
         for bit, v in enumerate(learner_result.feature_sets):
             key = 'feature_set_target_{}'.format(bit)
             results[key] = v
-    for bit, v in enumerate(training_evaluator.metric_value(Metric.PER_OUTPUT)):
+    for bit, v in enumerate(training_evaluator.metric_value(PER_OUTPUT)):
         key = 'training_error_target_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_evaluator.metric_value(Metric.PER_OUTPUT)):
+    for bit, v in enumerate(test_evaluator.metric_value(PER_OUTPUT)):
         key = 'test_error_target_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):

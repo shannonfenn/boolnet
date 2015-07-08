@@ -5,6 +5,8 @@ from os.path import join, splitext
 import numpy as np
 import json
 
+from boolnet.bintools.operator_iterator import operator_from_name, num_operands
+from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
 from boolnet.exptools.boolmapping import BoolMapping
 from boolnet.exptools.config_schemata import config_schema
 
@@ -13,21 +15,28 @@ Instance = namedtuple('Instance', [
     'training_mapping', 'test_mapping', 'training_indices'])
 
 
+# class ExperimentJSONEncoder(json.JSONEncoder):
+#     def default(self, obj):
+#         if isinstance(obj, np.ndarray):
+#             return obj.tolist()
+#         if isinstance(obj, BoolMapping):
+#             return obj.toDict()
+#         return json.JSONEncoder.default(self, obj)
+
+
+# def dump_configurations(configurations, stream):
+#     first = True
+#     for conf in configurations:
+#         stream.write('[' if first else ', ')
+#         json.dump(conf[0], stream, cls=ExperimentJSONEncoder)
+#     stream.write(']')
+
+
 class ExperimentJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
-        if isinstance(obj, BoolMapping):
-            return obj.toDict()
         return json.JSONEncoder.default(self, obj)
-
-
-def dump_configurations(configurations, stream):
-    first = True
-    for conf in configurations:
-        stream.write('[' if first else ', ')
-        json.dump(conf[0], stream, cls=ExperimentJSONEncoder)
-    stream.write(']')
 
 
 def dump_results_partial(results, stream, first):
@@ -50,6 +59,44 @@ def update_nested(d, u):
         else:
             d[k] = u[k]
     return d
+
+
+def load_dataset(settings):
+    data_settings = settings['data']
+    sampling_settings = settings['sampling']
+
+    if data_settings['type'] == 'file':
+        return file_instance(data_settings, sampling_settings)
+    elif data_settings['type'] == 'generated':
+        return generated_instance(data_settings, sampling_settings)
+    else:
+        raise ValueError('Invalid dataset type {}'.format(data_settings['type']))
+
+
+def load_samples(params, data_dir, N, Ni):
+    if params['method'] == 'given':
+        # load samples from file
+        # prepare filename
+        Ns = params['Ns']
+        Ne = params['Ne']
+        if 'file_suffix' in params:
+            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, params['file_suffix'])
+        else:
+            base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
+
+        # load sample indices
+        sample_filename = join(data_dir, 'samples', base_name)
+        training_indices = np.load(sample_filename)
+    elif params['method'] == 'generated':
+        # generate samples
+        Ns = params['Ns']
+        Ne = params['Ne']
+        # generate
+        training_indices = np.random.randint(N, size=(Ns, Ne))
+    else:
+        raise ValueError('Invalid sampling method {}'.format(
+                         params['method']))
+    return training_indices
 
 
 def pack_examples(inputs, targets, training_indices):
@@ -79,45 +126,6 @@ def pack_examples(inputs, targets, training_indices):
     return instances
 
 
-def load_dataset(settings):
-    data_settings = settings['data']
-    sampling_settings = settings['sampling']
-
-    if data_settings['type'] == 'file':
-        return file_instance(data_settings, sampling_settings)
-    elif data_settings['type'] == 'generated':
-        return generated_instance(data_settings, sampling_settings)
-    else:
-        raise ValueError('Invalid dataset type {}'.format(data_settings['type']))
-
-
-def load_samples(params, data_dir, inputs):
-    if params['method'] == 'given':
-        # load samples from file
-        # prepare filename
-        N, Ni = inputs.shape
-        Ns = params['Ns']
-        Ne = params['Ne']
-        if 'file_suffix' in params:
-            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, params['file_suffix'])
-        else:
-            base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
-
-        # load sample indices
-        sample_filename = join(data_dir, 'samples', base_name)
-        training_indices = np.load(sample_filename)
-    elif params['method'] == 'generated':
-        # generate samples
-        Ns = params['Ns']
-        Ne = params['Ne']
-        # generate
-        training_indices = np.random.randint(N, size=(Ns, Ne))
-    else:
-        raise ValueError('Invalid sampling method {}'.format(
-                         params['method']))
-    return training_indices
-
-
 def file_instance(data_settings, sampling_settings):
     data_dir = data_settings['dir']
     # load data set from file
@@ -128,14 +136,43 @@ def file_instance(data_settings, sampling_settings):
         inputs = dataset['input_matrix']
         targets = dataset['target_matrix']
 
-    training_indices = load_samples(sampling_settings, data_dir, inputs)
+    N, Ni = inputs.shape
+    training_indices = load_samples(sampling_settings, data_dir, N, Ni)
     # partition the sets based on loaded indices
     return pack_examples(inputs, targets, training_indices)
 
 
-def generated_instance(data_settings):
-    # do the things
-    raise NotImplementedError
+def generated_instance(data_settings, sampling_settings):
+    data_dir = data_settings['dir']
+    Nb = data_settings['bits']
+    No = data_settings['No']
+    op = operator_from_name(data_settings['operator'])
+    N_operands = num_operands(op)
+
+    Ni = (N_operands * Nb)
+    N = 2**Ni
+
+    # default window size of 4 (arbitrary at this point)
+    if 'window_size' not in data_settings:
+        data_settings['window_size'] = 4
+
+    training_indices = load_samples(sampling_settings, data_dir, N, Ni)
+
+    Ns, Ne = training_indices.shape
+
+    # Parameters
+    # build list of train/test set instances
+    instances = []
+    for s in range(Ns):
+        trg_factory = OperatorExampleFactory(training_indices[s], Nb, op)
+        tst_factory = OperatorExampleFactory(training_indices[s], Nb, op, N)
+
+        instances.append(Instance(
+            training_mapping=PackedExampleGenerator(trg_factory, No),
+            test_mapping=PackedExampleGenerator(tst_factory, No),
+            training_indices=training_indices[s],
+            ))
+    return instances
 
 
 def handle_initial_network(settings):

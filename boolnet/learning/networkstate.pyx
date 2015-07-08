@@ -16,13 +16,13 @@ from boolnet.bintools.packing import packed_type
 from boolnet.bintools.example_generator cimport PackedExampleGenerator
 
 
-cpdef standard_from_chained(ChainedEvaluator chained):
+cpdef standard_from_packed_generator(PackedExampleGenerator chained):
     cdef packed_type_t[:, :] inp, tgt
     inp = np.empty((chained.Ni, chained.Ne), dtype=packed_type)
     tgt = np.empty((chained.No, chained.Ne), dtype=packed_type)
-    chained.example_generator.reset()
-    chained.example_generator.next_examples(inp, tgt)
-    return StandardEvaluator(inp, tgt, chained.Ne)
+    chained.reset()
+    chained.next_examples(inp, tgt)
+    return StandardNetworkState(inp, tgt, chained.Ne)
 
 
 cdef class NetworkState:
