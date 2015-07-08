@@ -6,13 +6,11 @@ import numpy as np
 import json
 
 from boolnet.bintools.operator_iterator import operator_from_name, num_operands
-from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
-from boolnet.exptools.boolmapping import BoolMapping
+from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
 from boolnet.exptools.config_schemata import config_schema
 
 
-Instance = namedtuple('Instance', [
-    'training_mapping', 'test_mapping', 'training_indices'])
+Instance = namedtuple('Instance', ['training_mapping', 'test_mapping'])
 
 
 # class ExperimentJSONEncoder(json.JSONEncoder):
@@ -118,9 +116,8 @@ def pack_examples(inputs, targets, training_indices):
 
     # build list of train/test set instances
     instances = [Instance(
-        training_mapping=BoolMapping(training_inps[i], training_tgts[i], Ne),
-        test_mapping=BoolMapping(test_inps[i], test_tgts[i], N - Ne),
-        training_indices=training_indices[i],
+        training_mapping=FileBoolMapping(training_inps[i], training_tgts[i], Ne),
+        test_mapping=FileBoolMapping(test_inps[i], test_tgts[i], N - Ne)
         ) for i in range(Ns)]
 
     return instances
@@ -153,24 +150,20 @@ def generated_instance(data_settings, sampling_settings):
     N = 2**Ni
 
     # default window size of 4 (arbitrary at this point)
-    if 'window_size' not in data_settings:
-        data_settings['window_size'] = 4
+    if 'window_size' in data_settings:
+        window_size = data_settings['window_size']
+    else:
+        window_size = 4
 
     training_indices = load_samples(sampling_settings, data_dir, N, Ni)
-
     Ns, Ne = training_indices.shape
 
     # Parameters
     # build list of train/test set instances
-    instances = []
-    for s in range(Ns):
-        trg_factory = OperatorExampleFactory(training_indices[s], Nb, op)
-        tst_factory = OperatorExampleFactory(training_indices[s], Nb, op, N)
-
-        instances.append(Instance(
-            training_mapping=PackedExampleGenerator(trg_factory, No),
-            test_mapping=PackedExampleGenerator(tst_factory, No),
-            training_indices=training_indices[s]))
+    instances = [Instance(
+        training_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No, window_size, op, 0),
+        test_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No, window_size, op, N)
+        ) for i in range(Ns)]
     return instances
 
 
@@ -225,16 +218,12 @@ def generate_configurations(settings):
             instance = instances[i]
 
             iteration_settings = deepcopy(config_settings)
-            print(instance.training_mapping.Ni)
-            iteration_settings['training_indices'] = instance.training_indices
             iteration_settings['training_mapping'] = instance.training_mapping
             iteration_settings['test_mapping'] = instance.test_mapping
             iteration_settings['training_set_number'] = i
             iteration_settings['inter_file_base'] += '{}_{}_'.format(config_no, i)
 
-            print(iteration_settings['training_mapping'].Ni)
             config_schema(iteration_settings)
-            print(iteration_settings['training_mapping'].Ni)
 
             # dump the iteration settings out
             tasks.append(iteration_settings)
