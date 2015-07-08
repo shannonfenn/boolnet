@@ -14,7 +14,7 @@ import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
 from boolnet.learning.learn_boolnet import learn_bool_net
-import experiment.config_tools as config_tools
+import boolnet.exptools.config_tools as config_tools
 
 
 def check_git():
@@ -28,8 +28,11 @@ def check_git():
         print(('Warning, the following files in git repo '
                'have changes:\n\t{}').format('\n\t'.join(changed_files)))
 
+    return subprocess.check_output(
+        ['git', '-C', cur_file_dir, 'rev-parse', 'HEAD'], universal_newlines=True)
 
-def create_result_dir(args, exp_name):
+
+def create_result_dir(args, exp_name, git_hash):
     ''' Generates a new timestamped directory for the results and copies
         the experiment script, experiment file and git hash into it.'''
     # make directory for the results
@@ -45,8 +48,7 @@ def create_result_dir(args, exp_name):
     # copy experiment config and git hash into results directory
     shutil.copy(args.experiment.name, result_dir)
     with open(os.path.join(result_dir, 'git_hash'), 'w') as hashfile:
-        hashfile.write(subprocess.check_output(
-            ['git', 'rev-parse', 'HEAD'], universal_newlines=True))
+        hashfile.write(git_hash)
 
     # create a temp subdir
     os.mkdir(os.path.join(result_dir, 'temp'))
@@ -74,35 +76,17 @@ def parse_arguments():
                         type=argparse.FileType('r'),
                         default='experiment.yaml',
                         help='experiment config filename (relative to --exp-dir).')
-    parser.add_argument('--evaluator', default='cy', choices=['py', 'cy', 'gpu'],
-                        help='python, cython or cuda based evaluator.')
     parser.add_argument('--numprocs', '-n', metavar='N', type=int,
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for scoop).')
     parser.add_argument('--keep-temp', action='store_true',
                         help='provide to retain temporary FABCPP files.')
-    parser.add_argument('--data-dir', default='datasets', type=str,
+    parser.add_argument('--data-dir', default='experiments/datasets', type=str,
                         help='dataset directory.')
-    parser.add_argument('--results-dir', default='results', type=str,
+    parser.add_argument('--results-dir', default='experiments/results', type=str,
                         help='directory to store results in (in own subdir).')
 
-    args = parser.parse_args()
-
-    if args.evaluator == 'gpu':
-        raise NotImplementedError()
-        # from BoolNet.NetworkEvaluatorGPU import NetworkEvaluatorGPU
-        # args.evaluator = NetworkEvaluatorGPU
-    elif args.evaluator == 'cy':
-        import pyximport
-        pyximport.install()
-        from BoolNet.networkstate import NetworkState
-        args.evaluator = NetworkState
-    else:
-        raise NotImplementedError()
-        # from BoolNet.NetworkEvaluator import NetworkEvaluator
-        # args.evaluator = NetworkEvaluator
-
-    return args
+    return parser.parse_args()
 
 
 def initialise(args):
@@ -113,7 +97,7 @@ def initialise(args):
     if sys.version_info.major != 3:
         sys.exit("Requires python 3.")
 
-    check_git()
+    git_hash = check_git()
 
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
@@ -122,7 +106,7 @@ def initialise(args):
     settings['data']['dir'] = os.path.abspath(args.data_dir)
 
     # create result directory
-    result_dir = create_result_dir(args, settings['name'])
+    result_dir = create_result_dir(args, settings['name'], git_hash)
 
     # initialise logging
     initialise_logging(settings, result_dir)
@@ -207,7 +191,7 @@ def main():
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # generate learning tasks
-        configurations = config_tools.generate_configurations(settings, args.evaluator)
+        configurations = config_tools.generate_configurations(settings)
         print('{} runs generated.'.format(len(configurations)))
         # Run the actual learning as a parallel process
         run_tasks(configurations, args.numprocs, results_stream)
@@ -222,3 +206,6 @@ def main():
         notify(pb, settings['name'], result_dir, total_time)
     except PushbulletError as err:
         print('Failed to send PushBullet notification: {}.'.format(err))
+
+if __name__ == '__main__':
+    main()
