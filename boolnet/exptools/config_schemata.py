@@ -84,8 +84,7 @@ data_schema_generated = Schema({
     'dir':          IsDir(),
     'operator':     str,
     'bits':         All(int, Range(min=1)),
-    'No':           All(int, Range(min=1)),
-    'window_size':  All(int, Range(min=1))
+    'No':           All(int, Range(min=1))
     }, default_keys=Required)
 
 data_schema_file = Schema({
@@ -131,6 +130,5 @@ config_schema = Schema({
     'inter_file_base':          str,
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
-    'training_indices':         All(Type(np.ndarray), is_1d, is_int_arr),
     Optional('initial_gates'):  All(Type(np.ndarray), is_2d, is_int_arr),
     }, default_keys=Required)
