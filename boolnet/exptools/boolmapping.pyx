@@ -1,29 +1,5 @@
 from boolnet.bintools.packing cimport pack_bool_matrix, packed_type_t
 
-FUNCTIONS = {
-    'add':  bin_add,
-    'sub':  bin_sub,
-    'mul':  bin_mul,
-    'div':  bin_div,
-    'mod':  bin_mod,
-}
-
-cpdef size_t bin_add(size_t index, size_t bit_width):
-    return (index // bit_width) + (index % bit_width))
-
-cpdef size_t bin_sub(size_t index, size_t bit_width):
-    return (index // bit_width) - (index % bit_width))
-
-cpdef size_t bin_mul(size_t index, size_t bit_width):
-    return (index // bit_width) * (index % bit_width))
-
-cpdef size_t bin_div(size_t index, size_t bit_width):
-    return (index // bit_width) // (index % bit_width))
-
-cpdef size_t bin_mod(size_t index, size_t bit_width):
-    return (index // bit_width) % (index % bit_width))
-
-
 cdef class BoolMapping:
     def __init__(self, inputs, target, Ne):
         self.inputs, self.target = self._validate(inputs, target, Ne)

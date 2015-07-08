@@ -107,13 +107,8 @@ cdef class ChainedE1(ChainedEvaluator):
 
         self.partial_evaluation(E)
 
-        print(np.asarray(E))
-        print(np.asarray(self.row_accumulator))
-        print(self.divisor)
-
         for i in range(self.No):
             result += self.row_accumulator[i] / self.divisor
-            print(self.row_accumulator[i] / self.divisor)
 
         return result
 

@@ -225,8 +225,6 @@ class TestFunctionalilty:
     def test_move_in_connected_range(self, repeats, any_network):
         net = deepcopy(any_network['net'])
         connected = self.connected_ground_truth(net)
-        print(net)
-        print(connected)
         gate, _, _ = net.random_move()
         assert gate in connected
 
