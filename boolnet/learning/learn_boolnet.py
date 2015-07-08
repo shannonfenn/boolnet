@@ -38,13 +38,6 @@ def check_data(training_set, test_generator):
             training_set.No, test_generator.No))
 
 
-def learn_bool_net(task):
-    random.seed()
-    seed = random.randint(1, sys.maxsize)
-    fastrand.seed(seed)
-    return _learn_bool_net(*task)
-
-
 def build_training_evaluator(network, mapping):
     if isinstance(mapping, BoolMapping):
         return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
@@ -65,7 +58,12 @@ def build_test_evaluator(network, mapping, parameters, guiding_metric):
     return evaluator
 
 
-def _learn_bool_net(parameters):
+def learn_bool_net(parameters):
+    # seed fast random number generator using system rng (which auto seeds on module import)
+    random.seed()
+    seed = random.randint(1, sys.maxsize)
+    fastrand.seed(seed)
+
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']
     metric = metric_from_name(parameters['optimiser']['metric'])
