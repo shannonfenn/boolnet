@@ -1,6 +1,7 @@
-from boolnet.bintools.packing cimport pack_bool_matrix, packed_type_t
+from boolnet.bintools.packing import pack_bool_matrix
 
-cdef class BoolMapping:
+
+class BoolMapping:
     def __init__(self, inputs, target, Ne):
         self.inputs, self.target = self._validate(inputs, target, Ne)
         self.Ne = Ne
@@ -23,6 +24,3 @@ cdef class BoolMapping:
 
     def toDict(self):
         return {'inputs': self.inputs, 'target': self.target, 'Ne': self.Ne}
-
-
-
