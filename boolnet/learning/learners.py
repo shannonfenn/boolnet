@@ -3,7 +3,7 @@ from collections import namedtuple
 import numpy as np
 import kFS
 import logging
-from boolnet.bintools.metric_names import Metric
+from boolnet.bintools.metrics import PER_OUTPUT
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 
 
@@ -12,7 +12,7 @@ Result = namedtuple('Result', [
 
 
 def per_target_error_end_condition(bit):
-    return lambda ev, _: ev.metric_value(Metric.PER_OUTPUT)[bit] <= 0
+    return lambda ev, _: ev.metric_value(PER_OUTPUT)[bit] <= 0
 
 
 def guiding_error_end_condition():
@@ -183,11 +183,11 @@ def stratified_learn(evaluator, parameters, optimiser,
         # unpack results
         optimised_network, best_it, final_it = results
 
-        logging.info('''Error per output (sample): %s
-                        best iteration: %d
-                        final iteration: %d''',
-                     evaluator.metric_value(Metric.PER_OUTPUT),
-                     best_it, final_it)
+        # logging.info('''Error per output (sample): %s
+        #                 best iteration: %d
+        #                 final iteration: %d''',
+        #              evaluator.metric_value(PER_OUTPUT),
+        #              best_it, final_it)
 
         # record result
         best_states[tgt] = copy(optimised_network)

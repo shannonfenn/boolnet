@@ -4,17 +4,18 @@ import numpy as np
 from copy import copy, deepcopy
 from collections import namedtuple
 from pytest import mark, raises, fixture
-from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
-from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
-from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
-from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
-from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
-from boolnet.learning.networkstate import StandardNetworkState, ChainedNetworkState
 from numpy.testing import assert_array_equal as assert_array_equal
 from numpy.testing import assert_array_almost_equal as assert_array_almost_equal
 
 import pyximport
 pyximport.install()
+from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
+from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
+from boolnet.bintools.metrics import metric_name
+from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
+from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
+from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
+from boolnet.learning.networkstate import StandardNetworkState, ChainedNetworkState
 
 
 TEST_NETWORKS = glob.glob('boolnet/test/networks/*.yaml')
@@ -382,6 +383,6 @@ class TestBoth:
     def test_metric_value(self, state, metric, sample_type):
         evaluator = state['evaluator'][sample_type]
         evaluator.set_metric(metric)
-        expected = state['metric value'][sample_type][str(metric)]
+        expected = state['metric value'][sample_type][metric_name(metric)]
         actual = evaluator.metric_value()
         assert_array_almost_equal(expected, actual)

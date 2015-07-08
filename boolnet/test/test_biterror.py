@@ -1,4 +1,4 @@
-from boolnet.bintools.metric_names import metric_name
+from boolnet.bintools.metrics import metric_name
 from numpy.testing import assert_array_equal as assert_array_equal
 import pyximport
 pyximport.install()

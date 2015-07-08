@@ -4,9 +4,10 @@ from good import message, Allow, Optional
 
 from boolnet.exptools.boolmapping import BoolMapping
 from boolnet.learning.learn_boolnet import LEARNERS, OPTIMISERS
-from boolnet.bintools.metric_names import all_metric_names
+from boolnet.bintools.metrics import all_metric_names
 
-metrics = list(all_metric_names())
+
+metrics = all_metric_names()
 
 
 @message('2D array expected')

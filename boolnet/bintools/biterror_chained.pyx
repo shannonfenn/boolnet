@@ -1,8 +1,8 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
-from boolnet.bintools.metric_names import (
+from boolnet.bintools.metrics import (
     E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
-    E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT, Metric)
+    E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT)
 import numpy as np
 cimport numpy as np
 import cython

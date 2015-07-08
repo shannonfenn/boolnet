@@ -1,7 +1,7 @@
 import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_almost_equal as assert_array_almost_equal
-from boolnet.bintools.metric_names import metric_name
+from boolnet.bintools.metrics import metric_name
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.packing import packed_type
 
