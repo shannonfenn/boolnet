@@ -148,7 +148,7 @@ def learn_bool_net(parameters):
         'test_error_simple':        test_evaluator.metric_value(E1),
         'test_accuracy':            test_evaluator.metric_value(ACCURACY),
         'final_network':            final_network.gates,
-        'Ne':                       training_data.Ne,
+        'Ne':                       training_evaluator.Ne,
         'time':                     (end_time - start_time).total_seconds()
         }
 
