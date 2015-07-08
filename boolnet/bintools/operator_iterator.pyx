@@ -1,6 +1,33 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 
+def operator_from_name(name):
+    if name == 'zero':
+        return ZERO
+    elif name == 'and':
+        return AND
+    elif name == 'or':
+        return OR
+    elif name == 'unary_and':
+        return UNARY_AND
+    elif name == 'unary_or':
+        return UNARY_OR
+    elif name == 'add':
+        return ADD
+    elif name == 'sub':
+        return SUB
+    elif name == 'mul':
+        return MUL
+    raise ValueError('No operator named: ' + name)
+
+
+def num_operands(Operator op):
+    if op in [AND, OR, ADD, SUB, MUL]:
+        return 2
+    else:
+        return 1
+
+
 cdef class OperatorIterator:
     def __init__(self, size_t Nb, size_t Ne):
         if Nb == 0:
