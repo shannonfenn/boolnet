@@ -1,7 +1,8 @@
 from boolnet.bintools.packing import pack_bool_matrix
+from collections import namedtuple
 
 
-class BoolMapping:
+class FileBoolMapping:
     def __init__(self, inputs, target, Ne):
         self.inputs, self.target = self._validate(inputs, target, Ne)
         self.Ne = Ne
@@ -22,5 +23,6 @@ class BoolMapping:
     def No(self):
         return self.target.shape[0]
 
-    def toDict(self):
-        return {'inputs': self.inputs, 'target': self.target, 'Ne': self.Ne}
+
+OperatorBoolMapping = namedtuple('OperatorBoolMapping', [
+    'indices', 'Nb', 'Ni', 'No', 'window_size', 'operator', 'N'])
