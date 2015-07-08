@@ -1,4 +1,5 @@
 # cython: language_level=3
+# cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 import cython
 import numpy as np
 cimport numpy as np
@@ -162,7 +163,7 @@ cdef class NetworkState:
                              '({}).').format(network.No, self.No))
 
 
-cdef class StaticNetworkState(NetworkState):
+cdef class StandardNetworkState(NetworkState):
     cdef StandardEvaluator err_evaluator
 
     def __init__(self, network, packed_type_t[:, :] inputs,
@@ -306,19 +307,15 @@ cdef class ChainedNetworkState(NetworkState):
 
         for block in range(self.blocks):
             self.example_generator.next_examples(self.inputs, self.target)
-            print(np.asarray(self.inputs))
-            print(np.asarray(self.target))
             if is_nand:
                 self._evaluate_NAND()
             else:
                 self._evaluate_random()
-            print(np.asarray(self.outputs))
             # on the last iteration we must not perform a partial evaluation
             if block < self.blocks - 1:
                 self.err_evaluator.partial_evaluation(self.error)
         
         self._apply_zero_mask(self.error)
-        print(np.asarray(self.error))
         return self.err_evaluator.final_evaluation(self.error)
 
     @cython.boundscheck(False)

@@ -4,7 +4,7 @@ import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.packing import packed_type, pack_bool_matrix
-from boolnet.bintools.example_generator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
+from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
 from boolnet.bintools.example_generator import OperatorExampleFactory, PackedExampleGenerator
 
 
@@ -98,10 +98,10 @@ class TestExampleFactory:
 
 class TestExampleGenerator:
     op_map = {'add': ADD, 'sub': SUB, 'mul': MUL}
+    cache = dict()
 
-    @fixture(params=[
-        'add4.npz', 'add8.npz', 'sub4.npz', 'sub8.npz',
-        'mul2.npz', 'mul3.npz', 'mul4.npz', 'mul6.npz'])
+    @fixture(params=['add4.npz', 'add8.npz', 'sub4.npz', 'sub8.npz',
+                     'mul2.npz', 'mul3.npz', 'mul4.npz', 'mul6.npz'])
     def file_func_inst(self, request, test_location):
         return test_location, request.param
 
@@ -112,9 +112,13 @@ class TestExampleGenerator:
     def load_file_func_instance(self, instance):
         location, name = instance
         fname = os.path.join(location, 'functions', name)
-        with np.load(fname) as data:
-            inp = data['input_matrix']
-            tgt = data['target_matrix']
+        if fname not in self.cache:
+            with np.load(fname) as data:
+                inp = data['input_matrix']
+                tgt = data['target_matrix']
+            self.cache[fname] = (inp, tgt)
+        inp = np.array(self.cache[fname][0], copy=True)
+        tgt = np.array(self.cache[fname][1], copy=True)
         return self.op_map[name[:3]], inp, tgt
 
     def build_generator_instance(self, instance, include):
