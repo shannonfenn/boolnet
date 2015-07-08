@@ -2,12 +2,11 @@ from datetime import datetime
 import random
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.metrics import E1, ACCURACY, PER_OUTPUT, metric_from_name
-from boolnet.bintools.example_generator import PackedExampleGenerator
-from boolnet.exptools.boolmapping import BoolMapping
+from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
 from boolnet.learning.learners import basic_learn, stratified_learn
 from boolnet.learning.optimisers import SA, LAHC
-from boolnet.learning.networkstate import (
-    StandardNetworkState, ChainedNetworkState, standard_from_packed_generator)
+from boolnet.learning.networkstate import (StandardNetworkState, standard_from_operator,
+                                           chained_from_operator)
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import functools
@@ -47,18 +46,21 @@ def check_data(training_mapping, test_mapping):
 
 
 def build_training_evaluator(network, mapping):
-    if isinstance(mapping, BoolMapping):
+    if isinstance(mapping, FileBoolMapping):
         return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
-    elif isinstance(mapping, PackedExampleGenerator):
-        return standard_from_packed_generator(network, mapping)
+    elif isinstance(mapping, OperatorBoolMapping):
+        return standard_from_operator(network=network, indices=mapping.indices,
+                                      Nb=mapping.Nb, No=mapping.No,
+                                      operator=mapping.operator, N=mapping.N)
 
 
 def build_test_evaluator(network, mapping, parameters, guiding_metric):
-    if isinstance(mapping, BoolMapping):
+    if isinstance(mapping, FileBoolMapping):
         evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
-    elif isinstance(mapping, PackedExampleGenerator):
-        window_size = parameters['data']['window_size']
-        evaluator = ChainedNetworkState(network, mapping, window_size)
+    elif isinstance(mapping, OperatorBoolMapping):
+        evaluator = chained_from_operator(
+            network=network, indices=mapping.indices, Nb=mapping.Nb, No=mapping.No,
+            operator=mapping.operator, window_size=mapping.window_size, N=mapping.N)
         # pre-add metrics to avoid redundant network evaluations
         evaluator.add_metric(guiding_metric)
         evaluator.add_metric(E1)
@@ -67,7 +69,6 @@ def build_test_evaluator(network, mapping, parameters, guiding_metric):
 
 
 def learn_bool_net(parameters):
-    print(parameters)
     # seed fast random number generator using system rng (which auto seeds on module import)
     random.seed()
     seed = random.randint(1, sys.maxsize)
@@ -76,7 +77,7 @@ def learn_bool_net(parameters):
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']
     metric = metric_from_name(parameters['optimiser']['metric'])
-    print(parameters['training_mapping'].Ni)
+
     training_data = parameters['training_mapping']
     test_data = parameters['test_mapping']
 
