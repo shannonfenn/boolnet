@@ -170,8 +170,7 @@ def generated_instance(data_settings, sampling_settings):
         instances.append(Instance(
             training_mapping=PackedExampleGenerator(trg_factory, No),
             test_mapping=PackedExampleGenerator(tst_factory, No),
-            training_indices=training_indices[s],
-            ))
+            training_indices=training_indices[s]))
     return instances
 
 
@@ -226,13 +225,16 @@ def generate_configurations(settings):
             instance = instances[i]
 
             iteration_settings = deepcopy(config_settings)
+            print(instance.training_mapping.Ni)
             iteration_settings['training_indices'] = instance.training_indices
-            iteration_settings['training_set'] = instance.training_mapping
-            iteration_settings['test_set'] = instance.test_mapping
+            iteration_settings['training_mapping'] = instance.training_mapping
+            iteration_settings['test_mapping'] = instance.test_mapping
             iteration_settings['training_set_number'] = i
             iteration_settings['inter_file_base'] += '{}_{}_'.format(config_no, i)
 
+            print(iteration_settings['training_mapping'].Ni)
             config_schema(iteration_settings)
+            print(iteration_settings['training_mapping'].Ni)
 
             # dump the iteration settings out
             tasks.append(iteration_settings)

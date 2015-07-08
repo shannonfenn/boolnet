@@ -130,8 +130,8 @@ config_schema = Schema({
     'configuration_number':     All(int, Range(min=0)),
     'training_set_number':      All(int, Range(min=0)),
     'inter_file_base':          str,
-    'training_set':             Any(Type(BoolMapping), Type(PackedExampleGenerator)),
-    'test_set':                 Any(Type(BoolMapping), Type(PackedExampleGenerator)),
+    'training_mapping':         Any(Type(BoolMapping), Type(PackedExampleGenerator)),
+    'test_mapping':             Any(Type(BoolMapping), Type(PackedExampleGenerator)),
     'training_indices':         All(Type(np.ndarray), is_1d, is_int_arr),
     Optional('initial_gates'):  All(Type(np.ndarray), is_2d, is_int_arr),
     }, default_keys=Required)
