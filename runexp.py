@@ -153,7 +153,7 @@ def run_sequential(tasks, out_stream):
     ''' runs the given configurations '''
     bar = Bar('Running sequentially', max=len(tasks))
     bar.update()
-    for i, result in enumerate(itertools.imap(learn_bool_net, tasks)):
+    for i, result in enumerate(map(learn_bool_net, tasks)):
         config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
