@@ -139,21 +139,26 @@ def file_instance(data_settings, sampling_settings):
     return pack_examples(inputs, targets, training_indices)
 
 
+def default_key(settings, key, default_value):
+    if key in settings:
+        return settings[key]
+    else:
+        return default_value
+
+
 def generated_instance(data_settings, sampling_settings):
     data_dir = data_settings['dir']
     Nb = data_settings['bits']
-    No = data_settings['No']
     op = operator_from_name(data_settings['operator'])
     N_operands = num_operands(op)
 
     Ni = (N_operands * Nb)
     N = 2**Ni
 
+    # by default the output width is the operand width
+    No = default_key(data_settings, 'No', Nb)
     # default window size of 4 (arbitrary at this point)
-    if 'window_size' in data_settings:
-        window_size = data_settings['window_size']
-    else:
-        window_size = 4
+    window_size = default_key(data_settings, 'window_size', 4)
 
     training_indices = load_samples(sampling_settings, data_dir, N, Ni)
     Ns, Ne = training_indices.shape
