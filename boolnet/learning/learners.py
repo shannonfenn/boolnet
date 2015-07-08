@@ -1,10 +1,10 @@
 from copy import copy
 from collections import namedtuple
 import numpy as np
-import kFS
 import logging
 from boolnet.bintools.metrics import PER_OUTPUT
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
+import boolnet.learning.kfs as kfs
 
 
 Result = namedtuple('Result', [
@@ -89,7 +89,7 @@ def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
     # include all previous final outputs
     sourceable.extend(range(Ng - No + Ni, Ng - No + Ni + target_index))
 
-    logging.info('kFS result: %s', feature_set)
+    logging.info('kfs result: %s', feature_set)
     logging.info('prior outputs: %s', range(Ng - No + Ni, Ng - No + Ni + target_index))
     logging.info('Changeable: %s', changeable)
     logging.info('Sourceable: %s', sourceable)
@@ -101,19 +101,19 @@ def get_feature_set(evaluator, parameters, lower_bound, bit):
     activation_matrix = evaluator.activation_matrix
     Ni = evaluator.network.Ni
     # generate input to minFS solver
-    kFS_matrix = activation_matrix[:(lower_bound+Ni), :]
+    kfs_matrix = activation_matrix[:(lower_bound+Ni), :]
     # target feature for this bit
-    kFS_target = evaluator.target_matrix[bit, :]
+    kfs_target = evaluator.target_matrix[bit, :]
 
-    logging.info('\t(examples, features): {}'.format(evaluator.Ne, kFS_matrix.shape))
+    logging.info('\t(examples, features): {}'.format(evaluator.Ne, kfs_matrix.shape))
 
     file_name_base = parameters['inter_file_base'] + str(bit)
 
-    kFS_matrix = unpack_bool_matrix(kFS_matrix, evaluator.Ne)
-    kFS_target = unpack_bool_vector(kFS_target, evaluator.Ne)
+    kfs_matrix = unpack_bool_matrix(kfs_matrix, evaluator.Ne)
+    kfs_target = unpack_bool_vector(kfs_target, evaluator.Ne)
 
     # use external solver for minFS
-    feature_sets = kFS.minimal_feature_sets(kFS_matrix, kFS_target, file_name_base)
+    feature_sets = kfs.minimal_feature_sets(kfs_matrix, kfs_target, file_name_base)
 
     # for now only one feature set should exist
     if feature_sets.shape[0] > 1:
@@ -136,11 +136,11 @@ def stratified_learn(evaluator, parameters, optimiser,
     # allocate gate pools for each bit, to avoid the problem of
     # prematurely using all the gates
     lower_bounds, upper_bounds = strata_boundaries(network)
-    # the initial kFS input is just the set of all network inputs
+    # the initial kfs input is just the set of all network inputs
     target_matrix = np.array(evaluator.target_matrix)
 
     feature_set_results = []
-    # ################## Start kFS learning ################## #
+    # ################## Start kfs learning ################## #
 
     for tgt, L_bnd, U_bnd in zip(range(num_targets), lower_bounds, upper_bounds):
         if use_kfs_masking:
@@ -148,10 +148,10 @@ def stratified_learn(evaluator, parameters, optimiser,
             feature_set = get_feature_set(evaluator, parameters, L_bnd, tgt)
 
             if log_all_feature_sets:
-                FSes = [feature_set]
+                fs_list = [feature_set]
                 for t in range(tgt+1, num_targets):
-                    FSes.append(get_feature_set(evaluator, parameters, L_bnd, t))
-                feature_set_results.append(FSes)
+                    fs_list.append(get_feature_set(evaluator, parameters, L_bnd, t))
+                feature_set_results.append(fs_list)
             else:
                 feature_set_results.append(feature_set)
             # check for 1-FS
@@ -194,7 +194,7 @@ def stratified_learn(evaluator, parameters, optimiser,
         best_iterations[tgt] = best_it
         final_iterations[tgt] = final_it
 
-    # ################## End kFS learning ################## #
+    # ################## End kfs learning ################## #
 
     logging.info('Best states: %s', best_states)
 
