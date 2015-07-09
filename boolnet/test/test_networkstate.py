@@ -9,13 +9,14 @@ from numpy.testing import assert_array_almost_equal as assert_array_almost_equal
 
 import pyximport
 pyximport.install()
-from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix
+from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix, generate_end_mask
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
 from boolnet.bintools.metrics import metric_name
 from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
 from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
-from boolnet.learning.networkstate import StandardNetworkState, ChainedNetworkState
+from boolnet.learning.networkstate import (StandardNetworkState, ChainedNetworkState,
+                                           standard_from_operator, chained_from_operator)
 
 
 TEST_NETWORKS = glob.glob('boolnet/test/networks/*.yaml')
@@ -52,16 +53,16 @@ def harnesses_with_property(bool_property_name):
                 yield name
 
 
-HARNESS_CACHE = {'standard': dict(), 'chained': dict()}
+HARNESS_CACHE = dict()
 
 
 def harness_to_fixture(fname, evaluator_type):
-    if fname not in HARNESS_CACHE[evaluator_type]:
+    if fname not in HARNESS_CACHE:
         with open(fname) as stream:
             test = yaml.safe_load(stream)
-            HARNESS_CACHE[evaluator_type][fname] = test
+            HARNESS_CACHE[fname] = test
 
-    test = deepcopy(HARNESS_CACHE['standard'][fname])
+    test = deepcopy(HARNESS_CACHE[fname])
 
     if evaluator_type == 'standard':
         return standard_harness_to_fixture(test)
@@ -205,6 +206,57 @@ def evaluator_type(request):
 @fixture(params=TEST_NETWORKS)
 def state(request, evaluator_type):
     return harness_to_fixture(request.param, evaluator_type)
+
+
+@fixture(params=TEST_NETWORKS)
+def state_params(request):
+    fname = request.param
+    if fname not in HARNESS_CACHE:
+        with open(fname) as stream:
+            harness = yaml.safe_load(stream)
+            HARNESS_CACHE[fname] = harness
+    # copy to ensure harness cache remains correct
+    test = deepcopy(HARNESS_CACHE[fname])
+
+    Ni = test['Ni']
+    No = test['No']
+    gates = np.array(test['gates'], np.uint32)
+
+    Ne_f = 2**Ni
+    indices_s = np.array(test['samples'], dtype=np.uint32)
+    indices_f = np.arange(Ne_f, dtype=np.uint32)
+    Ne_s = indices_s.size
+    Ne_t = Ne_f - Ne_s
+    test['Ne'] = {'full': Ne_f, 'sample': Ne_s, 'test': Ne_t}
+    test['N'] = {'full': 0, 'sample': 0, 'test': Ne_f}
+
+    test['operator'] = operator_map[test['target function']]
+
+    # add network to test
+    if 'transfer functions' in test:
+        tf = test['transfer functions']
+        test['network'] = RandomBoolNetwork(gates, Ni, No, tf)
+    else:
+        test['network'] = BoolNetwork(gates, Ni, No)
+
+    if test['target function'].startswith('unary'):
+        test['Nb'] = Ni
+    else:
+        test['Nb'] = Ni // 2
+
+    # add generated params to test
+    test['indices'] = {
+        'sample': indices_s,
+        'full': indices_f,
+        'test': indices_s
+    }
+    test['window_size'] = {
+        'sample': np.random.randint(1, max(2, Ne_s // PACKED_SIZE)),
+        'full': np.random.randint(1, max(2, Ne_f // PACKED_SIZE)),
+        'test': np.random.randint(1, max(2, Ne_t // PACKED_SIZE))
+    }
+
+    return test
 
 
 @fixture(params=list(harnesses_with_property('invariant under single move')))
@@ -380,6 +432,44 @@ class TestStandard:
 
 
 class TestBoth:
+    def build_from_params(self, params, eval_type, sample_type):
+        if eval_type == 'standard':
+            return standard_from_operator(
+                network=params['network'],
+                indices=params['indices'][sample_type],
+                Nb=params['Nb'],
+                No=params['No'],
+                operator=params['operator'],
+                N=params['N'][sample_type]
+            )
+        elif eval_type == 'chained':
+            return chained_from_operator(
+                network=params['network'],
+                indices=params['indices'][sample_type],
+                Nb=params['Nb'],
+                No=params['No'],
+                operator=params['operator'],
+                window_size=params['window_size'][sample_type],
+                N=params['N'][sample_type]
+            )
+
+    def test_from_operator_combined_attributes(self, state_params, evaluator_type, sample_type):
+        state = self.build_from_params(state_params, evaluator_type, sample_type)
+
+        Ne = state_params['Ne'][sample_type]
+        assert state.Ne == Ne
+        assert state.Ni == state_params['Ni']
+        assert state.No == state_params['No']
+        assert state.Ng == state_params['network'].Ng
+        assert state.zero_mask == generate_end_mask(Ne)
+        # assert state.Ne == state_params['Ne'][sample_type]
+
+    def test_from_operator_metric_value(self, state_params, evaluator_type, metric, sample_type):
+        expected = state_params['metric value'][sample_type][metric_name(metric)]
+        state = self.build_from_params(state_params, evaluator_type, sample_type)
+        actual = state.metric_value(metric)
+        assert_array_almost_equal(expected, actual)
+
     def test_metric_value(self, state, metric, sample_type):
         evaluator = state['evaluator'][sample_type]
         expected = state['metric value'][sample_type][metric_name(metric)]
