@@ -54,7 +54,7 @@ def FABCPP_cmd_line(features, target, file_name_base):
     # parse output
     with open(out_file_name) as out:
         # pull out all lines from output file which match the feature name regex
-        k_feature_set = [int(l.strip()[1:]) for l in out if FEATURE_RE.match(l.strip())]
+        k_feature_set = [int(l.strip()) for l in out if FEATURE_RE.match(l.strip())]
 
         return np.array([k_feature_set])
 
