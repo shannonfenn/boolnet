@@ -1,4 +1,5 @@
 import numpy as np
+from collections import deque
 try:
     import boolnet.network.algorithms as algorithms
 except ImportError:
@@ -12,7 +13,7 @@ class BoolNetwork:
     def __init__(self, initial_gates, Ni, No):
         self.changed = True
         self.first_unevaluated_gate = 0
-        self._inverse_moves = []
+        self._inverse_moves = deque()
 
         # copy gate array
         self._gates = np.array(initial_gates, dtype=np.uint32, copy=True)
@@ -198,7 +199,7 @@ class BoolNetwork:
             self.revert_move()
 
     def clear_history(self):
-        self._inverse_moves = []
+        self._inverse_moves.clear()
 
 
 class RandomBoolNetwork(BoolNetwork):
