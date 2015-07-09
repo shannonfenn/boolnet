@@ -129,7 +129,7 @@ def learn_bool_net(parameters):
 
     end_time = datetime.now()
 
-    test_evaluator = build_test_evaluator(initial_network, test_data, parameters, metric)
+    test_evaluator = build_test_evaluator(final_network, test_data, parameters, metric)
 
     results = {
         'Ni':                       Ni,
