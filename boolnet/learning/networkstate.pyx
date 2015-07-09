@@ -20,10 +20,17 @@ cpdef standard_from_operator(network, indices, Nb, No, operator, N=0):
     cdef packed_type_t[:, :] inp, tgt
     ex_factory = OperatorExampleFactory(indices, Nb, operator, N)
     packed_factory = PackedExampleGenerator(ex_factory, No)
-    Ne = packed_factory.Ne
+
     Ni = packed_factory.Ni
-    inp = np.empty((Ni, Ne), dtype=packed_type)
-    tgt = np.empty((No, Ne), dtype=packed_type)
+    Ne = packed_factory.Ne
+
+    chunks = Ne // PACKED_SIZE
+    if packed_factory.Ne % PACKED_SIZE > 0:
+        chunks += 1
+
+    inp = np.empty((Ni, chunks), dtype=packed_type)
+    tgt = np.empty((No, chunks), dtype=packed_type)
+
     packed_factory.reset()
     packed_factory.next_examples(inp, tgt)
     return StandardNetworkState(network, inp, tgt, Ne)
@@ -40,7 +47,7 @@ cdef class NetworkState:
         readonly size_t Ne, Ni, No, Ng, cols
         readonly metric
         packed_type_t[:, :] activation, inputs, outputs, target, error
-        packed_type_t zero_mask
+        readonly packed_type_t zero_mask
         public object network
         dict err_evaluators
 
@@ -79,7 +86,7 @@ cdef class NetworkState:
         # prevent another evaluator causing problems with this network
         self.network = deepcopy(network)
         # force reevaluation of the copied network
-        self.network._evaluated = False
+        self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
     cpdef add_metric(self, Metric metric):
@@ -235,7 +242,7 @@ cdef class StandardNetworkState(NetworkState):
         ''' Evaluate the activation and error matrices if the
             network has been modified since the last evaluation. '''
 
-        if self.network._evaluated:
+        if not self.network.changed:
             return
 
         if hasattr(self.network, 'transfer_functions'):
@@ -307,7 +314,6 @@ cdef class ChainedNetworkState(NetworkState):
             self.zero_mask_cols = 1
         self.example_generator = example_generator
         self.metric_value_cache = dict()
-
 
     cpdef add_metric(self, Metric metric):
         if metric not in self.err_evaluators:
