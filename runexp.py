@@ -187,6 +187,8 @@ def main():
 
     settings, result_dir = initialise(args)
 
+    print('Results in: ' + result_dir)
+
     settings['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
