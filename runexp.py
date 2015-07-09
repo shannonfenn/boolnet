@@ -81,6 +81,8 @@ def parse_arguments():
                         help='how many parallel processes to use (give 0 for scoop).')
     parser.add_argument('--keep-temp', action='store_true',
                         help='provide to retain temporary FABCPP files.')
+    parser.add_argument('--no-notify', action='store_true',
+                        help='disable PushBullet notifications.')
     parser.add_argument('--data-dir', default='experiments/datasets', type=str,
                         help='dataset directory.')
     parser.add_argument('--results-dir', default='experiments/results', type=str,
@@ -131,7 +133,7 @@ def run_parallel(tasks, num_processes, out_stream):
     with Pool(processes=num_processes) as pool:
         bar = Bar('Parallelised', max=len(tasks))
         bar.update()
-        # uses unordered imap to ensure results are dumped as soon as available
+        # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
             config_tools.dump_results_partial(result, out_stream, i == 0)
             bar.next()
@@ -142,7 +144,7 @@ def run_scooped(tasks, out_stream):
     ''' runs the given configurations '''
     bar = Bar('Scooped', max=len(tasks))
     bar.update()
-    # uses unordered imap to ensure results are dumped as soon as available
+    # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(learn_bool_net, tasks)):
         config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
@@ -153,6 +155,7 @@ def run_sequential(tasks, out_stream):
     ''' runs the given configurations '''
     bar = Bar('Running sequentially', max=len(tasks))
     bar.update()
+    # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
         config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
@@ -171,19 +174,19 @@ def notify(pb_handle, exp_name, result_dirname, time):
 # ############################## MAIN ####################################### #
 def main():
     start_time = time()
-    try:
-        from pushbullet import PushBullet, PushbulletError
-        pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
-    except ImportError:
-        print('Failed to import PushBullet - notifications will not be sent.')
-        pb = None
-    except PushbulletError:
-        print('Failed to generate PushBullet interface - notifications will not be sent.')
-        pb = None
 
     args = parse_arguments()
 
-    # run_experiment(repo_dir, build_subdir, experiment_filename)
+    if not args.no_notify:
+        try:
+            from pushbullet import PushBullet, PushbulletError
+            pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
+        except ImportError:
+            print('Failed to import PushBullet - notifications will not be sent.')
+            pb = None
+        except PushbulletError:
+            print('Failed to generate PushBullet interface - notifications will not be sent.')
+            pb = None
 
     settings, result_dir = initialise(args)
 
@@ -204,10 +207,11 @@ def main():
 
     total_time = time() - start_time
 
-    try:
-        notify(pb, settings['name'], result_dir, total_time)
-    except PushbulletError as err:
-        print('Failed to send PushBullet notification: {}.'.format(err))
+    if not args.no_notify:
+        try:
+            notify(pb, settings['name'], result_dir, total_time)
+        except PushbulletError as err:
+            print('Failed to send PushBullet notification: {}.'.format(err))
 
 if __name__ == '__main__':
     main()
