@@ -80,11 +80,12 @@ optimiser_schema = Schema(
         optimiser_name_schema))
 
 data_schema_generated = Schema({
-    'type':         'generated',
-    'dir':          IsDir(),
-    'operator':     str,
-    'bits':         All(int, Range(min=1)),
-    'No':           All(int, Range(min=1))
+    'type':                     'generated',
+    'dir':                      IsDir(),
+    'operator':                 str,
+    'bits':                     All(int, Range(min=1)),
+    Optional('No'):             All(int, Range(min=1)),
+    Optional('window_size'):    All(int, Range(min=1))
     }, default_keys=Required)
 
 data_schema_file = Schema({
