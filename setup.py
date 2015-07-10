@@ -21,5 +21,7 @@ setup(
                   libraries=cython_gsl.get_libraries(),
                   library_dirs=[cython_gsl.get_library_dir()],
                   include_dirs=[cython_gsl.get_cython_include_dir()]),
+        Extension("boolnet.network.algorithms",
+                  ["boolnet/network/algorithms.pyx"]),
         ]
     )
