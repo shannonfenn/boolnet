@@ -27,9 +27,9 @@ class BoolNetwork:
 
         # set mask to allow all gates to be sourced and modified
         self._masked = False
-        self._changeable = np.array([], dtype=np.uint32)
-        self._sourceable = np.array([], dtype=np.uint32)
 
+        self._changeable = np.ones(self.Ng, dtype=np.uint8)
+        self._sourceable = np.ones(self.Ng + self.Ni, dtype=np.uint8)
         self._connected = np.zeros(self.Ng + self.Ni, dtype=np.uint8)
 
         self._check_invariants()
@@ -59,11 +59,11 @@ class BoolNetwork:
 
     @property
     def sourceable(self):
-        return self._sourceable if self._masked else np.array([], dtype=np.uint32)
+        return self._sourceable
 
     @property
     def changeable(self):
-        return self._changeable if self._masked else np.array([], dtype=np.uint32)
+        return self._changeable
 
     @property
     def gates(self):
@@ -108,51 +108,54 @@ class BoolNetwork:
     def _check_mask(self):
         # check for validity here rather than when attempting to
         # generate a move.
-        pure_inputs = np.setdiff1d(self._sourceable, self._changeable + self.Ni)
+        if np.sum(self._changeable) == 0:
+            raise ValueError('No changeable connections.')
+        if np.sum(self._sourceable) == 0:
+            raise ValueError('No changeable connections.')
 
-        if np.sum(pure_inputs < np.amin(self._changeable) + self.Ni) < 2:
+        first_changeable = np.flatnonzero(self._changeable)[0]
+
+        if self._sourceable[:first_changeable + self.Ni].sum() < 2:
             raise ValueError(('Not enough valid connections (2 required) in: '
-                              'sourceable: {} changeable: {} pure inputs {}').format(
-                self._sourceable, self._changeable, pure_inputs))
+                              'sourceable: {} changeable: {}').format(
+                self._sourceable, self._changeable))
 
     def set_mask(self, sourceable, changeable):
-        self._changeable = np.unique(np.asarray(changeable, dtype=np.uint32))
-        self._sourceable = np.unique(np.asarray(sourceable, dtype=np.uint32))
+        self._changeable = np.array(changeable, copy=True, dtype=np.uint8)
+        self._sourceable = np.array(sourceable, copy=True, dtype=np.uint8)
         self._masked = True
         self._check_mask()
 
     def remove_mask(self):
         # don't need to bother removing the actual masks
+        self._changeable[:] = 1
+        self._sourceable[:] = 1
         self._masked = False
 
     def random_move(self):
         ''' Returns a 3-tuple of unsigned ints (gate, terminal, new_source. '''
         # In order to ensure a useful modification is generated we make
         # sure to only modify connected gates
-
-        # the result of connected_gates() includeds inputs and is Ni-based
-        # so needs to be shifted and normalised
-        changeable = self.connected_gates()
-
         if self._masked:
-            # this will cause problems if the mask has been set poorly and there is
-            # no intersection between connected and changeable
-            changeable = np.intersect1d(self._changeable, changeable, assume_unique=True)
-            sourceable = self._sourceable
+            return algorithms.random_move(
+                self._gates, self._changeable & self.connected_gates(),
+                self._sourceable, self.Ni)
         else:
-            sourceable = None
+            return algorithms.random_move(
+                self._gates, self.connected_gates(), None, self.Ni)
 
-        return algorithms.random_move(self._gates, changeable, sourceable, self.Ni)
+    def connected_gates(self):
+        self._update_connected()
+        return self._connected[self.Ni:]
 
-    def connected_gates(self, No=None):
-        ''' This detects which gates and inputs are connected to the output
-            and returns the gate indices as a sorted list. This
-            is just the union of the connected components in the
-            digraph where connections are only backward.'''
-        if No is None:
-            No = self.No
+    def connected_sources(self):
+        self._update_connected()
+        return self._connected
 
-        return algorithms.connected_sources(self._gates, self._connected, self.Ni, No)
+    def _update_connected(self):
+        algorithms.connected_sources(self._gates, self._connected, self.Ni, self.No)
+
+
 
     # def percolate_connected_gates(self):
     #     ''' This detects which gates are disconnected from the
@@ -169,6 +172,8 @@ class BoolNetwork:
         else:
             self.first_unevaluated_gate = move[0]
 
+        print(self._gates)
+        print(move)
         # record the inverse move
         inverse = (move[0], move[1], self._gates[move[0]][move[1]])
         self._inverse_moves.append(inverse)

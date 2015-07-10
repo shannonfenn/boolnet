@@ -2,12 +2,13 @@ import yaml
 import glob
 import networkx as nx
 import numpy as np
+from numpy.testing import assert_array_equal
 from numpy.random import randint
 from copy import copy, deepcopy
 from itertools import chain
-from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from pytest import fixture, raises
 from pytest import mark
+from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 
 
 # ############# Global helpers ################# #
@@ -126,7 +127,7 @@ class TestExceptions:
 
 
 # #################### Functional Testing #################### #
-class TestFunctionalilty:
+class TestFunctionality:
     # ############## Helper Methods ##################### #
     def graph_from_gates(self, gates, Ni, No):
         DG = nx.DiGraph()
@@ -143,11 +144,13 @@ class TestFunctionalilty:
         No = net.No
         Ng = net.Ng
         digraph = self.graph_from_gates(net.gates, Ni, No)
-        connected = set(chain.from_iterable(
-            nx.ancestors(digraph, Ni+Ng-o-1) for o in range(No)))
-        connected = np.unique([g - Ni for g in connected if g >= Ni])
-        connected = np.union1d(connected, np.arange(Ng-No, Ng))
-        return connected
+        connected = chain.from_iterable(
+            nx.ancestors(digraph, Ni+Ng-o-1) for o in range(No))
+        connected = np.unique(list(connected))
+        connected = np.union1d(connected, np.arange(Ng-No+Ni, Ng+Ni))
+        result = np.zeros(Ng+Ni, dtype=np.uint8)
+        result[connected] = 1
+        return result
 
     def assert_feedforward(self, net):
         for g in range(net.Ng):
@@ -179,10 +182,16 @@ class TestFunctionalilty:
     def test_feedforward(self, random_network):
         self.assert_feedforward(random_network)
 
-    def test_connected_gates(self, random_network):
+    def test_connected_sources(self, random_network):
         expected = self.connected_ground_truth(random_network)
-        actual = random_network.connected_gates(random_network.No)
-        assert np.array_equal(actual, expected)
+        actual = random_network.connected_sources()
+        assert_array_equal(expected, actual)
+
+    def test_connected_gates(self, random_network):
+        Ni = random_network.Ni
+        expected = self.connected_ground_truth(random_network)[Ni:]
+        actual = random_network.connected_gates()
+        assert_array_equal(expected, actual)
 
     def test_revert_move_revert(self, any_network):
         net = deepcopy(any_network['net'])
@@ -191,7 +200,7 @@ class TestFunctionalilty:
             net.move_to_neighbour(net.random_move())
             assert not np.array_equal(net.gates, old_gates)
             net.revert_move()
-            assert np.array_equal(net.gates, old_gates)
+            assert_array_equal(net.gates, old_gates)
 
     def test_revert_move_revert_multi(self, any_network):
         net = deepcopy(any_network['net'])
@@ -203,7 +212,7 @@ class TestFunctionalilty:
         # revert it incrementally and check it is equal to the backup each time
         for backup in reversed(backups):
             net.revert_move()
-            assert np.array_equal(net.gates, backup.gates)
+            assert_array_equal(net.gates, backup.gates)
 
     def test_revert_all_moves(self, any_network):
         net = deepcopy(any_network['net'])
@@ -212,7 +221,7 @@ class TestFunctionalilty:
             for i in range(10):
                 net.move_to_neighbour(net.random_move())
             net.revert_all_moves()
-            assert np.array_equal(net.gates, old_gates)
+            assert_array_equal(net.gates, old_gates)
 
     def test_multiple_move_gates(self, any_network):
         net = deepcopy(any_network['net'])
@@ -226,21 +235,21 @@ class TestFunctionalilty:
         net = deepcopy(any_network['net'])
         connected = self.connected_ground_truth(net)
         gate, _, _ = net.random_move()
-        assert gate in connected
+        assert connected[gate] == 1
 
     @mark.parametrize('repeats', range(10))
     def test_masked_random_move(self, repeats, adder2, adder2_valid_mask):
         net = deepcopy(adder2)
         sourceable, changeable = adder2_valid_mask
-        connected = self.connected_ground_truth(net)
+        connected = self.connected_ground_truth(net)[net.Ni:]
         # get a random restricted move
         net.set_mask(sourceable, changeable)
         gate, terminal, new_source = net.random_move()
         # check the move is changing a valid gate
-        assert gate in changeable
-        assert gate in connected
+        assert changeable[gate] == 1
+        assert connected[gate] == 1
         # check the move is connecting to a valid source
-        assert new_source in sourceable
+        assert sourceable[new_source] == 1
         # check the move has changed the original connection
         assert new_source != net.gates[gate, terminal]
 
@@ -267,4 +276,4 @@ class TestFunctionalilty:
         net = deepcopy(any_network['net'])
         expected = any_network['max depths']
         actual = net.max_node_depths()
-        assert np.array_equal(actual, expected)
+        assert_array_equal(actual, expected)
