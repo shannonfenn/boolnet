@@ -73,26 +73,29 @@ def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
     Ng = network.Ng
     No = network.No
     # give list of gates which can have their inputs reconnected
-    changeable = list(range(lower_bound, upper_bound)) + [Ng - No + target_index]
+    changeable = np.zeros(Ng, dtype=np.uint8)
+    sourceable = np.zeros(Ng+Ni, dtype=np.uint8)
+    changeable[lower_bound:upper_bound] = 1
+    changeable[Ng - No + target_index] = 1
 
     # and a list of inputs (including gate outputs) which those
     # gates can be connected to
     if feature_set is None:
         # include all modifiable and previous connections
-        sourceable = list(range(upper_bound + Ni))
+        sourceable[:upper_bound+Ni] = 1
     else:
         # union of all feature sets
-        sourceable = list(feature_set.flat)
+        sourceable[feature_set.flat] = 1
         # and the range of modifiable gates (with Ni added)
-        sourceable.extend(range(lower_bound + Ni, upper_bound + Ni))
+        sourceable[lower_bound+Ni:upper_bound+Ni]
 
     # include all previous final outputs
-    sourceable.extend(range(Ng - No + Ni, Ng - No + Ni + target_index))
+    sourceable[Ng-No+Ni:Ng-No+Ni+target_index]
 
-    logging.info('kfs result: %s', feature_set)
-    logging.info('prior outputs: %s', range(Ng - No + Ni, Ng - No + Ni + target_index))
-    logging.info('Changeable: %s', changeable)
-    logging.info('Sourceable: %s', sourceable)
+    # logging.info('kfs result: %s', feature_set)
+    # logging.info('prior outputs: %s', range(Ng - No + Ni, Ng - No + Ni + target_index))
+    # logging.info('Changeable: %s', changeable)
+    # logging.info('Sourceable: %s', sourceable)
 
     return changeable, sourceable
 
