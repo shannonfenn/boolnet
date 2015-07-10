@@ -172,8 +172,6 @@ class BoolNetwork:
         else:
             self.first_unevaluated_gate = move[0]
 
-        print(self._gates)
-        print(move)
         # record the inverse move
         inverse = (move[0], move[1], self._gates[move[0]][move[1]])
         self._inverse_moves.append(inverse)
