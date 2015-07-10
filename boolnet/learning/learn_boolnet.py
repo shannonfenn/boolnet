@@ -1,4 +1,4 @@
-from datetime import datetime
+import time
 import random
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.metrics import E1, ACCURACY, PER_OUTPUT, metric_from_name
@@ -121,13 +121,13 @@ def learn_bool_net(parameters):
     optimiser = OPTIMISERS[optimiser_name]
 
     # learn the network
-    start_time = datetime.now()
+    start_time = time.monotonic()
 
     learner_result = learner(training_evaluator, parameters, optimiser)
 
     final_network = learner_result.best_states[-1]
 
-    end_time = datetime.now()
+    end_time = time.monotonic()
 
     test_evaluator = build_test_evaluator(final_network, test_data, parameters, metric)
 
@@ -149,7 +149,7 @@ def learn_bool_net(parameters):
         'test_accuracy':            test_evaluator.metric_value(ACCURACY),
         'final_network':            final_network.gates,
         'Ne':                       training_evaluator.Ne,
-        'time':                     (end_time - start_time).total_seconds()
+        'time':                     end_time - start_time
         }
 
     if learner_result.feature_sets:
@@ -167,6 +167,8 @@ def learn_bool_net(parameters):
         results[key] = v
     for k, v in parameters['optimiser'].items():
         results['optimiser_' + k] = v
+
+    results['result-time'] = time.monotonic() - start_time
 
     return results
 
