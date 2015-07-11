@@ -75,6 +75,7 @@ def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
     # give list of gates which can have their inputs reconnected
     changeable = np.zeros(Ng, dtype=np.uint8)
     sourceable = np.zeros(Ng+Ni, dtype=np.uint8)
+
     changeable[lower_bound:upper_bound] = 1
     changeable[Ng - No + target_index] = 1
 
@@ -87,10 +88,10 @@ def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
         # union of all feature sets
         sourceable[feature_set.flat] = 1
         # and the range of modifiable gates (with Ni added)
-        sourceable[lower_bound+Ni:upper_bound+Ni]
+        sourceable[lower_bound+Ni:upper_bound+Ni] = 1
 
     # include all previous final outputs
-    sourceable[Ng-No+Ni:Ng-No+Ni+target_index]
+    sourceable[Ng-No+Ni:Ng-No+Ni+target_index] = 1
 
     # logging.info('kfs result: %s', feature_set)
     # logging.info('prior outputs: %s', range(Ng - No + Ni, Ng - No + Ni + target_index))
@@ -150,6 +151,7 @@ def stratified_learn(evaluator, parameters, optimiser,
             # find a set of min feature sets for the next target
             feature_set = get_feature_set(evaluator, parameters, L_bnd, tgt)
 
+            # keep a log of the feature sets found at each iteration
             if log_all_feature_sets:
                 fs_list = [feature_set]
                 for t in range(tgt+1, num_targets):
@@ -157,6 +159,7 @@ def stratified_learn(evaluator, parameters, optimiser,
                 feature_set_results.append(fs_list)
             else:
                 feature_set_results.append(feature_set)
+
             # check for 1-FS
             if feature_set.size == 1:
                 # When we have a 1FS we have already learned the target,
