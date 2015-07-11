@@ -55,12 +55,12 @@ def handle_single_FS(feature_set, evaluator, bit, target):
         # current outputs inputs as the inputs to the 1FS gate
         sources = network.gates[gate]
         for i in [0, 1]:
-            network.move_to_neighbour(Ng - No + bit, i, sources[i])
+            network.apply_move({'gate': Ng - No + bit, 'terminal': i, 'new_source': sources[i]})
     else:
         # we have learnt the target inverse, since a NAND gate can act
         # as an inverter we can connect the output gate directly to this one
         for i in [0, 1]:
-            network.move_to_neighbour(Ng - No + bit, i, gate)
+            network.apply_move({'gate': Ng - No + bit, 'terminal': i, 'new_source': gate})
 
 
 def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
