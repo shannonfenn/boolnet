@@ -8,21 +8,42 @@ import cython
 @cython.wraparound(False)
 @cython.nonecheck(False)
 @cython.cdivision(True)
-cdef size_t sample_mask(np.uint8_t[:] mask, size_t max_index=0):
+cdef size_t sample_bool(np.uint8_t[:] M, size_t max_index=0):
     cdef size_t i, r, random_index, total
     total = 0
     if max_index == 0:
-        max_index = mask.size
+        max_index = M.size
     for i in range(max_index):
-        total += mask[i]
+        total += M[i]
     random_index = random_uniform_int(total)
     r = 0
     for i in range(max_index):
-        if mask[i]:
+        if M[i]:
             if r == random_index:
                 return i
-            r += mask[i]
-    return mask.size
+            r += M[i]
+    return M.size
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cdef size_t sample_masked_bool(np.uint8_t[:] M, np.uint8_t[:] mask, size_t max_index=0):
+    cdef size_t i, r, random_index, total
+    total = 0
+    if max_index == 0:
+        max_index = min(M.size, mask.size)
+    for i in range(max_index):
+        total += M[i] & mask[i]
+    random_index = random_uniform_int(total)
+    r = 0
+    for i in range(max_index):
+        if M[i] & mask[i]:
+            if r == random_index:
+                return i
+            r += M[i] & mask[i]
+    return M.size
 
 
 # @cython.boundscheck(False)

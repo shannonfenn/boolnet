@@ -269,7 +269,6 @@ def multiple_move_invariant(request):
     return harness_to_fixture(request.param, 'standard')
 
 
-Move = namedtuple('Move', ['gate', 'terminal', 'source'])
 MoveAndExpected = namedtuple('MoveAnExpected', ['move', 'expected'])
 
 
@@ -290,9 +289,7 @@ class TestStandard:
 
         updated_test_case = []
         for step in test_case:
-            move = Move(gate=step['move']['gate'],
-                        source=step['move']['source'],
-                        terminal=step['move']['terminal'])
+            move = step['move']
             expected = np.array(step['expected'], dtype=np.uint8)
             updated_test_case.append(MoveAndExpected(move=move, expected=expected))
         instance['multiple_moves_test_case'] = updated_test_case
@@ -355,7 +352,7 @@ class TestStandard:
         net = evaluator.network
         for k in range(10):
             old_error = eval_func(evaluator.error_matrix)
-            net.move_to_neighbour(net.random_move())
+            net.move_to_random_neighbour()
             assert not np.array_equal(eval_func(evaluator.error_matrix), old_error)
             net.revert_move()
 
@@ -375,10 +372,10 @@ class TestStandard:
         assert_array_equal(expected, actual)
 
         test_case = single_layer_zero['multiple_moves_test_case'][4]
-
-        net.move_to_neighbour(test_case.move)
-        actual = eval_func(evaluator.error_matrix)
         expected = test_case.expected
+
+        net.apply_move(test_case.move)
+        actual = eval_func(evaluator.error_matrix)
         assert_array_equal(expected, actual)
 
     def test_multiple_moves_error_matrix(self, single_layer_zero):
@@ -389,7 +386,7 @@ class TestStandard:
         test_case = single_layer_zero['multiple_moves_test_case']
 
         for move, expected in test_case:
-            net.move_to_neighbour(move)
+            net.apply_move(move)
             actual = eval_func(evaluator.error_matrix)
             assert_array_equal(expected, actual)
 
@@ -402,7 +399,7 @@ class TestStandard:
         test_case = single_layer_zero['multiple_moves_test_case']
 
         for move, _ in test_case:
-            net.move_to_neighbour(move)
+            net.apply_move(move)
 
         for _, expected in reversed(test_case):
             actual = eval_func(evaluator.error_matrix)
@@ -417,7 +414,7 @@ class TestStandard:
 
         net = evaluator_s.network
         for i in range(10):
-            net.move_to_neighbour(net.random_move())
+            net.move_to_random_neighbour()
             evaluator_s.evaluate()
         net.revert_all_moves()
 

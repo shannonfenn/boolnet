@@ -4,7 +4,7 @@ import networkx as nx
 import numpy as np
 from numpy.testing import assert_array_equal
 from numpy.random import randint
-from copy import copy, deepcopy
+from copy import copy
 from itertools import chain
 from pytest import fixture, raises
 from pytest import mark
@@ -44,14 +44,20 @@ def adder2():
     scope='module',
     params=load_field_from_yaml('boolnet/test/networks/adder2.yaml', 'valid_masks'))
 def adder2_valid_mask(request):
-    return request.param
+    harness = request.param
+    harness[0] = np.array(harness[0], dtype=np.uint8)
+    harness[1] = np.array(harness[1], dtype=np.uint8)
+    return harness
 
 
 @fixture(
     scope='module',
     params=load_field_from_yaml('boolnet/test/networks/adder2.yaml', 'invalid_masks'))
 def adder2_invalid_mask(request):
-    return request.param
+    harness = request.param
+    harness[0] = np.array(harness[0], dtype=np.uint8)
+    harness[1] = np.array(harness[1], dtype=np.uint8)
+    return harness
 
 
 @fixture(
@@ -100,8 +106,7 @@ class TestExceptions:
             network.revert_move()
 
     def test_1_move_2_revert_exception(self, network):
-        move = network.random_move()
-        network.move_to_neighbour(move)
+        network.move_to_random_neighbour()
         network.revert_move()
         with raises(RuntimeError):
             network.revert_move()
@@ -109,7 +114,7 @@ class TestExceptions:
     def test_n_move_n_plus_2_revert_exception(self, network):
         # n moves, n + 2 reverts
         for i in range(10):
-            network.move_to_neighbour(network.random_move())
+            network.move_to_random_neighbour()
         for i in range(10):
             network.revert_move()
         with raises(RuntimeError):
@@ -120,7 +125,7 @@ class TestExceptions:
     def test_revert_after_revert_all_exception(self, network):
         # revert after revert all
         for i in range(10):
-            network.move_to_neighbour(network.random_move())
+            network.move_to_random_neighbour()
         network.revert_all_moves()
         with raises(RuntimeError):
             network.revert_move()
@@ -194,57 +199,61 @@ class TestFunctionality:
         assert_array_equal(expected, actual)
 
     def test_revert_move_revert(self, any_network):
-        net = deepcopy(any_network['net'])
+        net = copy(any_network['net'])
         for i in range(20):
-            old_gates = copy(net.gates)
-            net.move_to_neighbour(net.random_move())
+            # old_gates = copy(net.gates)
+            old_gates = np.array(net.gates, copy=True)
+            net.move_to_random_neighbour()
             assert not np.array_equal(net.gates, old_gates)
             net.revert_move()
             assert_array_equal(net.gates, old_gates)
 
     def test_revert_move_revert_multi(self, any_network):
-        net = deepcopy(any_network['net'])
+        net = copy(any_network['net'])
         backups = []
         # move network several times keeping a list of the networks
         for i in range(20):
-            backups.append(deepcopy(net))
-            net.move_to_neighbour(net.random_move())
+            backups.append(copy(net))
+            net.move_to_random_neighbour()
         # revert it incrementally and check it is equal to the backup each time
         for backup in reversed(backups):
             net.revert_move()
             assert_array_equal(net.gates, backup.gates)
 
     def test_revert_all_moves(self, any_network):
-        net = deepcopy(any_network['net'])
+        net = copy(any_network['net'])
         for i in range(10):
-            old_gates = copy(net.gates)
+            # old_gates = copy(net.gates)
+            old_gates = np.array(net.gates, copy=True)
             for i in range(10):
-                net.move_to_neighbour(net.random_move())
+                net.move_to_random_neighbour()
             net.revert_all_moves()
             assert_array_equal(net.gates, old_gates)
 
     def test_multiple_move_gates(self, any_network):
-        net = deepcopy(any_network['net'])
+        net = copy(any_network['net'])
         for i in range(20):
-            old_gates = copy(net.gates)
-            net.move_to_neighbour(net.random_move())
+            # old_gates = copy(net.gates)
+            old_gates = np.array(net.gates, copy=True)
+            net.move_to_random_neighbour()
             assert not np.array_equal(net.gates, old_gates)
 
     @mark.parametrize('repeats', range(10))
     def test_move_in_connected_range(self, repeats, any_network):
-        net = deepcopy(any_network['net'])
+        net = copy(any_network['net'])
         connected = self.connected_ground_truth(net)
-        gate, _, _ = net.random_move()
+        gate = net.random_move()['gate']
         assert connected[gate] == 1
 
     @mark.parametrize('repeats', range(10))
     def test_masked_random_move(self, repeats, adder2, adder2_valid_mask):
-        net = deepcopy(adder2)
+        net = copy(adder2)
         sourceable, changeable = adder2_valid_mask
         connected = self.connected_ground_truth(net)[net.Ni:]
         # get a random restricted move
         net.set_mask(sourceable, changeable)
-        gate, terminal, new_source = net.random_move()
+        move = net.random_move()
+        gate, terminal, new_source = move['gate'], move['terminal'], move['new_source']
         # check the move is changing a valid gate
         assert changeable[gate] == 1
         assert connected[gate] == 1
@@ -255,25 +264,29 @@ class TestFunctionality:
 
     @mark.parametrize('repeats', range(10))
     def test_reconnect_masked_range(self, repeats, adder2, adder2_valid_mask):
-        net = deepcopy(adder2)
+        net = copy(adder2)
         sourceable, changeable = adder2_valid_mask
+        # check the changeable range all connect to sourceable nodes
+        valid = sourceable | np.hstack((np.zeros(net.Ni, dtype=np.uint8), changeable))
+
         net.set_mask(sourceable, changeable)
         net.reconnect_masked_range()
-        # check the changeable range all connect to sourceable nodes
-        valid = set(sourceable).union(g + net.Ni for g in changeable)
-        for g in changeable:
-            assert net.gates[g][0] in valid
-            assert net.gates[g][1] in valid
+
+        for g in range(net.Ng):
+            if changeable[g]:
+                assert valid[net.gates[g, 0]] == 1
+                assert valid[net.gates[g, 1]] == 1
 
     @mark.parametrize('repeats', range(10))
     def test_feedforward_after_reconnect(self, repeats, adder2, adder2_valid_mask):
-        net = deepcopy(adder2)
-        net.set_mask(*adder2_valid_mask)
+        net = copy(adder2)
+        sourceable, changeable = adder2_valid_mask
+        net.set_mask(sourceable, changeable)
         net.reconnect_masked_range()
         self.assert_feedforward(net)
 
     def test_max_depth(self, any_network):
-        net = deepcopy(any_network['net'])
+        net = copy(any_network['net'])
         expected = any_network['max depths']
         actual = net.max_node_depths()
         assert_array_equal(actual, expected)

@@ -87,15 +87,15 @@ metric value:
         per_output: [0.75, 0.75]
 
 multiple_moves_test_case:
-    - move: {gate: 0, source: 1, terminal: False}
+    - move: {gate: 0, new_source: 1, terminal: False}
       expected: [[1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 1], [0, 1], [0, 1], [1, 0], [1, 0], [0, 0], [0, 0]]
-    - move: {gate: 1, source: 0, terminal: True}
+    - move: {gate: 1, new_source: 0, terminal: True}
       expected: [[1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 0], [0, 1], [0, 0], [1, 1], [1, 1], [0, 1], [0, 1], [1, 1], [1, 0], [0, 1], [0, 0]]
-    - move: {gate: 0, source: 0, terminal: True}
+    - move: {gate: 0, new_source: 0, terminal: True}
       expected: [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 0], [1, 1], [0, 0], [1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 0], [1, 1], [0, 0]]
-    - move: {gate: 1, source: 3, terminal: True}
+    - move: {gate: 1, new_source: 3, terminal: True}
       expected: [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 0]]
-    - move: {gate: 1, source: 4, terminal: True}
+    - move: {gate: 1, new_source: 4, terminal: True}
       expected: [[1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]]
-    - move: {gate: 1, source: 4, terminal: False}
+    - move: {gate: 1, new_source: 4, terminal: False}
       expected: [[1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1], [1, 0], [1, 0], [1, 0], [0, 1]]

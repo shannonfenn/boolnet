@@ -1,3 +1,4 @@
+# cython: language_level=3
 import numpy as np
 cimport numpy as np
 from libcpp.deque cimport deque
@@ -5,20 +6,7 @@ from boolnet.exptools.fastrand cimport random_uniform_int
 cimport boolnet.network.algorithms as algorithms
 
 
-cdef struct Move:
-    size_t gate
-    bint terminal
-    size_t new_source
-
-
-cdef class BoolNetwork:
-    cdef:
-        readonly size_t Ng, Ni, No
-        readonly bint masked, changed
-        np.uint32_t[:, :] _gates
-        np.uint8_t[:] _changeable, _sourceable, _connected
-        deque[Move] inverse_moves
-    
+cdef class BoolNetwork:    
     def __init__(self, initial_gates, size_t Ni, size_t No):
         self.changed = True
         self.first_unevaluated_gate = 0
@@ -41,6 +29,18 @@ cdef class BoolNetwork:
         self._connected = np.zeros(self.Ng + Ni, dtype=np.uint8)
 
         self._check_invariants()
+
+    def __copy__(self):
+        cdef BoolNetwork bn
+        bn = BoolNetwork(self._gates, self.Ni, self.No)
+        bn._changeable[:] = self._changeable
+        bn._sourceable[:] = self._sourceable
+        bn._connected[:] = self._connected
+        bn.changed = self.changed
+        bn.first_unevaluated_gate = self.first_unevaluated_gate
+        bn.masked = self.masked
+        bn.inverse_moves = self.inverse_moves
+        return bn
 
     cdef _check_invariants(self):
         ''' [TODO] Add more here. '''
@@ -104,8 +104,8 @@ cdef class BoolNetwork:
             if self.changeable[g]:
                 # valid_sources if s < gate + Ni
                 # modify the connections of this gate with two random inputs
-                self._gates[g, 0] = algorithms.sample_mask(sources, g + Ni)
-                self._gates[g, 1] = algorithms.sample_mask(sources, g + Ni)
+                self._gates[g, 0] = algorithms.sample_bool(sources, g + Ni)
+                self._gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
 
         if self.changed:
             self.first_unevaluated_gate = min(self.first_unevaluated_gate,
@@ -123,9 +123,9 @@ cdef class BoolNetwork:
         if np.sum(self._sourceable) == 0:
             raise ValueError('No changeable connections.')
 
-        first_changeable = np.flatnonzero(self._changeable)[0]
+        first_changeable = np.flatnonzero(np.asarray(self._changeable))[0]
 
-        if self._sourceable[:first_changeable + self.Ni].sum() < 2:
+        if np.sum(self._sourceable[:first_changeable + self.Ni]) < 2:
             raise ValueError(('Not enough valid connections (2 required) in: '
                               'sourceable: {} changeable: {}').format(
                 self._sourceable, self._changeable))
@@ -142,45 +142,6 @@ cdef class BoolNetwork:
         self._sourceable[:] = 1
         self.masked = False
 
-    cpdef Move random_move(self):
-        ''' Returns a 3-tuple of unsigned ints (gate, terminal, new_source. '''
-        # In order to ensure a useful modification is generated we make
-        # sure to only modify connected gates
-        cdef:
-            size_t gate, terminal, shift
-            size_t cur_source, new_source, Ni
-            np.uint8_t temp
-            Move move
-
-        Ni = self.Ni
-
-        # pick a random gate to move
-        if self.masked:
-            gate = algorithms.sample_mask(self._changeable & self.connected_gates())
-        else:
-            gate = algorithms.sample_mask(self.connected_gates())
-
-        # pick single random input connection to move
-        terminal = random_uniform_int(2)
-        # pick new source for connection randomly
-        # can only come from earlier node to maintain feedforwardness
-        cur_source = self._gates[gate][terminal]
-
-        if self.masked:
-             # so that can undo the modification which will reflect through the view
-            temp = self._sourceable[cur_source]
-            self._sourceable[cur_source] = 0
-            new_source = algorithms.sample_mask(self._sourceable, gate + Ni)
-            self._sourceable[cur_source] = temp
-        else:
-            # decide how much to shift the input
-            # (gate can only connect to previous gate or input)
-            shift = random_uniform_int(gate + Ni - 1) + 1
-            # Get shifted connection
-            new_source = (cur_source + shift) % (gate + Ni)
-
-        return Move(gate, terminal, new_source)
-
     cpdef connected_gates(self):
         self._update_connected()
         return self._connected[self.Ni:]
@@ -193,9 +154,48 @@ cdef class BoolNetwork:
         algorithms.connected_sources(self._gates, self._connected, self.Ni, self.No)
 
     cpdef move_to_random_neighbour(self):
-        self.move_to_given(self.random_move())
+        self.apply_move(self.random_move())
 
-    cpdef move_to_given(self, Move move):
+    cpdef Move random_move(self) except +:
+        ''' Returns a 3-tuple of unsigned ints (gate, terminal, new_source. '''
+        # In order to ensure a useful modification is generated we make
+        # sure to only modify connected gates
+        cdef:
+            size_t gate, terminal, shift
+            size_t cur_source, new_source, Ni
+            np.uint8_t temp
+            Move move
+        Ni = self.Ni
+
+        # pick a random gate to move
+        if self.masked:
+            gate = algorithms.sample_masked_bool(self.connected_gates(), self._changeable)
+        else:
+            gate = algorithms.sample_bool(self.connected_gates())
+
+        # pick single random input connection to move
+        terminal = random_uniform_int(2)
+        # pick new source for connection randomly
+        # can only come from earlier node to maintain feedforwardness
+        cur_source = self._gates[gate][terminal]
+
+        if self.masked:
+             # so that can undo the modification which will reflect through the view
+            temp = self._sourceable[cur_source]
+            self._sourceable[cur_source] = 0
+            new_source = algorithms.sample_bool(self._sourceable, gate + Ni)
+            self._sourceable[cur_source] = temp
+        else:
+            # decide how much to shift the input
+            # (gate can only connect to previous gate or input)
+            shift = random_uniform_int(gate + Ni - 1) + 1
+            # Get shifted connection
+            new_source = (cur_source + shift) % (gate + Ni)
+
+        return Move(gate, terminal, new_source)
+
+    cpdef apply_move(self, Move move):
+        cdef Move inverse
         # expects iterable with the form (gate, terminal, new_source)
         if self.changed:
             self.first_unevaluated_gate = min(self.first_unevaluated_gate, move.gate)
@@ -203,17 +203,21 @@ cdef class BoolNetwork:
             self.first_unevaluated_gate = move.gate
 
         # record the inverse move
-        inverse = (move.gate, move.terminal, self._gates[move.gate][move.terminal])
-        self._inverse_moves.append(inverse)
+        inverse.gate = move.gate
+        inverse.terminal = move.terminal
+        inverse.new_source = self._gates[move.gate][move.terminal]
+        self.inverse_moves.push_back(inverse)
 
         # modify the connection
         self._gates[move.gate][move.terminal] = move.new_source
         # indicate the network must be reevaluated
         self.changed = True
 
-    def revert_move(self):
-        try:
-            inverse = self._inverse_moves.pop()
+    cpdef revert_move(self):
+        cdef Move inverse
+        if not self.inverse_moves.empty():
+            inverse = self.inverse_moves.back()
+            self.inverse_moves.pop_back()
             if self.changed:
                 # if multiple moves are undone there are no issues with
                 # recomputation since the earliest gate ever changed will
@@ -223,28 +227,35 @@ cdef class BoolNetwork:
                 self.first_unevaluated_gate = inverse.gate
             self.changed = True
             self._gates[inverse.gate][inverse.terminal] = inverse.new_source
-
-        except IndexError:
+        else:
             raise RuntimeError('Tried to revert with empty inverse move list.')
 
     def revert_all_moves(self):
-        while self._inverse_moves:
+        while not self.inverse_moves.empty():
             self.revert_move()
 
     def clear_history(self):
-        self._inverse_moves.clear()
+        self.inverse_moves.clear()
 
 
 cdef class RandomBoolNetwork(BoolNetwork):
-    cdef np.uint8_t[:] _transfer_functions
-
     def __init__(self, initial_gates, Ni, No, transfer_functions):
-        self._transfer_functions[:] = transfer_functions
+        self._transfer_functions = np.array(transfer_functions, copy=True, dtype=np.uint8)
         super().__init__(initial_gates, Ni, No)
 
     cdef _check_invariants(self):
-        super()._check_invariants()
-        if self._transfer_functions.shape != (self.Ng,):
+        ''' [TODO] Add more here. '''
+        if self.Ng == 0:
+            raise ValueError('Empty initial gates list')
+        if self.Ni <= 0:
+            raise ValueError('Invalid Ni ({})'.format(self.Ni))
+        if self.No <= 0:
+            raise ValueError('Invalid No ({})'.format(self.No))
+        if self.No > self.Ng:
+            raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
+        if self._gates.ndim != 2 or self._gates.shape[1] != 2:
+            raise ValueError('initial_gates must be 2D with dim2==2')
+        if self._transfer_functions.ndim != 1 or self._transfer_functions.shape[0] != self.Ng:
             raise ValueError('Invalid transfer function matrix shape: {}'.format(
                 self._transfer_functions.shape))
 
@@ -254,3 +265,15 @@ cdef class RandomBoolNetwork(BoolNetwork):
     property transfer_functions:
         def __get__(self):
             return self._transfer_functions
+
+    def __copy__(self):
+        cdef RandomBoolNetwork bn
+        bn = RandomBoolNetwork(self._gates, self.Ni, self.No, self._transfer_functions)
+        bn._changeable[:] = self._changeable
+        bn._sourceable[:] = self._sourceable
+        bn._connected[:] = self._connected
+        bn.changed = self.changed
+        bn.first_unevaluated_gate = self.first_unevaluated_gate
+        bn.masked = self.masked
+        bn.inverse_moves = self.inverse_moves
+        return bn

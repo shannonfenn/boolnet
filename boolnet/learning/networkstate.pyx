@@ -3,7 +3,7 @@
 import cython
 import numpy as np
 cimport numpy as np
-from copy import deepcopy
+from copy import copy
 
 from boolnet.network.boolnetwork import BoolNetwork
 from boolnet.bintools.metrics cimport Metric
@@ -84,7 +84,7 @@ cdef class NetworkState:
         self._check_network_invariants(network)
         self.Ng = network.Ng
         # prevent another evaluator causing problems with this network
-        self.network = deepcopy(network)
+        self.network = copy(network)
         # force reevaluation of the copied network
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
