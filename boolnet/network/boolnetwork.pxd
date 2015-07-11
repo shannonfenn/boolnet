@@ -13,12 +13,15 @@ cdef struct Move:
 
 cdef class BoolNetwork:
     cdef:
-        readonly size_t Ng, Ni, No
         public size_t first_unevaluated_gate
-        readonly bint masked
         public bint changed
-        np.uint32_t[:, :] _gates
-        np.uint8_t[:] _changeable, _sourceable, _connected
+        public np.uint32_t[:, :] gates
+        public np.uint8_t[:] changeable, sourceable
+
+        readonly size_t Ng, Ni, No
+        readonly bint masked
+
+        np.uint8_t[:] connected
         deque[Move] inverse_moves
     
     cdef _check_invariants(self)

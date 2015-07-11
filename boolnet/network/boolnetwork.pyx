@@ -12,30 +12,30 @@ cdef class BoolNetwork:
         self.first_unevaluated_gate = 0
 
         # copy gate array
-        self._gates = np.array(initial_gates, dtype=np.uint32, copy=True)
-        if self._gates.size == 0:
+        self.gates = np.array(initial_gates, dtype=np.uint32, copy=True)
+        if self.gates.size == 0:
             raise ValueError('Empty initial gates list')
 
         # Store size values
-        self.Ng = self._gates.shape[0]
+        self.Ng = self.gates.shape[0]
         self.Ni = Ni
         self.No = No
 
         # set mask to allow all gates to be sourced and modified
         self.masked = False
 
-        self._changeable = np.ones(self.Ng, dtype=np.uint8)      
-        self._sourceable = np.ones(self.Ng + Ni, dtype=np.uint8)
-        self._connected = np.zeros(self.Ng + Ni, dtype=np.uint8)
+        self.changeable = np.ones(self.Ng, dtype=np.uint8)      
+        self.sourceable = np.ones(self.Ng + Ni, dtype=np.uint8)
+        self.connected = np.zeros(self.Ng + Ni, dtype=np.uint8)
 
         self._check_invariants()
 
     def __copy__(self):
         cdef BoolNetwork bn
-        bn = BoolNetwork(self._gates, self.Ni, self.No)
-        bn._changeable[:] = self._changeable
-        bn._sourceable[:] = self._sourceable
-        bn._connected[:] = self._connected
+        bn = BoolNetwork(self.gates, self.Ni, self.No)
+        bn.changeable[:] = self.changeable
+        bn.sourceable[:] = self.sourceable
+        bn.connected[:] = self.connected
         bn.changed = self.changed
         bn.first_unevaluated_gate = self.first_unevaluated_gate
         bn.masked = self.masked
@@ -52,26 +52,14 @@ cdef class BoolNetwork:
             raise ValueError('Invalid No ({})'.format(self.No))
         if self.No > self.Ng:
             raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
-        if self._gates.ndim != 2 or self._gates.shape[1] != 2:
+        if self.gates.ndim != 2 or self.gates.shape[1] != 2:
             raise ValueError('initial_gates must be 2D with dim2==2')
         # could have a check for recurrence
 
     def __str__(self):
         return ('Ni: {} Ng: {} changed: {} max node depths: {}\n'
                 'gates:\n{}').format(self.Ni, self.Ng, self.changed,
-                                     self.max_node_depths(), self._gates)
-
-    property sourceable:
-        def __get__(self):
-            return self._sourceable
-
-    property changeable:
-        def __get__(self):
-            return self._changeable
-
-    property gates:
-        def __get__(self):
-            return self._gates
+                                     self.max_node_depths(), self.gates)
 
     def max_node_depths(self):
         # default to stored value of No
@@ -81,7 +69,7 @@ cdef class BoolNetwork:
         Ni = self.Ni
         depths = [0] * (Ng + Ni)
         for g in range(Ng):
-            depths[g + Ni] = max(depths[inp] for inp in self._gates[g]) + 1
+            depths[g + Ni] = max(depths[inp] for inp in self.gates[g]) + 1
         # return the last No values
         return depths[-No:]
 
@@ -95,63 +83,63 @@ cdef class BoolNetwork:
         cdef np.uint8_t[:] sources
 
         Ni = self.Ni
-        sources = np.array(self._sourceable, copy=True, dtype=np.uint8)
+        sources = np.array(self.sourceable, copy=True, dtype=np.uint8)
 
         self.clear_history()
         
         for g in range(self.Ng):
-            sources[g + Ni] = sources[g + Ni] or self._changeable[g]
+            sources[g + Ni] = sources[g + Ni] or self.changeable[g]
             if self.changeable[g]:
                 # valid_sources if s < gate + Ni
                 # modify the connections of this gate with two random inputs
-                self._gates[g, 0] = algorithms.sample_bool(sources, g + Ni)
-                self._gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
+                self.gates[g, 0] = algorithms.sample_bool(sources, g + Ni)
+                self.gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
 
         if self.changed:
             self.first_unevaluated_gate = min(self.first_unevaluated_gate,
-                                              min(self._changeable))
+                                              min(self.changeable))
         else:
-            self.first_unevaluated_gate = min(self._changeable)
+            self.first_unevaluated_gate = min(self.changeable)
         # indicate the network must be reevaluated
         self.changed = True
 
     cdef _check_mask(self):
         # check for validity here rather than when attempting to
         # generate a move.
-        if np.sum(self._changeable) == 0:
+        if np.sum(self.changeable) == 0:
             raise ValueError('No changeable connections.')
-        if np.sum(self._sourceable) == 0:
+        if np.sum(self.sourceable) == 0:
             raise ValueError('No changeable connections.')
 
-        first_changeable = np.flatnonzero(np.asarray(self._changeable))[0]
+        first_changeable = np.flatnonzero(np.asarray(self.changeable))[0]
 
-        if np.sum(self._sourceable[:first_changeable + self.Ni]) < 2:
+        if np.sum(self.sourceable[:first_changeable + self.Ni]) < 2:
             raise ValueError(('Not enough valid connections (2 required) in: '
                               'sourceable: {} changeable: {}').format(
-                self._sourceable, self._changeable))
+                self.sourceable, self.changeable))
 
     def set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable):
-        self._changeable[:] = changeable
-        self._sourceable[:] = sourceable
+        self.changeable[:] = changeable
+        self.sourceable[:] = sourceable
         self.masked = True
         self._check_mask()
 
     def remove_mask(self):
         # don't need to bother removing the actual masks
-        self._changeable[:] = 1
-        self._sourceable[:] = 1
+        self.changeable[:] = 1
+        self.sourceable[:] = 1
         self.masked = False
 
     cpdef connected_gates(self):
         self._update_connected()
-        return self._connected[self.Ni:]
+        return self.connected[self.Ni:]
 
     cpdef connected_sources(self):
         self._update_connected()
-        return self._connected
+        return self.connected
 
     cpdef _update_connected(self):
-        algorithms.connected_sources(self._gates, self._connected, self.Ni, self.No)
+        algorithms.connected_sources(self.gates, self.connected, self.Ni, self.No)
 
     cpdef move_to_random_neighbour(self):
         self.apply_move(self.random_move())
@@ -169,7 +157,7 @@ cdef class BoolNetwork:
 
         # pick a random gate to move
         if self.masked:
-            gate = algorithms.sample_masked_bool(self.connected_gates(), self._changeable)
+            gate = algorithms.sample_masked_bool(self.connected_gates(), self.changeable)
         else:
             gate = algorithms.sample_bool(self.connected_gates())
 
@@ -177,14 +165,14 @@ cdef class BoolNetwork:
         terminal = random_uniform_int(2)
         # pick new source for connection randomly
         # can only come from earlier node to maintain feedforwardness
-        cur_source = self._gates[gate][terminal]
+        cur_source = self.gates[gate][terminal]
 
         if self.masked:
              # so that can undo the modification which will reflect through the view
-            temp = self._sourceable[cur_source]
-            self._sourceable[cur_source] = 0
-            new_source = algorithms.sample_bool(self._sourceable, gate + Ni)
-            self._sourceable[cur_source] = temp
+            temp = self.sourceable[cur_source]
+            self.sourceable[cur_source] = 0
+            new_source = algorithms.sample_bool(self.sourceable, gate + Ni)
+            self.sourceable[cur_source] = temp
         else:
             # decide how much to shift the input
             # (gate can only connect to previous gate or input)
@@ -205,11 +193,11 @@ cdef class BoolNetwork:
         # record the inverse move
         inverse.gate = move.gate
         inverse.terminal = move.terminal
-        inverse.new_source = self._gates[move.gate][move.terminal]
+        inverse.new_source = self.gates[move.gate][move.terminal]
         self.inverse_moves.push_back(inverse)
 
         # modify the connection
-        self._gates[move.gate][move.terminal] = move.new_source
+        self.gates[move.gate][move.terminal] = move.new_source
         # indicate the network must be reevaluated
         self.changed = True
 
@@ -226,7 +214,7 @@ cdef class BoolNetwork:
             else:
                 self.first_unevaluated_gate = inverse.gate
             self.changed = True
-            self._gates[inverse.gate][inverse.terminal] = inverse.new_source
+            self.gates[inverse.gate][inverse.terminal] = inverse.new_source
         else:
             raise RuntimeError('Tried to revert with empty inverse move list.')
 
@@ -253,7 +241,7 @@ cdef class RandomBoolNetwork(BoolNetwork):
             raise ValueError('Invalid No ({})'.format(self.No))
         if self.No > self.Ng:
             raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
-        if self._gates.ndim != 2 or self._gates.shape[1] != 2:
+        if self.gates.ndim != 2 or self.gates.shape[1] != 2:
             raise ValueError('initial_gates must be 2D with dim2==2')
         if self._transfer_functions.ndim != 1 or self._transfer_functions.shape[0] != self.Ng:
             raise ValueError('Invalid transfer function matrix shape: {}'.format(
@@ -268,10 +256,10 @@ cdef class RandomBoolNetwork(BoolNetwork):
 
     def __copy__(self):
         cdef RandomBoolNetwork bn
-        bn = RandomBoolNetwork(self._gates, self.Ni, self.No, self._transfer_functions)
-        bn._changeable[:] = self._changeable
-        bn._sourceable[:] = self._sourceable
-        bn._connected[:] = self._connected
+        bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
+        bn.changeable[:] = self.changeable
+        bn.sourceable[:] = self.sourceable
+        bn.connected[:] = self.connected
         bn.changed = self.changed
         bn.first_unevaluated_gate = self.first_unevaluated_gate
         bn.masked = self.masked
