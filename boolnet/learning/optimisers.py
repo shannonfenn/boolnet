@@ -32,7 +32,7 @@ class SA:
                                 random() < exp(-delta/temperature))
 
     def move(self, state, temp):
-        state.move_to_neighbour(state.random_move())
+        state.move_to_random_neighbour()
 
     def undo_move(self, state):
         state.revert_move()
@@ -124,7 +124,7 @@ class SA:
 
 class LAHC:
     def move(self, state, iteration):
-        state.move_to_neighbour(state.random_move())
+        state.move_to_random_neighbour()
 
     def undo_move(self, state):
         state.revert_move()
@@ -205,7 +205,7 @@ class LAHC:
 #     def move(self, state, temp):
 #         num_moves = self.temp_to_move_map[temp]
 #         for i in range(num_moves):
-#             state.move_to_neighbour(state.random_move())
+#             state.move_to_random_neighbour()
 
 #     def undo_move(self, state):
 #         state.revert_all_moves()
@@ -233,7 +233,7 @@ class LAHC:
 #         num_moves = int(np.ceil(self.init_move_count * (
 #             1 - iteration / self.max_iterations)))
 #         for i in range(num_moves):
-#             state.move_to_neighbour(state.random_move())
+#             state.move_to_random_neighbour()
 
 #     def undo_move(self, state):
 #         state.revert_all_moves()

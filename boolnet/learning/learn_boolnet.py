@@ -1,5 +1,7 @@
 import time
 import random
+import pyximport
+pyximport.install()
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.metrics import E1, ACCURACY, PER_OUTPUT, metric_from_name
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
@@ -147,7 +149,7 @@ def learn_bool_net(parameters):
         'test_error_guiding':       test_evaluator.metric_value(metric),
         'test_error_simple':        test_evaluator.metric_value(E1),
         'test_accuracy':            test_evaluator.metric_value(ACCURACY),
-        'final_network':            final_network.gates,
+        'final_network':            np.array(final_network.gates),
         'Ne':                       training_evaluator.Ne,
         'time':                     end_time - start_time
         }
