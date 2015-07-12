@@ -131,6 +131,7 @@ def learn_bool_net(parameters):
 
     end_time = time.monotonic()
 
+    training_evaluator.set_network(final_network)
     test_evaluator = build_test_evaluator(final_network, test_data, parameters, metric)
 
     results = {
