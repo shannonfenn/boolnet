@@ -11,7 +11,7 @@ import pyximport
 pyximport.install()
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix, generate_end_mask
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
-from boolnet.bintools.metrics import metric_name
+from boolnet.bintools.metrics import metric_name, all_metrics
 from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
 from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
@@ -472,3 +472,19 @@ class TestBoth:
         expected = state['metric value'][sample_type][metric_name(metric)]
         actual = evaluator.metric_value(metric)
         assert_array_almost_equal(expected, actual)
+
+    def test_multiple_metric_values_pre(self, state, sample_type):
+        evaluator = state['evaluator'][sample_type]
+        for metric in all_metrics():
+            evaluator.add_metric(metric)
+        for metric in all_metrics():
+            expected = state['metric value'][sample_type][metric_name(metric)]
+            actual = evaluator.metric_value(metric)
+            assert_array_almost_equal(expected, actual)
+
+    def test_multiple_metric_values_post(self, state, sample_type):
+        evaluator = state['evaluator'][sample_type]
+        for metric in all_metrics():
+            expected = state['metric value'][sample_type][metric_name(metric)]
+            actual = evaluator.metric_value(metric)
+            assert_array_almost_equal(expected, actual)
