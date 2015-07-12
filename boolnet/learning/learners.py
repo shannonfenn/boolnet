@@ -137,8 +137,7 @@ def stratified_learn(evaluator, parameters, optimiser,
     final_iterations = [-1] * num_targets
     optimiser_parameters = parameters['optimiser']
 
-    # allocate gate pools for each bit, to avoid the problem of
-    # prematurely using all the gates
+    # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
     lower_bounds, upper_bounds = strata_boundaries(network)
     # the initial kfs input is just the set of all network inputs
     target_matrix = np.array(evaluator.target_matrix)
@@ -208,11 +207,9 @@ def stratified_learn(evaluator, parameters, optimiser,
     #       states according to the provided guiding metric?
 
     if feature_set_results:
-        return Result(best_states, best_iterations,
-                      final_iterations, feature_set_results)
+        return Result(best_states, best_iterations, final_iterations, feature_set_results)
     else:
-        return Result(best_states, best_iterations,
-                      final_iterations, None)
+        return Result(best_states, best_iterations, final_iterations, None)
 
 
 def basic_learn(evaluator, parameters, optimiser):

@@ -207,9 +207,8 @@ cdef class BoolNetwork:
             inverse = self.inverse_moves.back()
             self.inverse_moves.pop_back()
             if self.changed:
-                # if multiple moves are undone there are no issues with
-                # recomputation since the earliest gate ever changed will
-                # be the startpoint
+                # if multiple moves are undone there are no issues with recomputation since
+                # the earliest gate ever changed will be the startpoint
                 self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse.gate)
             else:
                 self.first_unevaluated_gate = inverse.gate
