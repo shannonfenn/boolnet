@@ -98,7 +98,7 @@ def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
     # logging.info('Changeable: %s', changeable)
     # logging.info('Sourceable: %s', sourceable)
 
-    return changeable, sourceable
+    return sourceable, changeable
 
 
 def get_feature_set(evaluator, parameters, lower_bound, bit):
@@ -166,9 +166,9 @@ def stratified_learn(evaluator, parameters, optimiser,
                 handle_single_FS(feature_set, evaluator, tgt, target_matrix)
                 continue
 
-            changeable, sourceable = get_mask(network, L_bnd, U_bnd, tgt, feature_set)
+            sourceable, changeable = get_mask(network, L_bnd, U_bnd, tgt, feature_set)
         else:
-            changeable, sourceable = get_mask(network, L_bnd, U_bnd, tgt)
+            sourceable, changeable = get_mask(network, L_bnd, U_bnd, tgt)
 
         # apply the mask to the network
         network.set_mask(sourceable, changeable)
