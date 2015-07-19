@@ -104,10 +104,11 @@ sampling_schema = Schema({
     }, default_keys=Required)
 
 network_schema_given = Schema({
-    'method':       'given',
-    'node_funcs':   'NAND',
-    'file':         All(str, lambda v: v.endswith('.json')),
-    'index':        All(int, Range(min=0)),
+    'method':           'given',
+    'node_funcs':       'NAND',
+    'file':             All(str, lambda v: v.endswith('.json')),
+    'index':            All(int, Range(min=0)),
+    'initial_gates':    All(Type(np.ndarray), is_2d, is_int_arr),
     }, default_keys=Required)
 
 network_schema_generated = Schema({
@@ -132,6 +133,5 @@ config_schema = Schema({
     'inter_file_base':          str,
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
-    Optional('initial_gates'):  All(Type(np.ndarray), is_2d, is_int_arr),
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
     }, default_keys=Required)

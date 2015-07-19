@@ -175,12 +175,12 @@ def generated_instance(data_settings, sampling_settings):
 def handle_initial_network(settings):
     net_method = settings['network']['method']
     if net_method == 'given':
-        data_dir = settings['data_dir']
+        data_dir = settings['data']['dir']
         filename = settings['network']['file']
         index = settings['network']['index']
         with open(join(data_dir, filename)) as f:
             gates = np.array(json.load(f)[index], dtype=np.uint32)
-            settings['initial_gates'] = gates
+            settings['network']['initial_gates'] = gates
 
 
 def get_config_indices(instances, config_settings):

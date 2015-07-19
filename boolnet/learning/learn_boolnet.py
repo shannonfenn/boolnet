@@ -74,6 +74,7 @@ def learn_bool_net(parameters):
     # seed fast random number generator using system rng (which auto seeds on module import)
     if 'seed' in parameters:
         seed = parameters['seed']
+        np.random.seed(seed)
     else:
         random.seed()
         seed = random.randint(1, sys.maxsize)
@@ -91,8 +92,8 @@ def learn_bool_net(parameters):
     Ni = training_data.Ni
     No = training_data.No
 
-    if 'initial_gates' in parameters:
-        initial_gates = np.asarray(parameters['initial_gates'], dtype=np.int32)
+    if 'initial_gates' in parameters['network']:
+        initial_gates = np.asarray(parameters['network']['initial_gates'], dtype=np.int32)
         Ng = initial_gates.shape[0]
         # Currently only works for NAND
         if parameters['network']['node_funcs'] != 'NAND':
