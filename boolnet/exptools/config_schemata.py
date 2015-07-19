@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from good import Schema, Required, In, All, Any, Range, Type, IsDir
 from good import message, Allow, Optional
@@ -132,4 +133,5 @@ config_schema = Schema({
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     Optional('initial_gates'):  All(Type(np.ndarray), is_2d, is_int_arr),
+    Optional('seed'):           All(int, Range(0, sys.maxsize)),
     }, default_keys=Required)

@@ -72,8 +72,11 @@ def build_test_evaluator(network, mapping, parameters, guiding_metric):
 
 def learn_bool_net(parameters):
     # seed fast random number generator using system rng (which auto seeds on module import)
-    random.seed()
-    seed = random.randint(1, sys.maxsize)
+    if 'seed' in parameters:
+        seed = parameters['seed']
+    else:
+        random.seed()
+        seed = random.randint(1, sys.maxsize)
     fastrand.seed(seed)
 
     optimiser_name = parameters['optimiser']['name']
