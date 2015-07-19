@@ -274,6 +274,26 @@ MoveAndExpected = namedtuple('MoveAnExpected', ['move', 'expected'])
 
 # ################### Functionality Testing ################### #
 class TestStandard:
+
+    # ##################### HELPERS ##################### #
+    def build_instance(self, instance_dict, sample_type, field):
+        evaluator = instance_dict['evaluator'][sample_type]
+        Ne = instance_dict['Ne'][sample_type]
+        expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
+        eval_func = lambda mat: unpack_bool_matrix(mat, Ne)
+        return evaluator, expected, eval_func
+
+    def output_different_helper(self, instance):
+        evaluator, _, eval_func = self.build_instance(instance, 'full',
+                                                      'error matrix')
+        net = evaluator.network
+        for k in range(10):
+            old_error = eval_func(evaluator.error_matrix)
+            net.move_to_random_neighbour()
+            assert not np.array_equal(eval_func(evaluator.error_matrix), old_error)
+            net.revert_move()
+
+    # ##################### FIXTURES ##################### #
     @fixture(params=TEST_NETWORKS)
     def standard_state(self, request):
         return harness_to_fixture(request.param, 'standard')
@@ -309,13 +329,7 @@ class TestStandard:
         with raises(ValueError):
             StandardNetworkState(net, inp, tgt, Ne)
 
-    def build_instance(self, instance_dict, sample_type, field):
-        evaluator = instance_dict['evaluator'][sample_type]
-        Ne = instance_dict['Ne'][sample_type]
-        expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
-        eval_func = lambda mat: unpack_bool_matrix(mat, Ne)
-        return evaluator, expected, eval_func
-
+    # ################### Functionality Testing ################### #
     def test_input_matrix(self, standard_state, sample_type):
         evaluator, expected, eval_func = self.build_instance(
             standard_state, sample_type, 'input matrix')
@@ -345,16 +359,6 @@ class TestStandard:
             standard_state, sample_type, 'error matrix')
         actual = eval_func(evaluator.error_matrix)
         assert_array_equal(expected, actual)
-
-    def output_different_helper(self, instance):
-        evaluator, _, eval_func = self.build_instance(instance, 'full',
-                                                      'error matrix')
-        net = evaluator.network
-        for k in range(10):
-            old_error = eval_func(evaluator.error_matrix)
-            net.move_to_random_neighbour()
-            assert not np.array_equal(eval_func(evaluator.error_matrix), old_error)
-            net.revert_move()
 
     def test_single_move_output_different(self, single_move_invariant):
         self.output_different_helper(single_move_invariant)
@@ -434,8 +438,7 @@ class TestBoth:
             return standard_from_operator(
                 network=params['network'],
                 indices=params['indices'][sample_type],
-                Nb=params['Nb'],
-                No=params['No'],
+                Nb=params['Nb'], No=params['No'],
                 operator=params['operator'],
                 N=params['N'][sample_type]
             )
@@ -488,3 +491,9 @@ class TestBoth:
             expected = state['metric value'][sample_type][metric_name(metric)]
             actual = evaluator.metric_value(metric)
             assert_array_almost_equal(expected, actual)
+
+    def test_network_changes_reflected(self, state, sample_type, metric):
+        evaluator = state['evaluator'][sample_type]
+        network = evaluator.network
+        network.move_to_random_neighbour()
+        assert network == evaluator.network

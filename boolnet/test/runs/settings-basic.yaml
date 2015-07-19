@@ -1,0 +1,50 @@
+---
+name: Regression_Test
+
+logging: none
+
+data: 
+  type: generated
+  operator: add
+  bits: 4
+
+network:
+  method: given
+  file:   initial_network.json
+  index:  0
+  node_funcs: NAND
+
+sampling:
+# given sample set
+  method:   given
+  Ns: 1
+  Ne: 32
+
+# common params
+
+# optimiser:
+#   name: SA
+#   num_temps:      100
+#   steps_per_temp: 5000
+#   init_temp:      0.005
+#   temp_rate:      0.98
+
+optimiser:
+  metric: e6L
+
+configurations:
+  - seed: 19295959
+    learner: basic
+    optimiser:
+      name: LAHC
+      cost_list_length:  1000
+      max_iterations : 400000
+  - seed: 17
+    learner: basic
+    optimiser:
+      name: SA
+      num_temps:      100
+      steps_per_temp: 4000
+      init_temp:      0.005
+      temp_rate:      0.98
+...
