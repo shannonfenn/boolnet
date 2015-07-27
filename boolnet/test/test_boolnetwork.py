@@ -245,6 +245,15 @@ class TestFunctionality:
         gate = net.random_move()['gate']
         assert connected[gate] == 1
 
+    def test_set_mask(self, adder2, adder2_valid_mask):
+        net = copy(adder2)
+        sourceable, changeable = adder2_valid_mask
+        # get a random restricted move
+        net.set_mask(sourceable, changeable)
+
+        assert_array_equal(sourceable, net.sourceable)
+        assert_array_equal(changeable, net.changeable)
+
     @mark.parametrize('repeats', range(10))
     def test_masked_random_move(self, repeats, adder2, adder2_valid_mask):
         net = copy(adder2)
