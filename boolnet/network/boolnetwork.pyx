@@ -95,11 +95,15 @@ cdef class BoolNetwork:
                 self.gates[g, 0] = algorithms.sample_bool(sources, g + Ni)
                 self.gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
 
+        # Update the first changeable gate
+        first_changeable = np.flat_nonzero(self.changeable)[0]
         if self.changed:
-            self.first_unevaluated_gate = min(self.first_unevaluated_gate,
-                                              min(self.changeable))
+            # In this case the earliest out of the first changeable and the prior unevaluated start point
+            self.first_unevaluated_gate = min(
+                self.first_unevaluated_gate, first_changeable)
         else:
-            self.first_unevaluated_gate = min(self.changeable)
+            # In this case just the first of the changeable
+            self.first_unevaluated_gate = first_changeable
         # indicate the network must be reevaluated
         self.changed = True
 
@@ -125,7 +129,6 @@ cdef class BoolNetwork:
         self._check_mask()
 
     def remove_mask(self):
-        # don't need to bother removing the actual masks
         self.changeable[:] = 1
         self.sourceable[:] = 1
         self.masked = False
