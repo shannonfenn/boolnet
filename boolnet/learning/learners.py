@@ -2,6 +2,8 @@ from copy import copy
 from collections import namedtuple
 import numpy as np
 import logging
+import pyximport
+pyximport.install()
 from boolnet.bintools.metrics import PER_OUTPUT
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
