@@ -118,8 +118,9 @@ def get_feature_set(evaluator, parameters, lower_bound, bit):
     kfs_matrix = unpack_bool_matrix(kfs_matrix, evaluator.Ne)
     kfs_target = unpack_bool_vector(kfs_target, evaluator.Ne)
 
+    options = parameters.get('kfs_options')
     # use external solver for minFS
-    feature_sets = kfs.minimal_feature_sets(kfs_matrix, kfs_target, file_name_base)
+    feature_sets = kfs.minimal_feature_sets(kfs_matrix, kfs_target, file_name_base, options)
 
     # for now only one feature set should exist
     if feature_sets.shape[0] > 1:

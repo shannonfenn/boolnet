@@ -33,7 +33,7 @@ def abk_file(features, target, file_name):
                header=header, footer=target_row, comments='')
 
 
-def FABCPP_cmd_line(features, target, file_name_base):
+def FABCPP_cmd_line(features, target, file_name_base, options):
     abk_file_name = file_name_base + '.abk'
     log_file_name = file_name_base + '.log'
     err_file_name = file_name_base + '.err'
@@ -44,12 +44,16 @@ def FABCPP_cmd_line(features, target, file_name_base):
     # write abk file
     abk_file(features, target, abk_file_name)
     # run FABCPP
+    cmd_string = [
+        os.path.expanduser('~/CIBMTools/FABCPP/Release/FABCPP'),
+        '-i', abk_file_name, '-o', out_file_name,
+        '-m', '1', '-A', '1', '-B', '0', '-y', 'alfa',
+        '-O', 'max:feature_degree']
+    if options is not None:
+        cmd_string += options
+
     with open(log_file_name, 'w') as log, open(err_file_name, 'w') as err:
-        cmd_args = [os.path.expanduser('~/CIBMTools/FABCPP/Release/FABCPP'),
-                    '-i', abk_file_name, '-o', out_file_name,
-                    '-m', '1', '-A', '1', '-B', '0', '-y', 'alfa',
-                    '-O', 'max:feature_degree']
-        check_call(cmd_args, stdout=log, stderr=err)
+        check_call(cmd_string, stdout=log, stderr=err)
 
     # parse output
     with open(out_file_name) as out:
@@ -61,7 +65,7 @@ def FABCPP_cmd_line(features, target, file_name_base):
         # TODO: Use model 5 to compute other FSs
 
 
-def minimal_feature_sets(features, target, file_name_base):
+def minimal_feature_sets(features, target, file_name_base, options):
     ''' Takes a featureset matrix and target vector and finds the
         set of all minimal featuresets.
     featureset  - assumed to be a 2D numpy array in example x feature format.
@@ -72,7 +76,7 @@ def minimal_feature_sets(features, target, file_name_base):
 
     NOTE: Only finds a single minFS at present'''
 
-    return FABCPP_cmd_line(features, target, file_name_base)
+    return FABCPP_cmd_line(features, target, file_name_base, options)
 
     # check if the features form a feature set, if not then no subset can either
     # if is_feature_set(features, target):

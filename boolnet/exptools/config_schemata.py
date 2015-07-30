@@ -134,4 +134,5 @@ config_schema = Schema({
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
+    Optional('kfs_options'):    list,
     }, default_keys=Required)
