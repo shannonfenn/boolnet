@@ -96,7 +96,7 @@ cdef class BoolNetwork:
                 self.gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
 
         # Update the first changeable gate
-        first_changeable = np.flat_nonzero(self.changeable)[0]
+        first_changeable = np.flatnonzero(np.asarray(self.changeable))[0]
         if self.changed:
             # In this case the earliest out of the first changeable and the prior unevaluated start point
             self.first_unevaluated_gate = min(
