@@ -41,4 +41,6 @@ def error_matrix_harness(request):
     E = unpack_bool_matrix(Ep, test['Ne'])
     test['packed error matrix'] = Ep
     test['unpacked error matrix'] = E
+    No = Ep.shape[0]
+    test['mask'] = np.array(test.get('mask', [1]*No), dtype=np.uint8)
     return test

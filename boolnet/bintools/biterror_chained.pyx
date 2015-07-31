@@ -25,7 +25,7 @@ CHAINED_EVALUATORS = {
 
 
 cdef class ChainedEvaluator:
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
         self.No = No
         self.divisor = No * Ne
         self.cols = cols
@@ -35,11 +35,14 @@ cdef class ChainedEvaluator:
         else:
             self.start = 0
             self.step = 1
+        self.set_mask(mask)
 
+    def set_mask(self, np.uint8_t[:] mask):
+        self.mask = np.array(mask)
 
 cdef class ChainedPerOutput(ChainedEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.No = No
         self.divisor = Ne
         self.row_accumulator = np.zeros(self.No, dtype=np.uint64)
@@ -63,8 +66,8 @@ cdef class ChainedPerOutput(ChainedEvaluator):
 
 
 cdef class ChainedAccuracy(ChainedEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.divisor = Ne
         self.accumulator = 0
         self.row_disjunction = np.zeros(cols, dtype=packed_type)
@@ -78,8 +81,9 @@ cdef class ChainedAccuracy(ChainedEvaluator):
         self.row_disjunction[:] = 0
         r = self.start
         for i in range(self.No):
-            for c in range(self.cols):
-                self.row_disjunction[c] |= E[r, c]
+            if self.mask[r]:
+                for c in range(self.cols):
+                    self.row_disjunction[c] |= E[r, c]
             r += self.step
         self.accumulator += popcount_vector(self.row_disjunction)
 
@@ -89,8 +93,8 @@ cdef class ChainedAccuracy(ChainedEvaluator):
 
 
 cdef class ChainedE1(ChainedEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.row_accumulator = np.zeros(No, dtype=np.uint64)
 
     cpdef reset(self):
@@ -99,7 +103,8 @@ cdef class ChainedE1(ChainedEvaluator):
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, size_t end_sub=0):
         cdef size_t i
         for i in range(self.No):
-            self.row_accumulator[i] += popcount_vector(E[i, :])
+            if self.mask[i]:
+                self.row_accumulator[i] += popcount_vector(E[i, :])
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
         cdef size_t i
@@ -114,8 +119,8 @@ cdef class ChainedE1(ChainedEvaluator):
 
 
 cdef class ChainedE2(ChainedE1):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.divisor = Ne * (No + 1.0) * No / 2.0
         if msb:
             self.weight_vector = np.arange(1, No+1, dtype=np.float64)
@@ -129,14 +134,15 @@ cdef class ChainedE2(ChainedE1):
         self.partial_evaluation(E)
             
         for i in range(self.No):
-            result += self.row_accumulator[i] / self.divisor * self.weight_vector[i] 
+            if self.mask[i]:
+                result += self.row_accumulator[i] / self.divisor * self.weight_vector[i] 
 
         return result
 
 
 cdef class ChainedE3(ChainedE1):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.row_disjunction = np.zeros(cols, dtype=packed_type)
 
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, size_t end_sub=0):
@@ -145,15 +151,16 @@ cdef class ChainedE3(ChainedE1):
         self.row_disjunction[:] = 0
         r = self.start
         for i in range(self.No):
-            for c in range(self.cols):
-                self.row_disjunction[c] |= E[r, c]
+            if self.mask[r]:
+                for c in range(self.cols):
+                    self.row_disjunction[c] |= E[r, c]
             self.row_accumulator[r] += popcount_vector(self.row_disjunction)
             r += self.step
 
 
 cdef class ChainedE4(ChainedE1):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.row_width = cols * PACKED_SIZE
         self.end_subtractor = self.row_width - Ne % self.row_width
 
@@ -163,16 +170,19 @@ cdef class ChainedE4(ChainedE1):
         r = self.start
         if self.row_accumulator[r] > 0:
             self.row_accumulator[r] += self.row_width - end_sub
-        else:
+        elif self.mask[r]:
             self.row_accumulator[r] += floodcount_vector(E[r, :], end_sub)
 
         r += self.step
         for i in range(self.No-1):
             if self.row_accumulator[r] > 0:
                 self.row_accumulator[r] += self.row_width - end_sub
-            else:
+            elif self.mask[r]:
                 self.row_accumulator[r] = max(self.row_accumulator[r - self.step],
                                               floodcount_vector(E[r, :], end_sub))
+            else:
+                self.row_accumulator[r] = self.row_accumulator[r - self.step]
+            
             r += self.step
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
@@ -187,14 +197,11 @@ cdef class ChainedE4(ChainedE1):
 
 
 cdef class ChainedE5(ChainedEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.Ne = Ne
         self.row_width = self.cols * PACKED_SIZE
         self.end_subtractor = self.row_width - Ne % self.row_width
-
-
-        self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
         self.reset()
 
     cpdef reset(self):
@@ -207,11 +214,12 @@ cdef class ChainedE5(ChainedEvaluator):
         # first check if an earlier row now has an error value
         r = self.start
         for i in range(self.No - self.err_rows):
-            row_sum = floodcount_vector(E[r, :], end_sub)
-            if row_sum > 0:
-                self.row_accumulator = row_sum
-                self.err_rows = self.No - i
-                return
+            if self.mask[r]:
+                row_sum = floodcount_vector(E[r, :], end_sub)
+                if row_sum > 0:
+                    self.row_accumulator = row_sum
+                    self.err_rows = self.No - i
+                    return
             r += self.step
 
         # no errors in earlier rows so just accumulate the same row
@@ -219,7 +227,7 @@ cdef class ChainedE5(ChainedEvaluator):
         # else store whatever floodcount finds
         if self.err_rows > 0:
             self.row_accumulator += self.row_width - end_sub
-        else:
+        elif self.mask[r]:
             self.row_accumulator = floodcount_vector(E[r, :], end_sub)
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
@@ -231,8 +239,8 @@ cdef class ChainedE5(ChainedEvaluator):
 
 
 cdef class ChainedE6(ChainedE5):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.end_subtractor = 0
 
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, size_t end_sub=0):
@@ -241,21 +249,23 @@ cdef class ChainedE6(ChainedE5):
         # first check if an earlier row now has an error value
         r = self.start
         for i in range(self.No - self.err_rows):
-            row_sum = popcount_vector(E[r, :])
-            if row_sum > 0:
-                # more important feature has error so overwrite accumulator
-                self.row_accumulator = row_sum
-                self.err_rows = self.No - i
-                return
-            r = self.start + self.step
+            if self.mask[r]:
+                row_sum = popcount_vector(E[r, :])
+                if row_sum > 0:
+                    # more important feature has error so overwrite accumulator
+                    self.row_accumulator = row_sum
+                    self.err_rows = self.No - i
+                    return
+            r += self.step
 
         # no errors in earlier rows so just accumulate the same row
-        self.row_accumulator += popcount_vector(E[r, :])
+        if self.mask[r]:
+            self.row_accumulator += popcount_vector(E[r, :])
 
 
 cdef class ChainedE7(ChainedEvaluator):
-    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
-        super().__init__(Ne, No, cols, msb)
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb, np.uint8_t[:] mask):
+        super().__init__(Ne, No, cols, msb, mask)
         self.Ne = Ne
         self.reset()
 
@@ -268,10 +278,11 @@ cdef class ChainedE7(ChainedEvaluator):
         # first check if an earlier row now has an error value
         r = self.start
         for i in range(self.err_rows, self.No):
-            for c in range(self.cols):
-                if E[r, c] > 0:
-                    self.err_rows = self.No - i
-                    return
+            if self.mask[r]:
+                for c in range(self.cols):
+                    if E[r, c] > 0:
+                        self.err_rows = self.No - i
+                        return
             r += self.step
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):

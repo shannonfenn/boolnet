@@ -1,12 +1,14 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 import cython
+cimport numpy as np
 from boolnet.bintools.packing cimport packed_type_t
 
 
 cdef class StandardEvaluator:
-    cdef size_t No, cols, start, step
+    cdef size_t Ne, No, cols, start, step
     cdef double divisor
+    cdef np.uint8_t[:] mask
 
 
 cdef class StandardPerOutput(StandardEvaluator):

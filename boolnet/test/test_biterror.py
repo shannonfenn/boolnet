@@ -8,12 +8,15 @@ from boolnet.bintools.biterror import STANDARD_EVALUATORS
 def test_biterror(error_matrix_harness, metric):
     Ne = error_matrix_harness['Ne']
     E = error_matrix_harness['packed error matrix']
+    mask = error_matrix_harness['mask']
     No, _ = E.shape
     eval_class, msb = STANDARD_EVALUATORS[metric]
-    error_evaluator = eval_class(Ne, No, msb)
+    error_evaluator = eval_class(Ne, No, msb, mask)
 
     actual = error_evaluator.evaluate(E)
     expected = error_matrix_harness[metric_name(metric)]
+
+    print(metric_name(metric))
 
     assert_array_equal(actual, expected)
 

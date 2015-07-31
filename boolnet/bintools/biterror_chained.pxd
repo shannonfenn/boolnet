@@ -6,6 +6,7 @@ cimport numpy as np
 cdef class ChainedEvaluator:
     cdef size_t No, cols, start, step
     cdef double divisor
+    cdef np.uint8_t[:] mask
 
 
 cdef class ChainedPerOutput(ChainedEvaluator):
