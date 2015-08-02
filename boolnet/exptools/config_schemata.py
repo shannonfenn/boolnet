@@ -117,6 +117,17 @@ network_schema_generated = Schema({
     'node_funcs':   In(['NAND', 'NOR', 'random'])
     }, default_keys=Required)
 
+
+learner_schema_strat = Schema({
+    'name':     In(['stratified kfs', 'stratified']),
+    'feature_masking':  bool
+    })
+learner_schema_basic = Schema({
+    'name':     'basic',
+    })
+
+learner_schema = Schema(Any(learner_schema_strat, learner_schema_basic))
+
 network_schema = Schema(Any(network_schema_given,
                             network_schema_generated))
 
@@ -125,7 +136,7 @@ config_schema = Schema({
     'data':                     Any(data_schema_file, data_schema_generated),
     'network':                  network_schema,
     'logging':                  In(['none', 'warning', 'info', 'debug']),
-    'learner':                  In(LEARNERS.keys()),
+    'learner':                  learner_schema,
     'optimiser':                optimiser_schema,
     'sampling':                 sampling_schema,
     'configuration_number':     All(int, Range(min=0)),
