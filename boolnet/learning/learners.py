@@ -1,8 +1,10 @@
 from copy import copy
 from collections import namedtuple
-import numpy as np
+from itertools import product
+import sys
 import logging
 import pyximport
+import numpy as np
 pyximport.install()
 from boolnet.bintools.metrics import PER_OUTPUT
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
@@ -32,15 +34,13 @@ def strata_boundaries(network):
 
 
 def check_parameters(parameters):
-    problem_metrics = ['e4 msb', 'e4 lsb', 'e5 msb', 'e5 lsb',
-                       'e6 msb', 'e6 lsb', 'e7 msb', 'e7 lsb']
+    problem_metrics = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
 
     metric_name = parameters['optimiser']['metric']
-    if metric_name in problem_metrics:
-        logging.error(('use of %s metric may result in poor performance '
-                       'due to masking of earlier bits'), metric_name)
-        # print('WARNING POTENTIALLY ERROR PRONE METRIC FOR KFS!',
-        #       file=sys.stderr)
+    if metric_name in problem_metrics and not parameters['learner']['feature_masking']:
+        logging.error(('use of %s metric without feature masking may result in poor performance '
+                       'due to non-zero errors in earlier bits'), metric_name)
+        print('WARNING POTENTIALLY ERROR PRONE METRIC FOR KFS!', file=sys.stderr)
 
 
 def handle_single_FS(feature_set, evaluator, bit, target):
@@ -134,11 +134,14 @@ def stratified_learn(evaluator, parameters, optimiser,
     network = evaluator.network
     num_targets = network.No
 
+    check_parameters(parameters)
+
     # For logging network as each new bit is learnt
     best_states = [None] * num_targets
     best_iterations = [-1] * num_targets
     final_iterations = [-1] * num_targets
     optimiser_parameters = parameters['optimiser']
+    feature_masking = parameters['learner']['feature_masking']
 
     # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
     lower_bounds, upper_bounds = strata_boundaries(network)
@@ -185,6 +188,10 @@ def stratified_learn(evaluator, parameters, optimiser,
         # Reinitialise the next range of gates to be optimised
         # according to the mask
         network.reconnect_masked_range()
+
+        if feature_masking:
+            mask = np.array([1] * tgt + [0] * (num_targets - tgt), dtype=np.uint8)
+            evaluator.add_metric(mask)
 
         # run the optimiser
         results = optimiser.run(evaluator, optimiser_parameters, end_condition)

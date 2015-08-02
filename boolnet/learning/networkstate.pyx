@@ -94,6 +94,9 @@ cdef class NetworkState:
     cpdef add_metric(self, Metric metric):
         pass
 
+    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask=None):
+        pass
+
     cpdef metric_value(self, Metric metric):
         pass
 
@@ -234,13 +237,21 @@ cdef class StandardNetworkState(NetworkState):
             mask = np.ones(self.No, dtype=np.uint8)
 
         # overwrite the existing evaluator in case the mask has changed
-        if (metric not in self.masks or 
-            not np.array_equal(self.masks[metric], mask)):
+        if (metric not in self.masks or not np.array_equal(self.masks[metric], mask)):
+            self.masks[metric] = mask
             eval_class, msb = STANDARD_EVALUATORS[metric]
             self.err_evaluators[metric] = eval_class(self.Ne, self.No, msb, mask)
+            self.network.changed = True
 
-    cpdef metric_value(self, Metric metric, np.uint8_t[:] mask=None):
-        self.add_metric(metric, mask)
+    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
+        self.masks[metric] = mask
+        eval_class, msb = STANDARD_EVALUATORS[metric]
+        self.err_evaluators[metric] = eval_class(self.Ne, self.No, msb, mask)
+        self.network.changed = True
+
+    cpdef metric_value(self, Metric metric):
+        if metric not in self.masks:
+            raise ValueError('Metric not added to evaluator prior to evaluation')
         if self.network.changed:
             self.evaluate()
         return self.err_evaluators[metric].evaluate(self.error)

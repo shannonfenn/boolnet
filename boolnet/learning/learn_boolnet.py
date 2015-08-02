@@ -81,7 +81,7 @@ def learn_bool_net(parameters):
     fastrand.seed(seed)
 
     optimiser_name = parameters['optimiser']['name']
-    learner_name = parameters['learner']
+    learner_name = parameters['learner']['name']
     metric = metric_from_name(parameters['optimiser']['metric'])
 
     training_data = parameters['training_mapping']
