@@ -11,7 +11,6 @@ from boolnet.learning.networkstate import (StandardNetworkState, standard_from_o
                                            chained_from_operator)
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
-import functools
 import sys
 
 
@@ -26,8 +25,9 @@ OPTIMISERS = {
 
 LEARNERS = {
     'basic': basic_learn,
-    'stratified': functools.partial(stratified_learn, use_kfs_masking=False),
-    'stratified kfs': functools.partial(stratified_learn, use_kfs_masking=True)}
+    'stratified': stratified_learn,
+    'stratified kfs': stratified_learn
+    }
 
 
 def check_data(training_mapping, test_mapping):
@@ -82,6 +82,8 @@ def learn_bool_net(parameters):
 
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']['name']
+    if parameters['learner'].get('kfs', False):
+        learner_name += ' kfs'
     metric = metric_from_name(parameters['optimiser']['metric'])
 
     training_data = parameters['training_mapping']
