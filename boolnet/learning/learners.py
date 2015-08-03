@@ -6,7 +6,7 @@ import logging
 import pyximport
 import numpy as np
 pyximport.install()
-from boolnet.bintools.metrics import PER_OUTPUT
+from boolnet.bintools.metrics import PER_OUTPUT, metric_from_name
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
 
@@ -172,7 +172,8 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
 
     if use_feature_masking:
         mask = np.array([1] * target + [0] * (num_targets - target), dtype=np.uint8)
-        evaluator.set_metric_mask(parameters['optimiser']['metric'], mask)
+        metric = metric_from_name(parameters['optimiser']['metric'])
+        evaluator.set_metric_mask(metric, mask)
 
     return False
 
@@ -196,29 +197,23 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
     fs_results = []
 
     for target in range(num_targets):
-        if prepare_state(evaluator, parameters, boundaries, target_matrix, target, fs_results):
-            continue
-        # generate an end condition based on the current target
-        end_condition = per_target_error_end_condition(target)
+        if not prepare_state(evaluator, parameters, boundaries, target_matrix, target, fs_results):
+            # generate an end condition based on the current target
+            end_condition = per_target_error_end_condition(target)
 
-        # run the optimiser
-        results = optimiser.run(evaluator, parameters['optimiser'], end_condition)
-        # unpack results
-        optimised_network, best_it, final_it = results
+            # run the optimiser
+            results = optimiser.run(evaluator, parameters['optimiser'], end_condition)
+            # unpack results
+            optimised_network, best_it, final_it = results
 
-        # logging.info('Error per output (sample): %s\nbest iteration: %d\nfinal iteration: %d',
-        #              evaluator.metric_value(PER_OUTPUT), best_it, final_it)
+            # record result
+            best_states[target] = copy(optimised_network)
+            best_iterations[target] = best_it
+            final_iterations[target] = final_it
 
-        # record result
-        best_states[target] = copy(optimised_network)
-        best_iterations[target] = best_it
-        final_iterations[target] = final_it
+            # logging.info('Error per output (sample): %s', evaluator.metric_value(PER_OUTPUT))
 
-    logging.info('Best states: %s', best_states)
-
-    # TODO: Maybe we should return the best state out of the
-    #       states according to the provided guiding metric?
-
+    # TODO: should this return the best state out of the states according to the guiding metric?
     if fs_results:
         return Result(best_states, best_iterations, final_iterations, fs_results)
     else:
