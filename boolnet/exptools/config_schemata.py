@@ -5,7 +5,7 @@ from good import message, Allow, Optional
 
 from boolnet.bintools.metrics import all_metric_names
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
-from boolnet.learning.learn_boolnet import LEARNERS, OPTIMISERS
+from boolnet.learning.learn_boolnet import OPTIMISERS
 
 
 metrics = all_metric_names()
@@ -119,8 +119,9 @@ network_schema_generated = Schema({
 
 
 learner_schema_strat = Schema({
-    'name':     In(['stratified kfs', 'stratified']),
-    'feature_masking':  bool
+    'name':                         'stratified',
+    Optional('kfs'):                bool,
+    Optional('feature_masking'):    bool
     })
 learner_schema_basic = Schema({
     'name':     'basic',
