@@ -91,10 +91,15 @@ cdef class NetworkState:
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
-    cpdef add_metric(self, Metric metric):
-        pass
+    cpdef add_metric(self, Metric metric, np.uint8_t[:] mask=None):
+        if mask is None:
+            mask = np.ones(self.No, dtype=np.uint8)
 
-    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask=None):
+        # overwrite the existing evaluator in case the mask has changed
+        if (metric not in self.masks or not np.array_equal(self.masks[metric], mask)):
+            self.set_metric_mask(metric, mask)
+
+    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
         pass
 
     cpdef metric_value(self, Metric metric):
@@ -232,17 +237,6 @@ cdef class StandardNetworkState(NetworkState):
             self.evaluate()
             return self.error
 
-    cpdef add_metric(self, Metric metric, np.uint8_t[:] mask=None):
-        if mask is None:
-            mask = np.ones(self.No, dtype=np.uint8)
-
-        # overwrite the existing evaluator in case the mask has changed
-        if (metric not in self.masks or not np.array_equal(self.masks[metric], mask)):
-            self.masks[metric] = mask
-            eval_class, msb = STANDARD_EVALUATORS[metric]
-            self.err_evaluators[metric] = eval_class(self.Ne, self.No, msb, mask)
-            self.network.changed = True
-
     cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
         self.masks[metric] = mask
         eval_class, msb = STANDARD_EVALUATORS[metric]
@@ -333,20 +327,16 @@ cdef class ChainedNetworkState(NetworkState):
         self.example_generator = example_generator
         self.metric_value_cache = dict()
 
-    cpdef add_metric(self, Metric metric, np.uint8_t[:] mask=None):
-        if mask is None:
-            mask = np.ones(self.No, dtype=np.uint8)
+    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
+        self.masks[metric] = mask
+        eval_class, msb = CHAINED_EVALUATORS[metric]
+        self.err_evaluators[metric] = eval_class(self.Ne, self.No, self.cols, msb, mask)
+        self.network.changed = True
 
-        # overwrite the existing evaluator in case the mask has changed
-        if (metric not in self.masks or 
-            not np.array_equal(self.masks[metric], mask)):
-            eval_class, msb = CHAINED_EVALUATORS[metric]
-            self.err_evaluators[metric] = eval_class(self.Ne, self.No, self.cols, msb, mask)
-            self.metric_value_cache[metric] = None
-            self.network.changed = True
+    cpdef metric_value(self, Metric metric):
+        if metric not in self.masks:
+            raise ValueError('Metric not added to evaluator prior to evaluation')
 
-    cpdef metric_value(self, Metric metric, np.uint8_t[:] mask=None):
-        self.add_metric(metric, mask)
         if self.network.changed:
             self.evaluate()
         return self.metric_value_cache[metric]

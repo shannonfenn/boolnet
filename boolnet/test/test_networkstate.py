@@ -453,6 +453,12 @@ class TestBoth:
                 N=params['N'][sample_type]
             )
 
+    # ################### Exception Testing ################### #
+    def test_metric_not_added(self, state, metric, sample_type):
+        with raises(ValueError):
+            state['evaluator'][sample_type].metric_value(metric)
+
+    # ################### Functionality Testing ################### #
     def test_from_operator_combined_attributes(self, state_params, evaluator_type, sample_type):
         state = self.build_from_params(state_params, evaluator_type, sample_type)
 
@@ -466,13 +472,15 @@ class TestBoth:
 
     def test_from_operator_metric_value(self, state_params, evaluator_type, metric, sample_type):
         expected = state_params['metric value'][sample_type][metric_name(metric)]
-        state = self.build_from_params(state_params, evaluator_type, sample_type)
-        actual = state.metric_value(metric)
+        evaluator = self.build_from_params(state_params, evaluator_type, sample_type)
+        evaluator.add_metric(metric)
+        actual = evaluator.metric_value(metric)
         assert_array_almost_equal(expected, actual)
 
     def test_metric_value(self, state, metric, sample_type):
         evaluator = state['evaluator'][sample_type]
         expected = state['metric value'][sample_type][metric_name(metric)]
+        evaluator.add_metric(metric)
         actual = evaluator.metric_value(metric)
         assert_array_almost_equal(expected, actual)
 
@@ -487,6 +495,8 @@ class TestBoth:
 
     def test_multiple_metric_values_post(self, state, sample_type):
         evaluator = state['evaluator'][sample_type]
+        for metric in all_metrics():
+            evaluator.add_metric(metric)
         for metric in all_metrics():
             expected = state['metric value'][sample_type][metric_name(metric)]
             actual = evaluator.metric_value(metric)
