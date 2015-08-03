@@ -26,11 +26,9 @@ def guiding_error_end_condition():
 def strata_boundaries(network):
     # this allocates gate boundaries linearly, that it the first
     # target is allocate the first Ng/No gates and so on.
-    No = network.No
-    Ng = network.Ng
+    No, Ng = network.No, network.Ng
     upper_bounds = np.linspace((Ng-No)/No, Ng-No, No).astype(int).tolist()
-    lower_bounds = [0] + upper_bounds[:-1]
-    return lower_bounds, upper_bounds
+    return [0] + upper_bounds
 
 
 def check_parameters(parameters):
@@ -65,7 +63,7 @@ def handle_single_FS(feature_set, evaluator, bit, target):
             network.apply_move({'gate': Ng - No + bit, 'terminal': i, 'new_source': gate})
 
 
-def get_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
+def build_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
     # IDEA: May later use entropy or something similar. For now
     #       this uses the union of all minimal feature sets the
     #       connection encoded (+Ni) values for the changeable
@@ -129,8 +127,57 @@ def get_feature_set(evaluator, parameters, lower_bound, bit):
     return feature_sets[0]
 
 
-def stratified_learn(evaluator, parameters, optimiser,
-                     use_kfs_masking=False, log_all_feature_sets=False):
+def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feature_set_results):
+    # options
+    use_kfs_masking = parameters['learner'].get('kfs', False)
+    log_all_feature_sets = parameters['learner'].get('log_all_feature_sets', False)
+    use_feature_masking = parameters['learner'].get('feature_masking', False)
+
+    network = evaluator.network
+    num_targets, _ = target_matrix.shape
+    lower_bound = boundaries[target]
+    upper_bound = boundaries[target + 1]
+
+    if use_kfs_masking:
+        # find a set of min feature sets for the next target
+        fs = get_feature_set(evaluator, parameters, lower_bound, target)
+
+        # keep a log of the feature sets found at each iteration
+        if log_all_feature_sets:
+            fs_list = [fs]
+            for t in range(target+1, num_targets):
+                fs_list.append(get_feature_set(evaluator, parameters, lower_bound, t))
+            feature_set_results.append(fs_list)
+        else:
+            feature_set_results.append(fs)
+
+        # check for 1-FS, if we have a 1FS we have already learnt the
+        # target, or its inverse, so simply map this feature to the output
+        if fs.size == 1:
+            handle_single_FS(fs, evaluator, target, target_matrix)
+            return True
+
+        sourceable, changeable = build_mask(network, lower_bound, upper_bound, target, fs)
+    else:
+        sourceable, changeable = build_mask(network, lower_bound, upper_bound, target)
+
+    # apply the mask to the network
+    network.set_mask(sourceable, changeable)
+
+    # TODO: Fix it so that the gate_edit boundaries aren't leaving gates unused
+    #       in the event that the learner finishes before exhausting all gates
+
+    # Reinitialise the next range of gates to be optimised according to the mask
+    network.reconnect_masked_range()
+
+    if use_feature_masking:
+        mask = np.array([1] * target + [0] * (num_targets - target), dtype=np.uint8)
+        evaluator.set_metric_mask(parameters['optimiser']['metric'], mask)
+
+    return False
+
+
+def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=False):
     network = evaluator.network
     num_targets = network.No
 
@@ -140,84 +187,40 @@ def stratified_learn(evaluator, parameters, optimiser,
     best_states = [None] * num_targets
     best_iterations = [-1] * num_targets
     final_iterations = [-1] * num_targets
-    optimiser_parameters = parameters['optimiser']
-    feature_masking = parameters['learner']['feature_masking']
 
     # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
-    lower_bounds, upper_bounds = strata_boundaries(network)
+    boundaries = strata_boundaries(network)
     # the initial kfs input is just the set of all network inputs
     target_matrix = np.array(evaluator.target_matrix)
 
-    feature_set_results = []
-    # ################## Start kfs learning ################## #
+    fs_results = []
 
-    for tgt, L_bnd, U_bnd in zip(range(num_targets), lower_bounds, upper_bounds):
-        if use_kfs_masking:
-            # find a set of min feature sets for the next target
-            feature_set = get_feature_set(evaluator, parameters, L_bnd, tgt)
-
-            # keep a log of the feature sets found at each iteration
-            if log_all_feature_sets:
-                fs_list = [feature_set]
-                for t in range(tgt+1, num_targets):
-                    fs_list.append(get_feature_set(evaluator, parameters, L_bnd, t))
-                feature_set_results.append(fs_list)
-            else:
-                feature_set_results.append(feature_set)
-
-            # check for 1-FS
-            if feature_set.size == 1:
-                # When we have a 1FS we have already learned the target,
-                # or its inverse, simply map this feature to the output
-                handle_single_FS(feature_set, evaluator, tgt, target_matrix)
-                continue
-
-            sourceable, changeable = get_mask(network, L_bnd, U_bnd, tgt, feature_set)
-        else:
-            sourceable, changeable = get_mask(network, L_bnd, U_bnd, tgt)
-
-        # apply the mask to the network
-        network.set_mask(sourceable, changeable)
+    for target in range(num_targets):
+        if prepare_state(evaluator, parameters, boundaries, target_matrix, target, fs_results):
+            continue
         # generate an end condition based on the current target
-        end_condition = per_target_error_end_condition(tgt)
-
-        # TODO: Fix it so that the gate_edit boundaries aren't
-        #       leaving gates unused in the event that the learner
-        #       finishes before exhausting all gates
-
-        # Reinitialise the next range of gates to be optimised
-        # according to the mask
-        network.reconnect_masked_range()
-
-        if feature_masking:
-            mask = np.array([1] * tgt + [0] * (num_targets - tgt), dtype=np.uint8)
-            evaluator.add_metric(mask)
+        end_condition = per_target_error_end_condition(target)
 
         # run the optimiser
-        results = optimiser.run(evaluator, optimiser_parameters, end_condition)
+        results = optimiser.run(evaluator, parameters['optimiser'], end_condition)
         # unpack results
         optimised_network, best_it, final_it = results
 
-        # logging.info('''Error per output (sample): %s
-        #                 best iteration: %d
-        #                 final iteration: %d''',
-        #              evaluator.metric_value(PER_OUTPUT),
-        #              best_it, final_it)
+        # logging.info('Error per output (sample): %s\nbest iteration: %d\nfinal iteration: %d',
+        #              evaluator.metric_value(PER_OUTPUT), best_it, final_it)
 
         # record result
-        best_states[tgt] = copy(optimised_network)
-        best_iterations[tgt] = best_it
-        final_iterations[tgt] = final_it
-
-    # ################## End kfs learning ################## #
+        best_states[target] = copy(optimised_network)
+        best_iterations[target] = best_it
+        final_iterations[target] = final_it
 
     logging.info('Best states: %s', best_states)
 
     # TODO: Maybe we should return the best state out of the
     #       states according to the provided guiding metric?
 
-    if feature_set_results:
-        return Result(best_states, best_iterations, final_iterations, feature_set_results)
+    if fs_results:
+        return Result(best_states, best_iterations, final_iterations, fs_results)
     else:
         return Result(best_states, best_iterations, final_iterations, None)
 
