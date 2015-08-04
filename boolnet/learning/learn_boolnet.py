@@ -56,7 +56,7 @@ def build_training_evaluator(network, mapping):
                                       operator=mapping.operator, N=mapping.N)
 
 
-def build_test_evaluator(network, mapping, parameters, guiding_metric):
+def build_test_evaluator(network, mapping, parameters, metrics):
     if isinstance(mapping, FileBoolMapping):
         evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, OperatorBoolMapping):
@@ -64,9 +64,8 @@ def build_test_evaluator(network, mapping, parameters, guiding_metric):
             network=network, indices=mapping.indices, Nb=mapping.Nb, No=mapping.No,
             operator=mapping.operator, window_size=mapping.window_size, N=mapping.N)
         # pre-add metrics to avoid redundant network evaluations
-        evaluator.add_metric(guiding_metric)
-        evaluator.add_metric(E1)
-        evaluator.add_metric(ACCURACY)
+        for metric in metrics:
+            evaluator.add_metric(metric)
     return evaluator
 
 
@@ -84,7 +83,7 @@ def learn_bool_net(parameters):
     learner_name = parameters['learner']['name']
     if parameters['learner'].get('kfs', False):
         learner_name += ' kfs'
-    metric = metric_from_name(parameters['optimiser']['metric'])
+    guiding_metric = metric_from_name(parameters['optimiser']['metric'])
 
     training_data = parameters['training_mapping']
     test_data = parameters['test_mapping']
@@ -138,7 +137,8 @@ def learn_bool_net(parameters):
     end_time = time.monotonic()
 
     training_evaluator.set_network(final_network)
-    test_evaluator = build_test_evaluator(final_network, test_data, parameters, metric)
+    test_evaluator = build_test_evaluator(final_network, test_data, parameters,
+                                          [guiding_metric, E1, ACCURACY, PER_OUTPUT])
 
     results = {
         'Ni':                       Ni,
@@ -150,10 +150,10 @@ def learn_bool_net(parameters):
         # 'Final Network':            network_trg,
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
-        'training_error_guiding':   training_evaluator.metric_value(metric),
+        'training_error_guiding':   training_evaluator.metric_value(guiding_metric),
         'training_error_simple':    training_evaluator.metric_value(E1),
         'training_accuracy':        training_evaluator.metric_value(ACCURACY),
-        'test_error_guiding':       test_evaluator.metric_value(metric),
+        'test_error_guiding':       test_evaluator.metric_value(guiding_metric),
         'test_error_simple':        test_evaluator.metric_value(E1),
         'test_accuracy':            test_evaluator.metric_value(ACCURACY),
         'final_network':            np.array(final_network.gates),
