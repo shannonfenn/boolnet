@@ -105,10 +105,6 @@ cdef class NetworkState:
     cpdef metric_value(self, Metric metric):
         pass
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.nonecheck(False)
-    @cython.cdivision(True)
     cdef void _evaluate_random(self):
         ''' Evaluate the activation and error matrices for the network
             getting node TFs from network. '''
@@ -147,10 +143,6 @@ cdef class NetworkState:
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.nonecheck(False)
-    @cython.cdivision(True)
     cdef void _evaluate_NAND(self):
         ''' Evaluate the activation and error matrices for the network
             assuming each node TF is NAND. '''
@@ -245,7 +237,7 @@ cdef class StandardNetworkState(NetworkState):
 
     cpdef metric_value(self, Metric metric):
         if metric not in self.masks:
-            raise ValueError('Metric not added to evaluator prior to evaluation')
+            self.add_metric(metric)
         if self.network.changed:
             self.evaluate()
         return self.err_evaluators[metric].evaluate(self.error)
@@ -267,10 +259,6 @@ cdef class StandardNetworkState(NetworkState):
 
         self.network.changed = False
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.nonecheck(False)
-    @cython.cdivision(True)
     cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
@@ -368,10 +356,6 @@ cdef class ChainedNetworkState(NetworkState):
             self.metric_value_cache[m] = evaluators[m].final_evaluation(self.error)
         self.network.changed = False
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.nonecheck(False)
-    @cython.cdivision(True)
     cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
