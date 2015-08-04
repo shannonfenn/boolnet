@@ -37,7 +37,8 @@ def check_parameters(parameters):
     metric_name = parameters['optimiser']['metric']
     if metric_name in problem_metrics and not parameters['learner']['feature_masking']:
         logging.error(('use of %s metric without feature masking may result in poor performance '
-                       'due to non-zero errors in earlier bits'), metric_name)
+                       'due to non-zero errors in earlier bits. Try setting \"feature_masking\" '
+                       'flag in \"learners\" configuration.'), metric_name)
         print('WARNING POTENTIALLY ERROR PRONE METRIC FOR KFS!', file=sys.stderr)
 
 
@@ -101,22 +102,29 @@ def build_mask(network, lower_bound, upper_bound, target_index, feature_set=None
     return sourceable, changeable
 
 
-def get_feature_set(evaluator, parameters, lower_bound, bit):
-    activation_matrix = evaluator.activation_matrix
+def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
+    activation_matrix = np.asarray(evaluator.activation_matrix)
     Ni = evaluator.network.Ni
     # generate input to minFS solver
-    kfs_matrix = activation_matrix[:(lower_bound+Ni), :]
+    upper_gate = boundaries[target]
+    if all_inputs or target == 0:
+        input_feature_indices = np.arange(upper_gate+Ni)
+    else:
+        lower_gate = boundaries[target - 1]
+        input_feature_indices = np.hstack((np.arange(Ni), np.arange(lower_gate+Ni, upper_gate+Ni)))
+
+    kfs_matrix = activation_matrix[input_feature_indices, :]
     # target feature for this bit
-    kfs_target = evaluator.target_matrix[bit, :]
+    kfs_target = evaluator.target_matrix[target, :]
 
     logging.info('\t(examples, features): {}'.format(evaluator.Ne, kfs_matrix.shape))
 
-    file_name_base = parameters['inter_file_base'] + str(bit)
+    file_name_base = parameters['inter_file_base'] + str(target)
 
     kfs_matrix = unpack_bool_matrix(kfs_matrix, evaluator.Ne)
     kfs_target = unpack_bool_vector(kfs_target, evaluator.Ne)
 
-    options = parameters.get('kfs_options')
+    options = parameters.get('fabcpp_options')
     # use external solver for minFS
     feature_sets = kfs.minimal_feature_sets(kfs_matrix, kfs_target, file_name_base, options)
 
@@ -139,8 +147,9 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
     upper_bound = boundaries[target + 1]
 
     if use_kfs_masking:
+        smaller_kfs_inputs = parameters['learner'].get('smaller_kfs_inputs', False)
         # find a set of min feature sets for the next target
-        fs = get_feature_set(evaluator, parameters, lower_bound, target)
+        fs = get_feature_set(evaluator, parameters, target, boundaries, not smaller_kfs_inputs)
 
         # keep a log of the feature sets found at each iteration
         if log_all_feature_sets:

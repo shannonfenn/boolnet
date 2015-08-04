@@ -118,16 +118,12 @@ network_schema_generated = Schema({
     }, default_keys=Required)
 
 
-learner_schema_strat = Schema({
-    'name':                         'stratified',
+learner_schema = Schema({
+    'name':     In(['basic', 'stratified']),
     Optional('kfs'):                bool,
-    Optional('feature_masking'):    bool
+    Optional('feature_masking'):    bool,
+    Optional('smaller_kfs_inputs'): bool
     })
-learner_schema_basic = Schema({
-    'name':     'basic',
-    })
-
-learner_schema = Schema(Any(learner_schema_strat, learner_schema_basic))
 
 network_schema = Schema(Any(network_schema_given,
                             network_schema_generated))
@@ -146,5 +142,5 @@ config_schema = Schema({
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
-    Optional('kfs_options'):    list,
+    Optional('fabcpp_options'):    list,
     }, default_keys=Required)
