@@ -204,6 +204,11 @@ def evaluator_type(request):
 
 
 @fixture(params=TEST_NETWORKS)
+def chained_state(request):
+    return harness_to_fixture(request.param, 'chained')
+
+
+@fixture(params=TEST_NETWORKS)
 def state(request, evaluator_type):
     return harness_to_fixture(request.param, evaluator_type)
 
@@ -454,9 +459,9 @@ class TestBoth:
             )
 
     # ################### Exception Testing ################### #
-    def test_metric_not_added(self, state, metric, sample_type):
+    def test_metric_not_added(self, chained_state, metric, sample_type):
         with raises(ValueError):
-            state['evaluator'][sample_type].metric_value(metric)
+            chained_state['evaluator'][sample_type].metric_value(metric)
 
     # ################### Functionality Testing ################### #
     def test_from_operator_combined_attributes(self, state_params, evaluator_type, sample_type):
