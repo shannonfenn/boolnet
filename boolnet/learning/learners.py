@@ -147,9 +147,9 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
     upper_bound = boundaries[target + 1]
 
     if use_kfs_masking:
-        smaller_kfs_inputs = parameters['learner'].get('smaller_kfs_inputs', False)
+        one_layer_kfs = parameters['learner'].get('one_layer_kfs', False)
         # find a set of min feature sets for the next target
-        fs = get_feature_set(evaluator, parameters, target, boundaries, not smaller_kfs_inputs)
+        fs = get_feature_set(evaluator, parameters, target, boundaries, not one_layer_kfs)
 
         # keep a log of the feature sets found at each iteration
         if log_all_feature_sets:

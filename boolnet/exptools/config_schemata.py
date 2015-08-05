@@ -122,7 +122,7 @@ learner_schema = Schema({
     'name':     In(['basic', 'stratified']),
     Optional('kfs'):                bool,
     Optional('feature_masking'):    bool,
-    Optional('smaller_kfs_inputs'): bool
+    Optional('one_layer_kfs'): bool
     })
 
 network_schema = Schema(Any(network_schema_given,
