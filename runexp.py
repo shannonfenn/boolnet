@@ -131,7 +131,7 @@ def run_tasks(tasks, num_processes, out_stream):
 def run_parallel(tasks, num_processes, out_stream):
     ''' runs the given configurations '''
     with Pool(processes=num_processes) as pool:
-        bar = Bar('Parallelised', max=len(tasks))
+        bar = Bar('Parallelised ({})'.format(num_processes), max=len(tasks))
         bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
@@ -153,7 +153,7 @@ def run_scooped(tasks, out_stream):
 
 def run_sequential(tasks, out_stream):
     ''' runs the given configurations '''
-    bar = Bar('Running sequentially', max=len(tasks))
+    bar = Bar('Sequential', max=len(tasks))
     bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
