@@ -132,7 +132,7 @@ def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
     if feature_sets.shape[0] > 1:
         raise ValueError('More than one feature set returned.')
 
-    return feature_sets[0]
+    return input_feature_indices[feature_sets][0]
 
 
 def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feature_set_results):
@@ -180,7 +180,7 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
     network.reconnect_masked_range()
 
     if use_feature_masking:
-        mask = np.array([1] * target + [0] * (num_targets - target), dtype=np.uint8)
+        mask = np.array([0] * target + [1] * (num_targets - target), dtype=np.uint8)
         metric = metric_from_name(parameters['optimiser']['metric'])
         evaluator.set_metric_mask(metric, mask)
 
@@ -206,7 +206,9 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
     fs_results = []
 
     for target in range(num_targets):
-        if not prepare_state(evaluator, parameters, boundaries, target_matrix, target, fs_results):
+        single_fs = prepare_state(evaluator, parameters, boundaries,
+                                  target_matrix, target, fs_results)
+        if not single_fs:
             # generate an end condition based on the current target
             end_condition = per_target_error_end_condition(target)
 
