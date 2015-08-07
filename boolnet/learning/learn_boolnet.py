@@ -70,6 +70,8 @@ def build_test_evaluator(network, mapping, parameters, metrics):
 
 
 def learn_bool_net(parameters):
+    start_time = time.monotonic()
+
     # seed fast random number generator using system rng (which auto seeds on module import)
     if 'seed' in parameters:
         seed = parameters['seed']
@@ -128,13 +130,13 @@ def learn_bool_net(parameters):
     optimiser = OPTIMISERS[optimiser_name]
 
     # learn the network
-    start_time = time.monotonic()
+    setup_time = time.monotonic()
 
     learner_result = learner(training_evaluator, parameters, optimiser)
 
     final_network = learner_result.best_states[-1]
 
-    end_time = time.monotonic()
+    learning_time = time.monotonic()
 
     training_evaluator.set_network(final_network)
     test_evaluator = build_test_evaluator(final_network, test_data, parameters,
@@ -158,7 +160,6 @@ def learn_bool_net(parameters):
         'test_accuracy':            test_evaluator.metric_value(ACCURACY),
         'final_network':            np.array(final_network.gates),
         'Ne':                       training_evaluator.Ne,
-        'time':                     end_time - start_time
         }
 
     if learner_result.feature_sets:
@@ -177,7 +178,12 @@ def learn_bool_net(parameters):
     for k, v in parameters['optimiser'].items():
         results['optimiser_' + k] = v
 
-    results['result-time'] = time.monotonic() - start_time
+    end_time = time.monotonic()
+
+    results['setup_time'] = setup_time - start_time
+    results['learning_time'] = learning_time - setup_time
+    results['result_time'] = end_time - learning_time
+    results['time'] = end_time - start_time
 
     return results
 
