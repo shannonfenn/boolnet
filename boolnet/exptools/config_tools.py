@@ -210,7 +210,7 @@ def generate_configurations(settings):
         config_settings = deepcopy(settings)
         # update the settings dict with the values for this configuration
         update_nested(config_settings, variables)
-        # record the config number for debuggin
+        # record the config number for debugging
         config_settings['configuration_number'] = config_no
         # load initial network from file if required
         handle_initial_network(config_settings)

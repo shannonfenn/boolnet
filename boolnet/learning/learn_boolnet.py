@@ -147,6 +147,7 @@ def learn_bool_net(parameters):
         'No':                       No,
         'Ng':                       Ng,
         'learner':                  learner_name,
+        'configuration_number':      parameters['configuration_number'],
         'training_set_number':      parameters['training_set_number'],
         'transfer_functions':       parameters['network']['node_funcs'],
         # 'Final Network':            network_trg,
