@@ -65,10 +65,10 @@ cdef class NetworkState:
         self.cols = cols
 
         self.zero_mask = generate_end_mask(Ne)
-        
+
         # instantiate a matrix for activation
         self.activation = np.empty((network.Ng + self.Ni, self.cols), dtype=packed_type)
-        
+
         # create input and output view into activation matrix
         self.inputs = self.activation[:self.Ni, :]
         self.outputs = self.activation[-<int>self.No:, :]
@@ -98,6 +98,10 @@ cdef class NetworkState:
         # overwrite the existing evaluator in case the mask has changed
         if (metric not in self.masks or not np.array_equal(self.masks[metric], mask)):
             self.set_metric_mask(metric, mask)
+
+    def clear_all_metric_masks():
+        for metric in masks:
+            self.set_metric_mask(metric, np.ones(self.No, dtype=np.uint8))
 
     cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
         pass
@@ -176,7 +180,6 @@ cdef class NetworkState:
         for o in range(No):
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
-
 
     cdef _check_network_invariants(self, network):
         if self.Ng > 0 and network.Ng != self.Ng:
