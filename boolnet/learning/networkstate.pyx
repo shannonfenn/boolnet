@@ -99,8 +99,8 @@ cdef class NetworkState:
         if (metric not in self.masks or not np.array_equal(self.masks[metric], mask)):
             self.set_metric_mask(metric, mask)
 
-    def clear_all_metric_masks():
-        for metric in masks:
+    def clear_all_metric_masks(self):
+        for metric in self.masks:
             self.set_metric_mask(metric, np.ones(self.No, dtype=np.uint8))
 
     cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
