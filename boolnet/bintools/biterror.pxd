@@ -8,7 +8,6 @@ from boolnet.bintools.packing cimport packed_type_t
 cdef class StandardEvaluator:
     cdef size_t Ne, No, cols, start, step
     cdef double divisor
-    cdef np.uint8_t[:] mask
 
 
 cdef class StandardPerOutput(StandardEvaluator):

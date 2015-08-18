@@ -6,7 +6,7 @@ import logging
 import pyximport
 import numpy as np
 pyximport.install()
-from boolnet.bintools.functions import PER_OUTPUT, function_from_name
+from boolnet.bintools.functions import PER_OUTPUT
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
 
@@ -34,12 +34,11 @@ def strata_boundaries(network):
 def check_parameters(parameters):
     problem_funcs = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
 
-    function_name = parameters['optimiser']['function']
-    if function_name in problem_funcs and not parameters['learner']['feature_masking']:
-        logging.error(('use of %s guiding function without feature masking may result in poor '
-                       'performance due to non-zero errors in earlier bits. Try setting '
-                       '\"feature_masking\" flag in \"learners\" configuration.'), function_name)
-        print('WARNING POTENTIALLY ERROR PRONE METRIC FOR KFS!', file=sys.stderr)
+    function_name = parameters['optimiser']['guiding_function']
+    if function_name in problem_funcs:
+        logging.error(('use of %s guiding function may result in poor performance due to non-zero '
+                       'errors in earlier bits.'), function_name)
+        print('WARNING POTENTIALLY ERROR PRONE METRIC FOR STRATIFIED LEARNING!', file=sys.stderr)
 
 
 def handle_single_FS(feature_set, evaluator, bit, target):
@@ -139,7 +138,6 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
     # options
     use_kfs_masking = parameters['learner'].get('kfs', False)
     log_all_feature_sets = parameters['learner'].get('log_all_feature_sets', False)
-    use_feature_masking = parameters['learner'].get('feature_masking', False)
 
     network = evaluator.network
     num_targets, _ = target_matrix.shape
@@ -178,11 +176,6 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
 
     # Reinitialise the next range of gates to be optimised according to the mask
     network.reconnect_masked_range()
-
-    if use_feature_masking:
-        mask = np.array([0] * target + [1] * (num_targets - target), dtype=np.uint8)
-        guiding_function = function_from_name(parameters['optimiser']['function'])
-        evaluator.set_function_mask(guiding_function, mask)
 
     return False
 

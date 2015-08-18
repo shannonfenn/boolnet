@@ -49,7 +49,6 @@ cdef class NetworkState:
         readonly packed_type_t zero_mask
         public object network
         dict err_evaluators
-        dict masks
 
     def __init__(self, network, size_t Ne, size_t Ni, size_t No, size_t cols):
         ''' Sets up the activation and error matrices for a new network.
@@ -78,7 +77,6 @@ cdef class NetworkState:
 
         self.set_network(network)
         self.err_evaluators = dict()
-        self.masks = dict()
 
     cpdef set_network(self, network):
         # check invariants hold
@@ -90,19 +88,7 @@ cdef class NetworkState:
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
-    cpdef add_function(self, Metric function, np.uint8_t[:] mask=None):
-        if mask is None:
-            mask = np.ones(self.No, dtype=np.uint8)
-
-        # overwrite the existing evaluator in case the mask has changed
-        if (function not in self.masks or not np.array_equal(self.masks[function], mask)):
-            self.set_function_mask(function, mask)
-
-    def clear_all_function_masks(self):
-        for function in self.masks:
-            self.set_function_mask(function, np.ones(self.No, dtype=np.uint8))
-
-    cpdef set_function_mask(self, Metric function, np.uint8_t[:] mask):
+    cpdef add_function(self, Metric function):
         pass
 
     cpdef function_value(self, Metric function):
@@ -116,7 +102,7 @@ cdef class NetworkState:
             packed_type_t[:, :] activation, outputs, error, target
             np.uint8_t[:] transfer_functions
             np.uint32_t[:, :] gates
-            f_type func
+            f_type transfer_func
 
         Ng = self.Ng
         Ni = self.Ni
@@ -137,9 +123,9 @@ cdef class NetworkState:
         for g in range(start, Ng):
             in1 = gates[g, 0]
             in2 = gates[g, 1]
-            func = function_list[transfer_functions[g]]
+            transfer_func = function_list[transfer_functions[g]]
             for c in range(cols):
-                activation[Ni+g, c] = func(activation[in1, c], activation[in2, c])
+                activation[Ni+g, c] = transfer_func(activation[in1, c], activation[in2, c])
 
         # evaluate the error matrix
         for o in range(No):
@@ -231,14 +217,13 @@ cdef class StandardNetworkState(NetworkState):
             self.evaluate()
             return self.error
 
-    cpdef set_function_mask(self, Metric function, np.uint8_t[:] mask):
-        self.masks[function] = mask
+    cpdef add_function(self, Metric function):
         eval_class, msb = STANDARD_EVALUATORS[function]
-        self.err_evaluators[function] = eval_class(self.Ne, self.No, msb, mask)
+        self.err_evaluators[function] = eval_class(self.Ne, self.No, msb)
         self.network.changed = True
 
     cpdef function_value(self, Metric function):
-        if function not in self.masks:
+        if function not in self.err_evaluators:
             self.add_function(function)
         if self.network.changed:
             self.evaluate()
@@ -317,15 +302,14 @@ cdef class ChainedNetworkState(NetworkState):
         self.example_generator = example_generator
         self.function_value_cache = dict()
 
-    cpdef set_function_mask(self, Metric function, np.uint8_t[:] mask):
-        self.masks[function] = mask
+    cpdef add_function(self, Metric function):
         eval_class, msb = CHAINED_EVALUATORS[function]
-        self.err_evaluators[function] = eval_class(self.Ne, self.No, self.cols, msb, mask)
+        self.err_evaluators[function] = eval_class(self.Ne, self.No, self.cols, msb)
         self.network.changed = True
 
     cpdef function_value(self, Metric function):
-        if function not in self.masks:
-            raise ValueError('Metric not added to evaluator prior to evaluation')
+        if function not in self.err_evaluators:
+            raise ValueError('Guiding function must be added to evaluator prior to evaluation')
 
         if self.network.changed:
             self.evaluate()

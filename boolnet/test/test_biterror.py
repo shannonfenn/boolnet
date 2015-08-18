@@ -8,10 +8,9 @@ from boolnet.bintools.biterror import STANDARD_EVALUATORS
 def test_biterror(error_matrix_harness, function):
     Ne = error_matrix_harness['Ne']
     E = error_matrix_harness['packed error matrix']
-    mask = error_matrix_harness['mask']
     No, _ = E.shape
     eval_class, msb = STANDARD_EVALUATORS[function]
-    error_evaluator = eval_class(Ne, No, msb, mask)
+    error_evaluator = eval_class(Ne, No, msb)
 
     actual = error_evaluator.evaluate(E)
     expected = error_matrix_harness[function_name(function)]

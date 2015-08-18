@@ -36,13 +36,12 @@ def construct_test_instance(harness):
     Ep = harness['packed error matrix']
     function = harness['function']
     window_width = harness['window_width']
-    mask = harness['mask']
 
     Ne = harness['Ne']
     No, cols = Ep.shape
 
     eval_class, msb = CHAINED_EVALUATORS[function]
-    error_evaluator = eval_class(Ne, No, window_width, msb, mask)
+    error_evaluator = eval_class(Ne, No, window_width, msb)
 
     expected = harness[function_name(function)]
 

@@ -121,7 +121,6 @@ network_schema_generated = Schema({
 learner_schema = Schema({
     'name':     In(['basic', 'stratified']),
     Optional('kfs'):                bool,
-    Optional('feature_masking'):    bool,
     Optional('one_layer_kfs'): bool
     })
 
