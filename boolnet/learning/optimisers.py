@@ -3,7 +3,7 @@ from math import exp
 from copy import copy
 from itertools import chain, repeat
 from collections import deque
-from boolnet.bintools.metrics import metric_from_name
+from boolnet.bintools.functions import function_from_name
 import sys
 import logging
 
@@ -44,7 +44,7 @@ class SA:
             self.steps_per_temp = parameters['steps_per_temp']
             self.init_temp = parameters['init_temp']
             self.temp_rate = parameters['temp_rate']
-            self.guiding_metric = metric_from_name(parameters['metric'])
+            self.guiding_function = function_from_name(parameters['guiding_function'])
         except KeyError:
             print('Optimiser parameters missing!', sys.stderr)
             raise
@@ -59,7 +59,7 @@ class SA:
         state = evaluator.network
 
         # Calculate initial error
-        error = evaluator.metric_value(self.guiding_metric)
+        error = evaluator.function_value(self.guiding_function)
 
         # Setup aspiration criteria
         best_error = error
@@ -93,7 +93,7 @@ class SA:
             self.move(state, temp)
 
             # calculate error for new state
-            new_error = evaluator.metric_value(self.guiding_metric)
+            new_error = evaluator.function_value(self.guiding_function)
 
             # Keep best state seen
             if new_error < best_error:
@@ -134,7 +134,7 @@ class LAHC:
         try:
             self.cost_list_len = parameters['cost_list_length']
             self.max_iterations = parameters['max_iterations']
-            self.guiding_metric = metric_from_name(parameters['metric'])
+            self.guiding_function = function_from_name(parameters['guiding_function'])
         except KeyError:
             print('Optimiser parameters missing!', sys.stderr)
             raise
@@ -147,7 +147,7 @@ class LAHC:
         state = evaluator.network
 
         # Calculate initial error
-        error = evaluator.metric_value(self.guiding_metric)
+        error = evaluator.function_value(self.guiding_function)
 
         # set up aspiration criteria
         best_error = error
@@ -167,7 +167,7 @@ class LAHC:
             self.move(state, iteration)
 
             # calculate error for new state
-            new_error = evaluator.metric_value(self.guiding_metric)
+            new_error = evaluator.function_value(self.guiding_function)
 
             # Keep best state seen
             if new_error < best_error:
@@ -255,7 +255,7 @@ class LAHC:
 #         try:
 #             self.tabu_period = parameters['tabu_period']
 #             self.max_iterations = parameters['max_iterations']
-#             self.guiding_metric = metric_from_name(parameters['metric'])
+#             self.guiding_function = function_from_name(parameters['guiding_function'])
 #         except KeyError:
 #             print('Optimiser parameters missing!', sys.stderr)
 #             raise
@@ -290,7 +290,7 @@ class LAHC:
 #         self.initialise(parameters, state)
 
 #         # Calculate initial error
-#         error = evaluator.metric_value(state_idx, self.guiding_metric)
+#         error = evaluator.function_value(state_idx, self.guiding_function)
 
 #         # Setup aspiration criteria
 #         best_error = error
@@ -315,7 +315,7 @@ class LAHC:
 #             move = self.move(state)
 
 #             # calculate error for new state
-#             new_error = evaluator.metric_value(state_idx, self.guiding_metric)
+#             new_error = evaluator.function_value(state_idx, self.guiding_function)
 
 #             # Keep best state seen
 #             if new_error < best_error:
@@ -353,7 +353,7 @@ class LAHC:
 #         steps_per_t     = parameters['steps per temp']
 #         init_t          = parameters['init temp']
 #         rate            = parameters['temp rate']
-#         guiding_metric  = metric_from_name(parameters['metric'])
+#         guiding_function  = function_from_name(parameters['guiding_function'])
 #     except KeyError:
 #         print('Optimiser parameters missing!', sys.stderr)
 #         raise
@@ -369,7 +369,7 @@ class LAHC:
 #     # NOTPRINTED = [True]*state.No()
 
 #     # Calculate initial error
-#     best_error = error = state.error(guiding_metric)
+#     best_error = error = state.error(guiding_function)
 
 #     if log_errors:
 #         best_error_for_temp = error
@@ -397,13 +397,13 @@ class LAHC:
 #         if gate_adding_on and iteration % gate_add_delay == 0:
 #             state.addGates(1)
 #             # Ensure adding gates hasn't changed the error
-#             assert state.error(guiding_metric) == error
+#             assert state.error(guiding_function) == error
 
 #         # perform random move
 #         state.moveToNeighbour(state.randomMove())
 
 #         # calculate error for new state
-#         new_error = state.error(guiding_metric)
+#         new_error = state.error(guiding_function)
 
 #         # REMOVE LATER - THIS SIMPLY PRINTS OUT THE TABLE OF ALL GATE OUTPUTS ONCE THE OPTIMISER
 #         #                HITS 0 ERROR ON EACH BIT

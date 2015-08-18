@@ -30,7 +30,7 @@ sampling:
 #   temp_rate:      0.98
 
 optimiser:
-  metric: e6L
+  guiding_function: e6L
 
 configurations:
   - seed: 3648

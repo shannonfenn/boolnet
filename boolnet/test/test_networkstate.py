@@ -11,7 +11,7 @@ import pyximport
 pyximport.install()
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix, generate_end_mask
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
-from boolnet.bintools.metrics import metric_name, all_metrics
+from boolnet.bintools.functions import function_name, all_functions
 from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
 from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
@@ -459,9 +459,9 @@ class TestBoth:
             )
 
     # ################### Exception Testing ################### #
-    def test_metric_not_added(self, chained_state, metric, sample_type):
+    def test_function_not_added(self, chained_state, function, sample_type):
         with raises(ValueError):
-            chained_state['evaluator'][sample_type].metric_value(metric)
+            chained_state['evaluator'][sample_type].function_value(function)
 
     # ################### Functionality Testing ################### #
     def test_from_operator_combined_attributes(self, state_params, evaluator_type, sample_type):
@@ -475,39 +475,39 @@ class TestBoth:
         assert state.zero_mask == generate_end_mask(Ne)
         # assert state.Ne == state_params['Ne'][sample_type]
 
-    def test_from_operator_metric_value(self, state_params, evaluator_type, metric, sample_type):
-        expected = state_params['metric value'][sample_type][metric_name(metric)]
+    def test_from_operator_func_value(self, state_params, evaluator_type, function, sample_type):
+        expected = state_params['function value'][sample_type][function_name(function)]
         evaluator = self.build_from_params(state_params, evaluator_type, sample_type)
-        evaluator.add_metric(metric)
-        actual = evaluator.metric_value(metric)
+        evaluator.add_function(function)
+        actual = evaluator.function_value(function)
         assert_array_almost_equal(expected, actual)
 
-    def test_metric_value(self, state, metric, sample_type):
+    def test_function_value(self, state, function, sample_type):
         evaluator = state['evaluator'][sample_type]
-        expected = state['metric value'][sample_type][metric_name(metric)]
-        evaluator.add_metric(metric)
-        actual = evaluator.metric_value(metric)
+        expected = state['function value'][sample_type][function_name(function)]
+        evaluator.add_function(function)
+        actual = evaluator.function_value(function)
         assert_array_almost_equal(expected, actual)
 
-    def test_multiple_metric_values_pre(self, state, sample_type):
+    def test_multiple_function_values_pre(self, state, sample_type):
         evaluator = state['evaluator'][sample_type]
-        for metric in all_metrics():
-            evaluator.add_metric(metric)
-        for metric in all_metrics():
-            expected = state['metric value'][sample_type][metric_name(metric)]
-            actual = evaluator.metric_value(metric)
+        for function in all_functions():
+            evaluator.add_function(function)
+        for function in all_functions():
+            expected = state['function value'][sample_type][function_name(function)]
+            actual = evaluator.function_value(function)
             assert_array_almost_equal(expected, actual)
 
-    def test_multiple_metric_values_post(self, state, sample_type):
+    def test_multiple_function_values_post(self, state, sample_type):
         evaluator = state['evaluator'][sample_type]
-        for metric in all_metrics():
-            evaluator.add_metric(metric)
-        for metric in all_metrics():
-            expected = state['metric value'][sample_type][metric_name(metric)]
-            actual = evaluator.metric_value(metric)
+        for function in all_functions():
+            evaluator.add_function(function)
+        for function in all_functions():
+            expected = state['function value'][sample_type][function_name(function)]
+            actual = evaluator.function_value(function)
             assert_array_almost_equal(expected, actual)
 
-    def test_network_changes_reflected(self, state, sample_type, metric):
+    def test_network_changes_reflected(self, state, sample_type):
         evaluator = state['evaluator'][sample_type]
         network = evaluator.network
         network.move_to_random_neighbour()

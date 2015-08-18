@@ -12,7 +12,7 @@ sys.path.append(os.path.expanduser('~/HMRI/code/python/'))
 import pyximport
 pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
 
-from BoolNet.metric_names import all_metrics, metric_name, metric_value
+from BoolNet.function_names import all_functions, function_name, function_value
 
 from BoolNet.Packing import pack_bool_matrix, packed_type, generate_end_mask
 
@@ -30,7 +30,7 @@ from BoolNet.Packing import pack_bool_matrix, packed_type, generate_end_mask
 def eval_metric(params, metric):
     # force reevaluation
     E, E_scratch, Ne, end_mask = params
-    return metric_value(E, E_scratch, Ne, end_mask, metric)
+    return function_value(E, E_scratch, Ne, end_mask, metric)
 
 
 def tests(metrics, param_sets, repeats):
@@ -38,7 +38,7 @@ def tests(metrics, param_sets, repeats):
 
     for name, params in param_sets.items():
         for metric in metrics:
-            tests[name + ' - ' + metric_name(metric)] = (
+            tests[name + ' - ' + function_name(metric)] = (
                 'eval_metric(params, {})'.format(metric.raw_str()),
                 'from __main__ import eval_metric, params, {}'.format(metric.raw_str()),
                 repeats)
@@ -64,7 +64,7 @@ if __name__ == '__main__':
     with open('matrix_large.json') as f:
         param_sets['large'] = make_params(f)
 
-    tests = tests(list(all_metrics()), param_sets, 100)
+    tests = tests(list(all_functions()), param_sets, 100)
 
     bar = Bar('Analysing', max=len(tests))
 

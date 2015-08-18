@@ -3,12 +3,12 @@ import numpy as np
 from good import Schema, Required, In, All, Any, Range, Type, IsDir
 from good import message, Allow, Optional
 
-from boolnet.bintools.metrics import all_metric_names
+from boolnet.bintools.functions import all_function_names
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
 from boolnet.learning.learn_boolnet import OPTIMISERS
 
 
-metrics = all_metric_names()
+guiding_functions = all_function_names()
 
 
 @message('2D array expected')
@@ -33,7 +33,7 @@ def is_int_arr(v):
 
 SA_schema = Schema({
     'name':           'SA',
-    'metric':         In(metrics),
+    'guiding_function':         In(guiding_functions),
     'num_temps':      All(int, Range(min=1)),
     'init_temp':      Range(min=0.0),
     'temp_rate':      Range(min=0.0, max=1.0),
@@ -42,7 +42,7 @@ SA_schema = Schema({
 
 SA_VN_schema = Schema({
     'name':             'SA-VN',
-    'metric':           In(metrics),
+    'guiding_function':           In(guiding_functions),
     'num_temps':        All(int, Range(min=1)),
     'init_temp':        Range(min=0.0),
     'temp_rate':        Range(min=0.0, max=1.0),
@@ -52,14 +52,14 @@ SA_VN_schema = Schema({
 
 LAHC_schema = Schema({
     'name':             'LAHC',
-    'metric':           In(metrics),
+    'guiding_function':           In(guiding_functions),
     'cost_list_length': All(int, Range(min=1)),
     'max_iterations':   All(int, Range(min=1))
     }, default_keys=Required)
 
 LAHC_VN_schema = Schema({
     'name':             'LAHC-VN',
-    'metric':           In(metrics),
+    'guiding_function':           In(guiding_functions),
     'cost_list_length': All(int, Range(min=1)),
     'max_iterations':   All(int, Range(min=1)),
     'init_move_count':  All(int, Range(min=1))
@@ -67,7 +67,7 @@ LAHC_VN_schema = Schema({
 
 TS_schema = Schema({
     'name':             'TS',
-    'metric':           In(metrics),
+    'guiding_function':           In(guiding_functions),
     'tabu_period':      All(int, Range(min=1)),
     'max_iterations':   All(int, Range(min=1))
     }, default_keys=Required)

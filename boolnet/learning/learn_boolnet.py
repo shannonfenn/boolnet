@@ -3,7 +3,7 @@ import random
 import pyximport
 pyximport.install()
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
-from boolnet.bintools.metrics import E1, ACCURACY, PER_OUTPUT, metric_from_name
+from boolnet.bintools.functions import E1, ACCURACY, PER_OUTPUT, function_from_name
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
 from boolnet.learning.learners import basic_learn, stratified_learn
 from boolnet.learning.optimisers import SA, LAHC
@@ -56,16 +56,16 @@ def build_training_evaluator(network, mapping):
                                       operator=mapping.operator, N=mapping.N)
 
 
-def build_test_evaluator(network, mapping, parameters, metrics):
+def build_test_evaluator(network, mapping, parameters, guiding_functions):
     if isinstance(mapping, FileBoolMapping):
         evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, OperatorBoolMapping):
         evaluator = chained_from_operator(
             network=network, indices=mapping.indices, Nb=mapping.Nb, No=mapping.No,
             operator=mapping.operator, window_size=mapping.window_size, N=mapping.N)
-        # pre-add metrics to avoid redundant network evaluations
-        for metric in metrics:
-            evaluator.add_metric(metric)
+        # pre-add functions to avoid redundant network evaluations
+        for func in guiding_functions:
+            evaluator.add_function(func)
     return evaluator
 
 
@@ -85,7 +85,7 @@ def learn_bool_net(parameters):
     learner_name = parameters['learner']['name']
     if parameters['learner'].get('kfs', False):
         learner_name += ' kfs'
-    guiding_metric = metric_from_name(parameters['optimiser']['metric'])
+    guiding_function = function_from_name(parameters['optimiser']['guiding_function'])
 
     training_data = parameters['training_mapping']
     test_data = parameters['test_mapping']
@@ -138,10 +138,10 @@ def learn_bool_net(parameters):
 
     learning_time = time.monotonic()
 
-    training_evaluator.clear_all_metric_masks()
+    training_evaluator.clear_all_function_masks()
     training_evaluator.set_network(final_network)
     test_evaluator = build_test_evaluator(final_network, test_data, parameters,
-                                          [guiding_metric, E1, ACCURACY, PER_OUTPUT])
+                                          [guiding_function, E1, ACCURACY, PER_OUTPUT])
 
     results = {
         'Ni':                       Ni,
@@ -154,12 +154,12 @@ def learn_bool_net(parameters):
         # 'Final Network':            network_trg,
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
-        'training_error_guiding':   training_evaluator.metric_value(guiding_metric),
-        'training_error_simple':    training_evaluator.metric_value(E1),
-        'training_accuracy':        training_evaluator.metric_value(ACCURACY),
-        'test_error_guiding':       test_evaluator.metric_value(guiding_metric),
-        'test_error_simple':        test_evaluator.metric_value(E1),
-        'test_accuracy':            test_evaluator.metric_value(ACCURACY),
+        'training_error_guiding':   training_evaluator.function_value(guiding_function),
+        'training_error_simple':    training_evaluator.function_value(E1),
+        'training_accuracy':        training_evaluator.function_value(ACCURACY),
+        'test_error_guiding':       test_evaluator.function_value(guiding_function),
+        'test_error_simple':        test_evaluator.function_value(E1),
+        'test_accuracy':            test_evaluator.function_value(ACCURACY),
         'final_network':            np.array(final_network.gates),
         'Ne':                       training_evaluator.Ne,
         }
@@ -168,10 +168,10 @@ def learn_bool_net(parameters):
         for bit, v in enumerate(learner_result.feature_sets):
             key = 'feature_set_target_{}'.format(bit)
             results[key] = v
-    for bit, v in enumerate(training_evaluator.metric_value(PER_OUTPUT)):
+    for bit, v in enumerate(training_evaluator.function_value(PER_OUTPUT)):
         key = 'training_error_target_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_evaluator.metric_value(PER_OUTPUT)):
+    for bit, v in enumerate(test_evaluator.function_value(PER_OUTPUT)):
         key = 'test_error_target_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):

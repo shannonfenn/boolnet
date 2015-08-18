@@ -14,7 +14,7 @@ pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
 
 from BoolNet.NetworkEvaluator import NetworkEvaluator
 from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
-from BoolNet.metric_names import all_metrics, metric_name, Metric
+from BoolNet.function_names import all_functions, function_name, Metric
 from BoolNet.BooleanNetwork import BooleanNetwork
 from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
 from BoolNet.Packing import pack_bool_matrix
@@ -36,9 +36,9 @@ def error_per_output(evaluator, index):
     return evaluator.error_per_output(index)
 
 
-def metric_value(evaluator, index, metric):
+def function_value(evaluator, index, metric):
     # net.force_reevaluation()
-    return evaluator.metric_value(index, metric)
+    return evaluator.function_value(index, metric)
 
 
 def truth_table(evaluator, index):
@@ -62,7 +62,7 @@ def evaluate(evaluator, index):
 
 def move_evaluate(net, evaluator, index, metric):
     net.move_to_neighbour(net.random_move())
-    return evaluator.metric_value(index, metric)
+    return evaluator.function_value(index, metric)
 
 
 def tests(metrics, repeats):
@@ -93,23 +93,23 @@ def tests(metrics, repeats):
     }
 
     for metric in metrics:
-        tests[metric_name(metric) + ' (nand)'] = (
-            'metric_value(evaluator, 0, {})'.format(metric.raw_str()),
-            'from __main__ import metric_value, {}, evaluator'.format(metric.raw_str()),
+        tests[function_name(metric) + ' (nand)'] = (
+            'function_value(evaluator, 0, {})'.format(metric.raw_str()),
+            'from __main__ import function_value, {}, evaluator'.format(metric.raw_str()),
             repeats)
-        tests[metric_name(metric) + ' (random)'] = (
-            'metric_value(evaluator, 1, {})'.format(metric.raw_str()),
-            'from __main__ import metric_value, {}, evaluator'.format(metric.raw_str()),
+        tests[function_name(metric) + ' (random)'] = (
+            'function_value(evaluator, 1, {})'.format(metric.raw_str()),
+            'from __main__ import function_value, {}, evaluator'.format(metric.raw_str()),
             repeats)
 
     for metric in [Metric.E1, Metric.E6_LSB]:
-        tests['move then eval {} (nand)'.format(metric_name(metric))] = (
-            'metric_value(evaluator, 0, {})'.format(metric.raw_str()),
-            'from __main__ import metric_value, {}, evaluator'.format(metric.raw_str()),
+        tests['move then eval {} (nand)'.format(function_name(metric))] = (
+            'function_value(evaluator, 0, {})'.format(metric.raw_str()),
+            'from __main__ import function_value, {}, evaluator'.format(metric.raw_str()),
             repeats)
-        tests['move then eval {} (random)'.format(metric_name(metric))] = (
-            'metric_value(evaluator, 1, {})'.format(metric.raw_str()),
-            'from __main__ import metric_value, {}, evaluator'.format(metric.raw_str()),
+        tests['move then eval {} (random)'.format(function_name(metric))] = (
+            'function_value(evaluator, 1, {})'.format(metric.raw_str()),
+            'from __main__ import function_value, {}, evaluator'.format(metric.raw_str()),
             repeats)
 
     return tests
@@ -126,10 +126,10 @@ if __name__ == '__main__':
         metrics = IMPLEMENTED_METRICS
     elif args.evaluator == 'cy':
         evaluator_class = NetworkEvaluatorCython
-        metrics = list(all_metrics())
+        metrics = list(all_functions())
     else:
         evaluator_class = NetworkEvaluator
-        metrics = list(all_metrics())
+        metrics = list(all_functions())
 
     tests = tests(metrics, 100)
 

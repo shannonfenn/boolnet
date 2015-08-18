@@ -6,7 +6,7 @@ import logging
 import pyximport
 import numpy as np
 pyximport.install()
-from boolnet.bintools.metrics import PER_OUTPUT, metric_from_name
+from boolnet.bintools.functions import PER_OUTPUT, function_from_name
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
 
@@ -16,7 +16,7 @@ Result = namedtuple('Result', [
 
 
 def per_target_error_end_condition(bit):
-    return lambda ev, _: ev.metric_value(PER_OUTPUT)[bit] <= 0
+    return lambda ev, _: ev.function_value(PER_OUTPUT)[bit] <= 0
 
 
 def guiding_error_end_condition():
@@ -32,13 +32,13 @@ def strata_boundaries(network):
 
 
 def check_parameters(parameters):
-    problem_metrics = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
+    problem_funcs = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
 
-    metric_name = parameters['optimiser']['metric']
-    if metric_name in problem_metrics and not parameters['learner']['feature_masking']:
-        logging.error(('use of %s metric without feature masking may result in poor performance '
-                       'due to non-zero errors in earlier bits. Try setting \"feature_masking\" '
-                       'flag in \"learners\" configuration.'), metric_name)
+    function_name = parameters['optimiser']['function']
+    if function_name in problem_funcs and not parameters['learner']['feature_masking']:
+        logging.error(('use of %s guiding function without feature masking may result in poor '
+                       'performance due to non-zero errors in earlier bits. Try setting '
+                       '\"feature_masking\" flag in \"learners\" configuration.'), function_name)
         print('WARNING POTENTIALLY ERROR PRONE METRIC FOR KFS!', file=sys.stderr)
 
 
@@ -181,8 +181,8 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
 
     if use_feature_masking:
         mask = np.array([0] * target + [1] * (num_targets - target), dtype=np.uint8)
-        metric = metric_from_name(parameters['optimiser']['metric'])
-        evaluator.set_metric_mask(metric, mask)
+        guiding_function = function_from_name(parameters['optimiser']['function'])
+        evaluator.set_function_mask(guiding_function, mask)
 
     return False
 
@@ -222,9 +222,9 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
             best_iterations[target] = best_it
             final_iterations[target] = final_it
 
-            # logging.info('Error per output (sample): %s', evaluator.metric_value(PER_OUTPUT))
+            # logging.info('Error per output (sample): %s', evaluator.function_value(PER_OUTPUT))
 
-    # TODO: should this return the best state out of the states according to the guiding metric?
+    # TODO: should this return the best state out of the states according to the guiding function?
     if fs_results:
         return Result(best_states, best_iterations, final_iterations, fs_results)
     else:
@@ -232,7 +232,7 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
 
 
 def basic_learn(evaluator, parameters, optimiser):
-    ''' This just learns by using the given optimiser and guiding metric.'''
+    ''' This just learns by using the given optimiser and guiding function.'''
     opt_params = parameters['optimiser']
     end_condition = guiding_error_end_condition()
 

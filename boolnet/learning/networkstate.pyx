@@ -6,7 +6,7 @@ cimport numpy as np
 from copy import copy
 
 from boolnet.network.boolnetwork import BoolNetwork
-from boolnet.bintools.metrics cimport Metric
+from boolnet.bintools.functions cimport Metric
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 from boolnet.bintools.biterror cimport StandardEvaluator
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
@@ -45,7 +45,6 @@ cpdef chained_from_operator(network, indices, Nb, No, operator, window_size, N=0
 cdef class NetworkState:
     cdef:
         readonly size_t Ne, Ni, No, Ng, cols
-        readonly metric
         packed_type_t[:, :] activation, inputs, outputs, target, error
         readonly packed_type_t zero_mask
         public object network
@@ -91,22 +90,22 @@ cdef class NetworkState:
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
-    cpdef add_metric(self, Metric metric, np.uint8_t[:] mask=None):
+    cpdef add_function(self, Metric function, np.uint8_t[:] mask=None):
         if mask is None:
             mask = np.ones(self.No, dtype=np.uint8)
 
         # overwrite the existing evaluator in case the mask has changed
-        if (metric not in self.masks or not np.array_equal(self.masks[metric], mask)):
-            self.set_metric_mask(metric, mask)
+        if (function not in self.masks or not np.array_equal(self.masks[function], mask)):
+            self.set_function_mask(function, mask)
 
-    def clear_all_metric_masks(self):
-        for metric in self.masks:
-            self.set_metric_mask(metric, np.ones(self.No, dtype=np.uint8))
+    def clear_all_function_masks(self):
+        for function in self.masks:
+            self.set_function_mask(function, np.ones(self.No, dtype=np.uint8))
 
-    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
+    cpdef set_function_mask(self, Metric function, np.uint8_t[:] mask):
         pass
 
-    cpdef metric_value(self, Metric metric):
+    cpdef function_value(self, Metric function):
         pass
 
     cdef void _evaluate_random(self):
@@ -232,18 +231,18 @@ cdef class StandardNetworkState(NetworkState):
             self.evaluate()
             return self.error
 
-    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
-        self.masks[metric] = mask
-        eval_class, msb = STANDARD_EVALUATORS[metric]
-        self.err_evaluators[metric] = eval_class(self.Ne, self.No, msb, mask)
+    cpdef set_function_mask(self, Metric function, np.uint8_t[:] mask):
+        self.masks[function] = mask
+        eval_class, msb = STANDARD_EVALUATORS[function]
+        self.err_evaluators[function] = eval_class(self.Ne, self.No, msb, mask)
         self.network.changed = True
 
-    cpdef metric_value(self, Metric metric):
-        if metric not in self.masks:
-            self.add_metric(metric)
+    cpdef function_value(self, Metric function):
+        if function not in self.masks:
+            self.add_function(function)
         if self.network.changed:
             self.evaluate()
-        return self.err_evaluators[metric].evaluate(self.error)
+        return self.err_evaluators[function].evaluate(self.error)
 
     cpdef evaluate(self):
         ''' Evaluate the activation and error matrices if the
@@ -291,7 +290,7 @@ cdef class ChainedNetworkState(NetworkState):
     cdef:
         PackedExampleGenerator example_generator
         size_t blocks, zero_mask_cols
-        dict metric_value_cache
+        dict function_value_cache
         bint evaluated
 
     def __init__(self, network, PackedExampleGenerator example_generator, size_t window_size):
@@ -316,21 +315,21 @@ cdef class ChainedNetworkState(NetworkState):
         else:
             self.zero_mask_cols = 1
         self.example_generator = example_generator
-        self.metric_value_cache = dict()
+        self.function_value_cache = dict()
 
-    cpdef set_metric_mask(self, Metric metric, np.uint8_t[:] mask):
-        self.masks[metric] = mask
-        eval_class, msb = CHAINED_EVALUATORS[metric]
-        self.err_evaluators[metric] = eval_class(self.Ne, self.No, self.cols, msb, mask)
+    cpdef set_function_mask(self, Metric function, np.uint8_t[:] mask):
+        self.masks[function] = mask
+        eval_class, msb = CHAINED_EVALUATORS[function]
+        self.err_evaluators[function] = eval_class(self.Ne, self.No, self.cols, msb, mask)
         self.network.changed = True
 
-    cpdef metric_value(self, Metric metric):
-        if metric not in self.masks:
+    cpdef function_value(self, Metric function):
+        if function not in self.masks:
             raise ValueError('Metric not added to evaluator prior to evaluation')
 
         if self.network.changed:
             self.evaluate()
-        return self.metric_value_cache[metric]
+        return self.function_value_cache[function]
 
     cdef evaluate(self):
         cdef:
@@ -356,7 +355,7 @@ cdef class ChainedNetworkState(NetworkState):
 
         self._apply_zero_mask(self.error)
         for m in evaluators:
-            self.metric_value_cache[m] = evaluators[m].final_evaluation(self.error)
+            self.function_value_cache[m] = evaluators[m].final_evaluation(self.error)
         self.network.changed = False
 
     cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):

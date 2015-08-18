@@ -1,32 +1,32 @@
 import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_almost_equal as assert_array_almost_equal
-from boolnet.bintools.metrics import metric_name
+from boolnet.bintools.functions import function_name
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.packing import packed_type
 
 
 @fixture
-def single_column(error_matrix_harness, metric):
-    error_matrix_harness['metric'] = metric
+def single_column(error_matrix_harness, function):
+    error_matrix_harness['function'] = function
     window_width = 1
     error_matrix_harness['window_width'] = window_width
     return construct_test_instance(error_matrix_harness)
 
 
 @fixture
-def full_width(error_matrix_harness, metric):
+def full_width(error_matrix_harness, function):
     Ep = error_matrix_harness['packed error matrix']
-    error_matrix_harness['metric'] = metric
+    error_matrix_harness['function'] = function
     window_width = Ep.shape[1]
     error_matrix_harness['window_width'] = window_width
     return construct_test_instance(error_matrix_harness)
 
 
 @fixture
-def random_width(error_matrix_harness, metric):
+def random_width(error_matrix_harness, function):
     Ep = error_matrix_harness['packed error matrix']
-    error_matrix_harness['metric'] = metric
+    error_matrix_harness['function'] = function
     window_width = max(int(np.random.random(1) * Ep.shape[1]), 1)
     error_matrix_harness['window_width'] = window_width
     return construct_test_instance(error_matrix_harness)
@@ -34,19 +34,19 @@ def random_width(error_matrix_harness, metric):
 
 def construct_test_instance(harness):
     Ep = harness['packed error matrix']
-    metric = harness['metric']
+    function = harness['function']
     window_width = harness['window_width']
     mask = harness['mask']
 
     Ne = harness['Ne']
     No, cols = Ep.shape
 
-    eval_class, msb = CHAINED_EVALUATORS[metric]
+    eval_class, msb = CHAINED_EVALUATORS[function]
     error_evaluator = eval_class(Ne, No, window_width, msb, mask)
 
-    expected = harness[metric_name(metric)]
+    expected = harness[function_name(function)]
 
-    print(metric_name(metric))
+    print(function_name(function))
 
     return (window_width, Ep, error_evaluator, expected)
 
@@ -75,7 +75,7 @@ def eval_chained(window_width, E, error_evaluator):
 
 
 def test_single_column_eval(single_column):
-    ''' Test the chained evaluator gives correct metric values
+    ''' Test the chained evaluator gives correct function values
         for varying window widths.'''
     window_width, E, error_evaluator, expected = single_column
 
@@ -84,7 +84,7 @@ def test_single_column_eval(single_column):
 
 
 def test_full_width_eval(full_width):
-    ''' Test the chained evaluator gives correct metric values
+    ''' Test the chained evaluator gives correct function values
         for varying window widths.'''
     window_width, E, error_evaluator, expected = full_width
 
@@ -93,7 +93,7 @@ def test_full_width_eval(full_width):
 
 
 def test_eval(random_width):
-    ''' Test the chained evaluator gives correct metric values
+    ''' Test the chained evaluator gives correct function values
         for varying window widths.'''
     window_width, E, error_evaluator, expected = random_width
 
@@ -102,7 +102,7 @@ def test_eval(random_width):
 
 
 def test_reset(random_width):
-    ''' Test the chained evaluator gives correct metric values
+    ''' Test the chained evaluator gives correct function values
         after being evaluated and reset.'''
     window_width, E, error_evaluator, expected = random_width
 

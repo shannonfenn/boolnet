@@ -47,21 +47,21 @@ ACCURACY = Metric.ACCURACY
 PER_OUTPUT = Metric.PER_OUTPUT
 
 
-def all_metrics():
+def all_functions():
     for m in Metric:
         yield m
 
 
-def all_metric_names():
+def all_function_names():
     for m in Metric:
         yield str(m)
 
 
-def metric_from_name(name):
+def function_from_name(name):
     return Metric[name.upper()]
 
 
-def metric_name(metric):
+def function_name(metric):
     return str(metric)
 
 
@@ -76,7 +76,7 @@ def flood_count_lsb(error_matrix, No):
 
 # Many of the calculations in this method rely on error_matrix
 # only being comprised of 1s and 0s
-def metric_value(error_matrix, metric):
+def function_value(error_matrix, metric):
     error = 0.0
     # for weighted and hierarchical methods
     Ne, No = error_matrix.shape

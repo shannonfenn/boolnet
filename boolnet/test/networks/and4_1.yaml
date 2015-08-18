@@ -70,7 +70,7 @@ error matrix:
         - [0]
         - [0]
         - [0]
-metric value:
+function value:
     sample:
         e1: 0.0
         e2M: 0.0

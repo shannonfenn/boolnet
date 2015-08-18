@@ -7,7 +7,7 @@ from pytest import fixture
 from boolnet.bintools.packing import unpack_bool_matrix
 import pyximport
 pyximport.install()
-from boolnet.bintools.metrics import all_metrics
+from boolnet.bintools.functions import all_functions
 
 
 ERROR_MATRIX_FILES = glob.glob('boolnet/test/error matrices/*.yaml')
@@ -20,8 +20,8 @@ def test_location():
 
 
 # #################### Fixtures ############################ #
-@fixture(params=all_metrics())
-def metric(request):
+@fixture(params=all_functions())
+def function(request):
     return request.param
 
 

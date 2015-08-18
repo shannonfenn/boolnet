@@ -28,7 +28,7 @@ error matrix:
         - [1]
         - [1]
         - [0]
-metric value:
+function value:
     sample:
         e1:         1.0
         e2M:        1.0
