@@ -6,7 +6,7 @@ import logging
 import pyximport
 import numpy as np
 pyximport.install()
-from boolnet.bintools.functions import PER_OUTPUT
+from boolnet.bintools.functions import PER_OUTPUT, function_from_name
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
 
@@ -183,6 +183,9 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
 def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=False):
     network = evaluator.network
     num_targets = network.No
+    opt_params = copy(parameters['optimiser'])
+    guiding_func_id = function_from_name(opt_params['guiding_function'])
+    guiding_func = lambda evaluator: evaluator.function_value(guiding_func_id)
 
     check_parameters(parameters)
 
@@ -205,8 +208,14 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
             # generate an end condition based on the current target
             end_condition = per_target_error_end_condition(target)
 
+            # build new guiding function for only next target if required
+            if guiding_func_id == PER_OUTPUT:
+                guiding_func = lambda evaluator: evaluator.function_value(guiding_func_id)[target]
+
+            opt_params['guiding_function'] = guiding_func
+
             # run the optimiser
-            results = optimiser.run(evaluator, parameters['optimiser'], end_condition)
+            results = optimiser.run(evaluator, opt_params, end_condition)
             # unpack results
             optimised_network, best_it, final_it = results
 
@@ -226,8 +235,11 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
 
 def basic_learn(evaluator, parameters, optimiser):
     ''' This just learns by using the given optimiser and guiding function.'''
-    opt_params = parameters['optimiser']
+    opt_params = copy(parameters['optimiser'])
     end_condition = guiding_error_end_condition()
+
+    guiding_func_id = function_from_name(opt_params['guiding_function'])
+    opt_params['guiding_function'] = lambda evaluator: evaluator.function_value(guiding_func_id)
 
     results = optimiser.run(evaluator, opt_params, end_condition)
     best_state, best_it, final_it = results
