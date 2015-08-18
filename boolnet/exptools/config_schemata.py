@@ -32,17 +32,17 @@ def is_int_arr(v):
     return v
 
 SA_schema = Schema({
-    'name':           'SA',
-    'guiding_function':         In(guiding_functions),
-    'num_temps':      All(int, Range(min=1)),
-    'init_temp':      Range(min=0.0),
-    'temp_rate':      Range(min=0.0, max=1.0),
-    'steps_per_temp': All(int, Range(min=1))
+    'name':             'SA',
+    'guiding_function': In(guiding_functions),
+    'num_temps':        All(int, Range(min=1)),
+    'init_temp':        Range(min=0.0),
+    'temp_rate':        Range(min=0.0, max=1.0),
+    'steps_per_temp':   All(int, Range(min=1))
     }, default_keys=Required)
 
 SA_VN_schema = Schema({
     'name':             'SA-VN',
-    'guiding_function':           In(guiding_functions),
+    'guiding_function': In(guiding_functions),
     'num_temps':        All(int, Range(min=1)),
     'init_temp':        Range(min=0.0),
     'temp_rate':        Range(min=0.0, max=1.0),
@@ -52,14 +52,14 @@ SA_VN_schema = Schema({
 
 LAHC_schema = Schema({
     'name':             'LAHC',
-    'guiding_function':           In(guiding_functions),
+    'guiding_function': In(guiding_functions),
     'cost_list_length': All(int, Range(min=1)),
     'max_iterations':   All(int, Range(min=1))
     }, default_keys=Required)
 
 LAHC_VN_schema = Schema({
     'name':             'LAHC-VN',
-    'guiding_function':           In(guiding_functions),
+    'guiding_function': In(guiding_functions),
     'cost_list_length': All(int, Range(min=1)),
     'max_iterations':   All(int, Range(min=1)),
     'init_move_count':  All(int, Range(min=1))
@@ -67,7 +67,7 @@ LAHC_VN_schema = Schema({
 
 TS_schema = Schema({
     'name':             'TS',
-    'guiding_function':           In(guiding_functions),
+    'guiding_function': In(guiding_functions),
     'tabu_period':      All(int, Range(min=1)),
     'max_iterations':   All(int, Range(min=1))
     }, default_keys=Required)
@@ -119,9 +119,9 @@ network_schema_generated = Schema({
 
 
 learner_schema = Schema({
-    'name':     In(['basic', 'stratified']),
-    Optional('kfs'):                bool,
-    Optional('one_layer_kfs'): bool
+    'name':                     In(['basic', 'stratified']),
+    Optional('kfs'):            bool,
+    Optional('one_layer_kfs'):  bool
     })
 
 network_schema = Schema(Any(network_schema_given,
@@ -141,5 +141,5 @@ config_schema = Schema({
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
-    Optional('fabcpp_options'):    list,
+    Optional('fabcpp_options'): list,
     }, default_keys=Required)
