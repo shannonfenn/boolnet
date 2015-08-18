@@ -17,9 +17,6 @@ import sys
 OPTIMISERS = {
     'SA': SA(),
     'LAHC': LAHC(),
-    # 'TS': TabuSearch(),
-    # 'SA-VN': SA_VN(),
-    # 'LAHC-VN': LAHC_VN()
     }
 
 
@@ -147,16 +144,15 @@ def learn_bool_net(parameters):
         'No':                       No,
         'Ng':                       Ng,
         'learner':                  learner_name,
-        'configuration_number':      parameters['configuration_number'],
+        'configuration_number':     parameters['configuration_number'],
         'training_set_number':      parameters['training_set_number'],
         'transfer_functions':       parameters['network']['node_funcs'],
-        # 'Final Network':            network_trg,
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
-        'training_error_guiding':   training_evaluator.function_value(guiding_function),
+        # 'training_error_guiding':   training_evaluator.function_value(guiding_function),
         'training_error_simple':    training_evaluator.function_value(E1),
         'training_accuracy':        training_evaluator.function_value(ACCURACY),
-        'test_error_guiding':       test_evaluator.function_value(guiding_function),
+        # 'test_error_guiding':       test_evaluator.function_value(guiding_function),
         'test_error_simple':        test_evaluator.function_value(E1),
         'test_accuracy':            test_evaluator.function_value(ACCURACY),
         'final_network':            np.array(final_network.gates),

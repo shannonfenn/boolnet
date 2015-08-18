@@ -36,18 +36,19 @@ SA_schema = Schema({
     'num_temps':        All(int, Range(min=1)),
     'init_temp':        Range(min=0.0),
     'temp_rate':        Range(min=0.0, max=1.0),
-    'steps_per_temp':   All(int, Range(min=1))
+    'steps_per_temp':   All(int, Range(min=1)),
+    'guiding_function': In(guiding_functions)
     }, default_keys=Required)
 
 LAHC_schema = Schema({
     'name':             'LAHC',
     'cost_list_length': All(int, Range(min=1)),
-    'max_iterations':   All(int, Range(min=1))
+    'max_iterations':   All(int, Range(min=1)),
+    'guiding_function': In(guiding_functions)
     }, default_keys=Required)
 
 optimiser_base_schema = Schema({
-    'name':     In(OPTIMISERS.keys()),
-    'guiding_function': In(guiding_functions)
+    'name':             In(OPTIMISERS.keys())
     }, extra_keys=Allow)
 
 optimiser_schema = Schema(
