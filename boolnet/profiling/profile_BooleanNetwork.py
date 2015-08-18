@@ -14,7 +14,7 @@ pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
 
 from BoolNet.NetworkEvaluator import NetworkEvaluator
 from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
-from BoolNet.function_names import all_functions, function_name, Metric
+from BoolNet.function_names import all_functions, function_name, Function
 from BoolNet.BooleanNetwork import BooleanNetwork
 from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
 from BoolNet.Packing import pack_bool_matrix
@@ -102,7 +102,7 @@ def tests(metrics, repeats):
             'from __main__ import function_value, {}, evaluator'.format(metric.raw_str()),
             repeats)
 
-    for metric in [Metric.E1, Metric.E6_LSB]:
+    for metric in [Function.E1, Function.E6_LSB]:
         tests['move then eval {} (nand)'.format(function_name(metric))] = (
             'function_value(evaluator, 0, {})'.format(metric.raw_str()),
             'from __main__ import function_value, {}, evaluator'.format(metric.raw_str()),

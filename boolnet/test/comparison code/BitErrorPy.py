@@ -3,7 +3,7 @@ from enum import Enum, unique
 
 
 @unique
-class Metric(Enum):
+class Function(Enum):
     E1 = 1,         # simple
     E2M = 2,     # weighted
     E2L = 3,
@@ -30,35 +30,35 @@ class Metric(Enum):
     def raw_str(self):
         return self.name
 
-E1 = Metric.E1
-E2M = Metric.E2M
-E2L = Metric.E2L
-E3M = Metric.E3M
-E3L = Metric.E3L
-E4M = Metric.E4M
-E4L = Metric.E4L
-E5M = Metric.E5M
-E5L = Metric.E5L
-E6M = Metric.E6M
-E6L = Metric.E6L
-E7M = Metric.E7M
-E7L = Metric.E7L
-ACCURACY = Metric.ACCURACY
-PER_OUTPUT = Metric.PER_OUTPUT
+E1 = Function.E1
+E2M = Function.E2M
+E2L = Function.E2L
+E3M = Function.E3M
+E3L = Function.E3L
+E4M = Function.E4M
+E4L = Function.E4L
+E5M = Function.E5M
+E5L = Function.E5L
+E6M = Function.E6M
+E6L = Function.E6L
+E7M = Function.E7M
+E7L = Function.E7L
+ACCURACY = Function.ACCURACY
+PER_OUTPUT = Function.PER_OUTPUT
 
 
 def all_functions():
-    for m in Metric:
+    for m in Function:
         yield m
 
 
 def all_function_names():
-    for m in Metric:
+    for m in Function:
         yield str(m)
 
 
 def function_from_name(name):
-    return Metric[name.upper()]
+    return Function[name.upper()]
 
 
 def function_name(metric):

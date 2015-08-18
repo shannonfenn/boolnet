@@ -1,7 +1,7 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 
-cpdef enum Metric:
+cpdef enum Function:
     E1
     E2M, E2L,    # weighted
     E3M, E3L,    # hierarchical

@@ -6,7 +6,7 @@ cimport numpy as np
 from copy import copy
 
 from boolnet.network.boolnetwork import BoolNetwork
-from boolnet.bintools.functions cimport Metric
+from boolnet.bintools.functions cimport Function
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 from boolnet.bintools.biterror cimport StandardEvaluator
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
@@ -88,10 +88,10 @@ cdef class NetworkState:
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
-    cpdef add_function(self, Metric function):
+    cpdef add_function(self, Function function):
         pass
 
-    cpdef function_value(self, Metric function):
+    cpdef function_value(self, Function function):
         pass
 
     cdef void _evaluate_random(self):
@@ -217,12 +217,12 @@ cdef class StandardNetworkState(NetworkState):
             self.evaluate()
             return self.error
 
-    cpdef add_function(self, Metric function):
+    cpdef add_function(self, Function function):
         eval_class, msb = STANDARD_EVALUATORS[function]
         self.err_evaluators[function] = eval_class(self.Ne, self.No, msb)
         self.network.changed = True
 
-    cpdef function_value(self, Metric function):
+    cpdef function_value(self, Function function):
         if function not in self.err_evaluators:
             self.add_function(function)
         if self.network.changed:
@@ -302,12 +302,12 @@ cdef class ChainedNetworkState(NetworkState):
         self.example_generator = example_generator
         self.function_value_cache = dict()
 
-    cpdef add_function(self, Metric function):
+    cpdef add_function(self, Function function):
         eval_class, msb = CHAINED_EVALUATORS[function]
         self.err_evaluators[function] = eval_class(self.Ne, self.No, self.cols, msb)
         self.network.changed = True
 
-    cpdef function_value(self, Metric function):
+    cpdef function_value(self, Function function):
         if function not in self.err_evaluators:
             raise ValueError('Guiding function must be added to evaluator prior to evaluation')
 
