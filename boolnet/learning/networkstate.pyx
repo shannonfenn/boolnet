@@ -78,22 +78,36 @@ cdef class NetworkState:
         self.set_network(network)
         self.err_evaluators = dict()
 
-    cpdef set_network(self, network):
-        # check invariants hold
-        self._check_network_invariants(network)
-        self.Ng = network.Ng
-        # prevent another evaluator causing problems with this network
-        self.network = copy(network)
-        # force reevaluation of the copied network
-        self.network.changed = True
-        self.network.first_unevaluated_gate = 0
-
     cpdef add_function(self, Function function):
         pass
 
     cpdef function_value(self, Function function):
         pass
 
+    ######################### Network pass-through methods #########################
+    cpdef set_network(self, network):
+        # check invariants hold
+        self._check_network_invariants(network)
+        self.Ng = network.Ng
+        # prevent another evaluator causing problems with this network
+        self.network = network.full_copy()
+        # force reevaluation of the copied network
+        self.network.changed = True
+        self.network.first_unevaluated_gate = 0
+
+    cpdef representation(self):
+        return self.network
+
+    cpdef move_to_random_neighbour(self):
+        self.network.move_to_random_neighbour()
+
+    cpdef revert_move(self):
+        self.network.revert_move()
+
+    cpdef clear_history(self):
+        self.network.clear_history()
+
+    ############################### Evaluation methods ###############################
     cdef void _evaluate_random(self):
         ''' Evaluate the activation and error matrices for the network
             getting node TFs from network. '''

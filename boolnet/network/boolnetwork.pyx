@@ -30,7 +30,12 @@ cdef class BoolNetwork:
 
         self._check_invariants()
 
-    def __copy__(self):
+    def clean_copy(self):
+        cdef BoolNetwork bn
+        bn = BoolNetwork(self.gates, self.Ni, self.No)
+        return bn
+
+    def full_copy(self):
         cdef BoolNetwork bn
         bn = BoolNetwork(self.gates, self.Ni, self.No)
         bn.changeable[:] = self.changeable
@@ -41,6 +46,9 @@ cdef class BoolNetwork:
         bn.masked = self.masked
         bn.inverse_moves = self.inverse_moves
         return bn
+
+    def __copy__(self):
+        return self.clean_copy()
 
     cdef _check_invariants(self):
         ''' [TODO] Add more here. '''
@@ -256,7 +264,12 @@ cdef class RandomBoolNetwork(BoolNetwork):
         def __get__(self):
             return self._transfer_functions
 
-    def __copy__(self):
+    def clean_copy(self):
+        cdef RandomBoolNetwork bn
+        bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
+        return bn
+
+    def full_copy(self):
         cdef RandomBoolNetwork bn
         bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
         bn.changeable[:] = self.changeable

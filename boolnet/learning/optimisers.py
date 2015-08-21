@@ -3,7 +3,6 @@ from math import exp
 from copy import copy
 from itertools import chain, repeat
 from collections import deque
-from boolnet.bintools.functions import function_from_name
 import sys
 import logging
 
@@ -51,42 +50,33 @@ class SA:
         self.temperatures = stepped_exp_decrease(
             self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)
 
-    def run(self, evaluator, parameters, end_condition):
+    def run(self, state, parameters, end_condition):
         """This learns a network using SA."""
         # initialise
         self.initialise(parameters)
 
-        state = evaluator.network
-
         # Calculate initial error
-        error = self.guiding_function(evaluator)
-        # error = evaluator.function_value(self.guiding_function)
+        error = self.guiding_function(state)
 
         # Setup aspiration criteria
         best_error = error
-        best_state = copy(state)
+        best_state = copy(state.representation())
         best_iteration = 0
 
         best_error_for_temp = error
 
         last_temp = self.init_temp  # so we can check for temp changes
 
-        # REMOVE
-        # f_err = open('error.log', 'w')
-        # print(error, file=f_err)
-        # REMOVE
-
         # annealing loop
         for iteration, temp in enumerate(self.temperatures):
             # Stop on user defined condition
-            if end_condition(evaluator, best_error):
+            if end_condition(state, best_error):
                 break
 
             # Log error on new temperature if logging
             best_error_for_temp = min(best_error_for_temp, error)
             if last_temp != temp:
-                logging.debug('temp: %f best_err:%f ',
-                              last_temp, best_error_for_temp)
+                logging.debug('temp: %f best_err:%f ', last_temp, best_error_for_temp)
                 best_error_for_temp = error
                 last_temp = temp
 
@@ -94,12 +84,11 @@ class SA:
             self.move(state, temp)
 
             # calculate error for new state
-            new_error = self.guiding_function(evaluator)
-            # new_error = evaluator.function_value(self.guiding_function)
+            new_error = self.guiding_function(state)
 
             # Keep best state seen
             if new_error < best_error:
-                best_state = copy(state)
+                best_state = copy(state.representation())
                 best_error = new_error
                 best_iteration = iteration
 
@@ -112,14 +101,6 @@ class SA:
             # In any case, clear the move history to save memory
             # and prevent accidentally undoing accepted moves later
             state.clear_history()
-
-            # REMOVE
-            # print(error, file=f_err)
-            # REMOVE
-
-        # REMOVE
-        # f_err.close()
-        # REMOVE
 
         return (best_state, best_iteration, iteration)
 
@@ -141,20 +122,17 @@ class LAHC:
             print('Optimiser parameters missing!', sys.stderr)
             raise
 
-    def run(self, evaluator, parameters, end_condition):
+    def run(self, state, parameters, end_condition):
         # unpack options
         self.initialise(parameters)
 
-        # initialise state
-        state = evaluator.network
-
         # Calculate initial error
-        error = self.guiding_function(evaluator)
+        error = self.guiding_function(state)
         # error = evaluator.function_value(self.guiding_function)
 
         # set up aspiration criteria
         best_error = error
-        best_state = copy(state)
+        best_state = copy(state.representation())
         best_iteration = 0
 
         # initialise cost list
@@ -163,19 +141,19 @@ class LAHC:
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
-            if end_condition(evaluator, best_error):
+            if end_condition(state, best_error):
                 break
 
             # perform random move
             self.move(state, iteration)
 
             # calculate error for new state
-            new_error = self.guiding_function(evaluator)
+            new_error = self.guiding_function(state)
             # new_error = evaluator.function_value(self.guiding_function)
 
             # Keep best state seen
             if new_error < best_error:
-                best_state = copy(state)
+                best_state = copy(state.representation())
                 best_error = new_error
                 best_iteration = iteration
 
