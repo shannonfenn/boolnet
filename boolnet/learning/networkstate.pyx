@@ -367,4 +367,4 @@ cdef class ChainedNetworkState(NetworkState):
         for r in range(rows):
             matrix[r, cols-self.zero_mask_cols] &= self.zero_mask
             for c in range(1, self.zero_mask_cols):
-                matrix[r, cols-c-1] = 0
+                matrix[r, cols-self.zero_mask_cols+c] = 0
