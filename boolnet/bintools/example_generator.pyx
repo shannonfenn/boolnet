@@ -80,6 +80,8 @@ cdef class OperatorExampleIteratorFactory:
             if max_elements < self.indices.size:
                 raise ValueError('Exclude list larger than max_elements.')
             self.Ne = max_elements - self.indices.size
+            # sort the indices so that the operator does not return incorrect examples
+            self.indices = np.sort(self.indices)
         self.Nb = Nb
         if operator in [UNARY_AND, UNARY_OR]:
             self.Ni = Nb
