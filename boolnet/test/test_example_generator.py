@@ -4,25 +4,74 @@ import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.packing import packed_type, pack_bool_matrix
-from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
-from boolnet.bintools.example_generator import OperatorExampleFactory, PackedExampleGenerator
+import boolnet.bintools.operator_iterator as op_it
+from boolnet.bintools.example_generator import OperatorExampleIteratorFactory, PackedExampleGenerator
 
 
-class TestExampleFactory:
+class TestIterators:
     @fixture(params=[
-        (AND, operator.__and__),
-        (OR, operator.__or__),
-        (ADD, operator.add),
-        (SUB, operator.sub),
-        (MUL, operator.mul)
+        op_it.ZeroIncludeIterator,
+        op_it.UnaryANDIncludeIterator,
+        op_it.UnaryORIncludeIterator,
+        op_it.ANDIncludeIterator,
+        op_it.ORIncludeIterator,
+        op_it.AddIncludeIterator,
+        op_it.SubIncludeIterator,
+        op_it.MulIncludeIterator])
+    def include_iterator(self, request):
+        return request.param
+
+    @fixture(params=[
+        op_it.ZeroExcludeIterator,
+        op_it.UnaryANDExcludeIterator,
+        op_it.UnaryORExcludeIterator,
+        op_it.ANDExcludeIterator,
+        op_it.ORExcludeIterator,
+        op_it.AddExcludeIterator,
+        op_it.SubExcludeIterator,
+        op_it.MulExcludeIterator])
+    def exclude_iterator(self, request):
+        return request.param
+
+    @fixture(params=np.random.randint(2, 100, 5))
+    def index_harness(self, request):
+        max_index = request.param
+        num_indices = np.random.randint(max_index-1, max_index)
+        in_indices = np.random.choice(max_index, size=num_indices, replace=False)
+        in_indices = np.array(np.sort(in_indices), dtype=np.uint64)
+        ex_indices = np.array([i for i in range(max_index) if i not in in_indices])
+        return (in_indices, ex_indices, max_index)
+
+    def test_include_indices(self, include_iterator, index_harness):
+        indices, _, _ = index_harness
+        expected = np.array(indices, copy=True)
+        actual = np.array(list(include_iterator(indices, 2)))[:, 0]
+
+        assert_array_equal(expected, actual)
+
+    def test_exclude_indices(self, exclude_iterator, index_harness):
+        indices, expected, max_index = index_harness
+        print(expected.size)
+        actual = np.array(list(exclude_iterator(indices, 2, max_index)))[:, 0]
+
+        assert_array_equal(expected, actual)
+
+
+class TestExampleIteratorFactory:
+    @fixture(params=[
+        (op_it.AND, operator.__and__),
+        (op_it.OR, operator.__or__),
+        (op_it.ADD, operator.add),
+        (op_it.SUB, operator.sub),
+        (op_it.MUL, operator.mul)
     ])
     def binary_op(self, request):
         return request.param
 
     @fixture(params=[
-        (ZERO, lambda x, m: 0),
-        (UNARY_OR, lambda x, m: int(x > 0)),
-        (UNARY_AND, lambda x, m: int(x == m - 1))
+        (op_it.ZERO, lambda x, m: 0),
+        (op_it.UNARY_OR, lambda x, m: int(x > 0)),
+        (op_it.UNARY_AND, lambda x, m: int(x == m - 1))
     ])
     def unary_op(self, request):
         return request.param
@@ -32,6 +81,7 @@ class TestExampleFactory:
         return request.param
 
     def test_operator_factory_include(self, binary_op, operand_width):
+        operator_id, operator_function = binary_op
         Nb = int(operand_width)
         upper = 2**Nb
         max_indices = 2**(2*Nb)
@@ -39,11 +89,11 @@ class TestExampleFactory:
         indices = np.random.choice(max_indices, Ne, replace=False)
         indices = np.array(indices, dtype=np.uint64)
 
-        factory = OperatorExampleFactory(indices, Nb, binary_op[0])
+        factory = OperatorExampleIteratorFactory(indices, Nb, operator_id)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
-            expected_out = binary_op[1](int(i // upper), int(i % upper))
+            expected_out = operator_function(int(i // upper), int(i % upper))
             if expected_out < 0:
                 expected_out += upper
             assert expected_out == tgt
@@ -53,11 +103,12 @@ class TestExampleFactory:
         upper = 2**Nb
         max_indices = 2**(2*Nb)
         Ne = np.random.randint(min(100, max_indices))
-        ex_indices = np.sort(np.random.choice(max_indices, Ne, replace=False))
+        # ex_indices = np.sort(np.random.choice(max_indices, Ne, replace=False))
+        ex_indices = np.random.choice(max_indices, Ne, replace=False)
         ex_indices = np.array(ex_indices, dtype=np.uint64)
         indices = (i for i in range(max_indices) if i not in ex_indices)
 
-        factory = OperatorExampleFactory(ex_indices, Nb, binary_op[0], max_indices)
+        factory = OperatorExampleIteratorFactory(ex_indices, Nb, binary_op[0], max_indices)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -73,7 +124,7 @@ class TestExampleFactory:
         indices = np.random.choice(max_indices, Ne, replace=False)
         indices = np.array(indices, dtype=np.uint64)
 
-        factory = OperatorExampleFactory(indices, Nb, unary_op[0])
+        factory = OperatorExampleIteratorFactory(indices, Nb, unary_op[0])
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -88,7 +139,7 @@ class TestExampleFactory:
         ex_indices = np.array(ex_indices, dtype=np.uint64)
         indices = (i for i in range(max_indices) if i not in ex_indices)
 
-        factory = OperatorExampleFactory(ex_indices, Nb, unary_op[0], max_indices)
+        factory = OperatorExampleIteratorFactory(ex_indices, Nb, unary_op[0], max_indices)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -97,7 +148,7 @@ class TestExampleFactory:
 
 
 class TestExampleGenerator:
-    op_map = {'add': ADD, 'sub': SUB, 'mul': MUL}
+    op_map = {'add': op_it.ADD, 'sub': op_it.SUB, 'mul': op_it.MUL}
     cache = dict()
 
     @fixture(params=['add4.npz', 'add8.npz', 'sub4.npz', 'sub8.npz',
@@ -137,8 +188,7 @@ class TestExampleGenerator:
             indices = [i for i in range(Ne) if i not in indices]
         indices = np.array(indices, dtype=packed_type)
 
-        factory = OperatorExampleFactory(indices, Ni//2, op,
-                                         0 if include else Ne)
+        factory = OperatorExampleIteratorFactory(indices, Ni//2, op, 0 if include else Ne)
 
         gen = PackedExampleGenerator(factory, No)
         return (gen, inp_p, tgt_p)
