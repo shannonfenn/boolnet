@@ -42,6 +42,8 @@ def check_data(training_mapping, test_mapping):
     if training_mapping.No != test_mapping.No:
         raise ValueError('Training ({}) and Test ({}) No do not match.'.format(
             training_mapping.No, test_mapping.No))
+    if len(test_mapping.indices) >= test_mapping.N:
+        raise ValueError('No test indices!')
 
 
 def build_training_evaluator(network, mapping):
@@ -149,14 +151,14 @@ def learn_bool_net(parameters):
         'transfer_functions':       parameters['network']['node_funcs'],
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
-        # 'training_error_guiding':   training_evaluator.function_value(guiding_function),
         'training_error_simple':    training_evaluator.function_value(E1),
         'training_accuracy':        training_evaluator.function_value(ACCURACY),
-        # 'test_error_guiding':       test_evaluator.function_value(guiding_function),
         'test_error_simple':        test_evaluator.function_value(E1),
         'test_accuracy':            test_evaluator.function_value(ACCURACY),
         'final_network':            np.array(final_network.gates),
         'Ne':                       training_evaluator.Ne,
+        # 'training_error_guiding':   training_evaluator.function_value(guiding_function),
+        # 'test_error_guiding':       test_evaluator.function_value(guiding_function),
         }
 
     if learner_result.feature_sets:

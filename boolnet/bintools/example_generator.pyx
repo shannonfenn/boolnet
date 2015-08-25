@@ -11,18 +11,18 @@ cdef class PackedExampleGenerator:
     # No_p = No // 64 if No % 64 == 0 else No // 64 + 1
     # self.inp_block = np.zeros((PACKED_SIZE, Ni_p), dtype=np.uint64)
     # self.tgt_block = np.zeros((PACKED_SIZE, No_p), dtype=np.uint64)
-    def __init__(self, OperatorExampleFactory example_factory, size_t No):
+    def __init__(self, OperatorExampleIteratorFactory iterator_factory, size_t No):
         self.No = No
-        self.Ne = example_factory.Ne
-        self.Ni = example_factory.Ni
-        self.example_factory = example_factory
+        self.Ne = iterator_factory.Ne
+        self.Ni = iterator_factory.Ni
+        self.iterator_factory = iterator_factory
 
         self.inp_block = np.zeros(PACKED_SIZE, dtype=packed_type)
         self.tgt_block = np.zeros(PACKED_SIZE, dtype=packed_type)
         self.reset()
 
     cpdef reset(self):
-        self.example_iter = iter(self.example_factory)
+        self.example_iter = iter(self.iterator_factory)
 
     cpdef next_examples(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target):
         cdef size_t i, remaining, remaining_blocks, blocks
@@ -67,7 +67,7 @@ cdef class PackedExampleGenerator:
             raise ValueError('Ni or No greater than 64 not supported.')
 
 
-cdef class OperatorExampleFactory:
+cdef class OperatorExampleIteratorFactory:
     def __init__(self, indices, size_t Nb, Operator operator, size_t max_elements=0):
         self.__check_operator(operator)
         self.indices = np.array(indices, dtype=np.uintp)

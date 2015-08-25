@@ -130,27 +130,28 @@ cdef class MulIncludeIterator(OperatorIncludeIterator):
 
 
 cdef class OperatorExcludeIterator(OperatorIterator):
-    def __init__(self, size_t[:] exclude_list, size_t Nb, size_t num_elements):
-        if num_elements < exclude_list.size:
-            raise ValueError('Exclude list larger than num_elements.')
-        super().__init__(Nb, num_elements - exclude_list.size)
-        self.num_elements = num_elements
+    def __init__(self, size_t[:] exclude_list, size_t Nb, size_t total_elements):
+        if total_elements < exclude_list.size:
+            raise ValueError('Exclude list larger than total_elements.')
+        super().__init__(Nb, total_elements - exclude_list.size)
+        self.total_elements = total_elements
         self.ex_iter = iter(exclude_list)
         self.index = 0
         try:
             self.ex_index = next(self.ex_iter)
             self._sync()
         except StopIteration:
-            self.ex_index = self.num_elements
+            self.ex_index = self.total_elements
 
     cdef void _sync(self):
-        if self.ex_index < self.num_elements:
+        print('sync')
+        if self.ex_index < self.total_elements:
             try:
                 while self.index == self.ex_index:
                     self.index += 1
                     self.ex_index = next(self.ex_iter)
             except StopIteration:
-                self.ex_index = self.num_elements
+                self.ex_index = self.total_elements
 
 
 cdef class ZeroExcludeIterator(OperatorExcludeIterator):
@@ -165,8 +166,8 @@ cdef class ZeroExcludeIterator(OperatorExcludeIterator):
 
 
 cdef class UnaryANDExcludeIterator(OperatorExcludeIterator):
-    def __init__(self, size_t[:] exclude_list, size_t Nb, size_t num_elements):
-        super().__init__(exclude_list, Nb, num_elements)
+    def __init__(self, size_t[:] exclude_list, size_t Nb, size_t total_elements):
+        super().__init__(exclude_list, Nb, total_elements)
         self.all_ones = 2**Nb - 1
 
     def __next__(self):

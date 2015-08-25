@@ -156,7 +156,7 @@ def generated_instance(data_settings, sampling_settings):
     N = 2**Ni
 
     # by default the output width is the operand width
-    No = default_key(data_settings, 'No', Nb)
+    No = default_key(data_settings, 'out_width', Nb)
     # default window size of 4 (arbitrary at this point)
     window_size = default_key(data_settings, 'window_size', 4)
 

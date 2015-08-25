@@ -59,7 +59,7 @@ data_schema_generated = Schema({
     'dir':                      IsDir(),
     'operator':                 str,
     'bits':                     All(int, Range(min=1)),
-    Optional('No'):             All(int, Range(min=1)),
+    Optional('out_width'):      All(int, Range(min=1)),
     Optional('window_size'):    All(int, Range(min=1))
     }, default_keys=Required)
 

@@ -12,7 +12,7 @@ pyximport.install()
 from boolnet.bintools.packing import pack_bool_matrix, unpack_bool_matrix, generate_end_mask
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
 from boolnet.bintools.functions import function_name, all_functions
-from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleFactory
+from boolnet.bintools.example_generator import PackedExampleGenerator, OperatorExampleIteratorFactory
 from boolnet.bintools.operator_iterator import ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.learning.networkstate import (StandardNetworkState, ChainedNetworkState,
@@ -171,13 +171,13 @@ def chained_harness_to_fixture(test):
     else:
         Nb = Ni // 2
 
-    ex_factory_s = OperatorExampleFactory(indices_s, Nb, op)
-    ex_factory_f = OperatorExampleFactory(indices_f, Nb, op)
-    ex_factory_t = OperatorExampleFactory(indices_s, Nb, op, Ne_f)
+    iterator_factory_s = OperatorExampleIteratorFactory(indices_s, Nb, op)
+    iterator_factory_f = OperatorExampleIteratorFactory(indices_f, Nb, op)
+    iterator_factory_t = OperatorExampleIteratorFactory(indices_s, Nb, op, Ne_f)
 
-    generator_s = PackedExampleGenerator(ex_factory_s, No)
-    generator_f = PackedExampleGenerator(ex_factory_f, No)
-    generator_t = PackedExampleGenerator(ex_factory_t, No)
+    generator_s = PackedExampleGenerator(iterator_factory_s, No)
+    generator_f = PackedExampleGenerator(iterator_factory_f, No)
+    generator_t = PackedExampleGenerator(iterator_factory_t, No)
 
     window_size_s = np.random.randint(1, max(2, Ne_s // PACKED_SIZE))
     window_size_f = np.random.randint(1, max(2, Ne_f // PACKED_SIZE))

@@ -54,7 +54,7 @@ cdef class MulIncludeIterator(OperatorIncludeIterator):
 
 cdef class OperatorExcludeIterator(OperatorIterator):    
     cdef:
-        size_t index, ex_index, num_elements
+        size_t index, ex_index, total_elements
         object ex_iter
 
     cdef void _sync(self)
