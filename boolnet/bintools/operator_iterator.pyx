@@ -144,7 +144,6 @@ cdef class OperatorExcludeIterator(OperatorIterator):
             self.ex_index = self.total_elements
 
     cdef void _sync(self):
-        print('sync')
         if self.ex_index < self.total_elements:
             try:
                 while self.index == self.ex_index:
