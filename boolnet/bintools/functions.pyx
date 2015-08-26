@@ -27,6 +27,7 @@ def function_from_name(name):
     elif name == 'e7L':         return E7L
     elif name == 'accuracy':    return ACCURACY
     elif name == 'per_output':  return PER_OUTPUT
+    else: raise ValueError('No function named \'{}\''.format(name))
 
 
 def function_name(function_id):
@@ -45,3 +46,4 @@ def function_name(function_id):
     elif function_id == E7L:         return 'e7L'
     elif function_id == ACCURACY:    return 'accuracy'
     elif function_id == PER_OUTPUT:  return 'per_output'
+    else: raise ValueError('No function id \'{}\''.format(function_id))
