@@ -192,7 +192,7 @@ def main():
 
     print('Results in: ' + result_dir)
 
-    settings['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
+    settings['learner']['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # generate learning tasks

@@ -42,8 +42,6 @@ def check_data(training_mapping, test_mapping):
     if training_mapping.No != test_mapping.No:
         raise ValueError('Training ({}) and Test ({}) No do not match.'.format(
             training_mapping.No, test_mapping.No))
-    if len(test_mapping.indices) >= test_mapping.N:
-        raise ValueError('No test indices!')
 
 
 def build_training_evaluator(network, mapping):
@@ -78,25 +76,10 @@ def seed_rng(value):
     fastrand.seed(seed)
 
 
-def learn_bool_net(parameters):
-    start_time = time.monotonic()
+def build_initial_network(parameters, training_data):
+    Ni, No = training_data.Ni, training_data.No
 
-    seed_rng(parameters.get('seed'))
-
-    optimiser_name = parameters['optimiser']['name']
-    learner_name = parameters['learner']['name']
-    if parameters['learner'].get('kfs'):
-        learner_name += ' kfs'
-    guiding_function = function_from_name(parameters['optimiser']['guiding_function'])
-
-    training_data = parameters['training_mapping']
-    test_data = parameters['test_mapping']
-
-    check_data(training_data, test_data)
-
-    Ni = training_data.Ni
-    No = training_data.No
-
+    # Create the initial connection matrix
     if 'initial_gates' in parameters['network']:
         initial_gates = np.asarray(parameters['network']['initial_gates'], dtype=np.int32)
         Ng = initial_gates.shape[0]
@@ -109,46 +92,80 @@ def learn_bool_net(parameters):
         initial_gates = np.empty(shape=(Ng, 2), dtype=np.int32)
         for g in range(Ng):
             initial_gates[g, :] = np.random.randint(g+Ni, size=2)
-
     # create the seed network
     node_funcs = parameters['network']['node_funcs']
     if node_funcs == 'random':
         # generate a random set of transfer functions
         transfer_functions = np.random.randint(16, size=Ng)
-        initial_network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
+        network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
     elif node_funcs == 'NOR':
         # 1 is the decimal code for NOR
         transfer_functions = [1]*Ng
-        initial_network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
+        network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
     elif node_funcs == 'NAND':
-        initial_network = BoolNetwork(initial_gates, Ni, No)
+        network = BoolNetwork(initial_gates, Ni, No)
     else:
         raise ValueError('Invalid setting for \'transfer functions\': {}'.format(node_funcs))
+    return network
+
+
+def learn_bool_net(parameters):
+    start_time = time.monotonic()
+
+    seed_rng(parameters.get('seed'))
+
+    learner_parameters = parameters['learner']
+    optimiser_parameters = parameters['learner']['optimiser']
+
+    training_data = parameters['training_mapping']
+    test_data = parameters['test_mapping']
+    check_data(training_data, test_data)
+
+    initial_network = build_initial_network(parameters, training_data)
 
     # make evaluators for the training and test sets
     training_evaluator = build_training_evaluator(initial_network, training_data)
 
-    learner = LEARNERS[learner_name]
-    optimiser = OPTIMISERS[optimiser_name]
+    learner = LEARNERS[learner_parameters['name']]
+    optimiser = OPTIMISERS[optimiser_parameters['name']]
 
-    setup_time = time.monotonic()
+    setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner(training_evaluator, parameters, optimiser)
+    learner_result = learner(training_evaluator, learner_parameters, optimiser)
+
+    learning_end_time = time.monotonic()
+
+    results = build_result_map(parameters, learner_result, training_evaluator, test_data)
+
+    end_time = time.monotonic()
+
+    # add timing results
+    results['setup_time'] = setup_end_time - start_time
+    results['learning_time'] = learning_end_time - setup_end_time
+    results['result_time'] = end_time - learning_end_time
+    results['time'] = end_time - start_time
+
+    return results
+
+
+def build_result_map(parameters, learner_result, training_evaluator, test_data):
+    learner_parameters = parameters['learner']
+    optimiser_parameters = parameters['learner']['optimiser']
+
+    guiding_function = function_from_name(optimiser_parameters['guiding_function'])
 
     final_network = learner_result.best_states[-1]
-
-    learning_time = time.monotonic()
 
     training_evaluator.set_network(final_network)
     test_evaluator = build_test_evaluator(final_network, test_data, parameters,
                                           [guiding_function, E1, ACCURACY, PER_OUTPUT])
 
     results = {
-        'Ni':                       Ni,
-        'No':                       No,
-        'Ng':                       Ng,
-        'learner':                  learner_name,
+        'Ni':                       final_network.Ni,
+        'No':                       final_network.No,
+        'Ng':                       final_network.Ng,
+        'learner':                  learner_parameters['name'],
         'configuration_number':     parameters['configuration_number'],
         'training_set_number':      parameters['training_set_number'],
         'transfer_functions':       parameters['network']['node_funcs'],
@@ -161,6 +178,10 @@ def learn_bool_net(parameters):
         'final_network':            np.array(final_network.gates),
         'Ne':                       training_evaluator.Ne
         }
+
+    # add ' kfs' on the end of the learner name in the result dict if required
+    if learner_parameters.get('kfs'):
+        results['learner'] += ' kfs'
 
     if learner_result.feature_sets:
         for bit, v in enumerate(learner_result.feature_sets):
@@ -175,21 +196,7 @@ def learn_bool_net(parameters):
     for bit, v in enumerate(final_network.max_node_depths()):
         key = 'max_depth_target_{}'.format(bit)
         results[key] = v
-    for k, v in parameters['optimiser'].items():
+    for k, v in optimiser_parameters.items():
         results['optimiser_' + k] = v
 
-    end_time = time.monotonic()
-
-    results['setup_time'] = setup_time - start_time
-    results['learning_time'] = learning_time - setup_time
-    results['result_time'] = end_time - learning_time
-    results['time'] = end_time - start_time
-
     return results
-
-    # if parameters['optimiser_name'] == 'anneal':
-    #     parameters['finalNg'] = parameters['Ng']
-    # elif parameters['optimiser_name'] == 'ganneal':
-
-    # elif parameters['optimiser_name'] == 'tabu':
-    #     raise ValueError('Tabu search not implemented yet.')

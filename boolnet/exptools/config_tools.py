@@ -226,7 +226,7 @@ def generate_configurations(settings):
             iteration_settings['training_mapping'] = instance.training_mapping
             iteration_settings['test_mapping'] = instance.test_mapping
             iteration_settings['training_set_number'] = i
-            iteration_settings['inter_file_base'] += '{}_{}_'.format(config_no, i)
+            iteration_settings['learner']['inter_file_base'] += '{}_{}_'.format(config_no, i)
 
             config_schema(iteration_settings)
 

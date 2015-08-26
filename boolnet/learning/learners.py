@@ -182,7 +182,6 @@ def prepare_state(state, parameters, boundaries, target_matrix, target, feature_
 
 def stratified(state, parameters, optimiser):
     num_targets = state.network.No
-    opt_params = copy(parameters['optimiser'])
     auto_target = parameters.get('auto_target')
 
     check_parameters(parameters)
@@ -213,7 +212,7 @@ def stratified(state, parameters, optimiser):
 
         if optimisation_required:
             optimised_network, best_it, final_it = learn_single_target(
-                state, opt_params, optimiser, target)
+                state, parameters['optimiser'], optimiser, target)
 
             # record result
             best_states[target] = copy(optimised_network)
@@ -226,15 +225,16 @@ def stratified(state, parameters, optimiser):
 
 
 def learn_single_target(state, opt_params, optimiser, target):
+    opt_params = copy(opt_params)
     guiding_func_id = function_from_name(opt_params['guiding_function'])
     # generate an end condition based on the current target
     end_condition = per_target_error_end_condition(target)
 
     # build new guiding function for only next target if required
     if guiding_func_id == PER_OUTPUT:
-        guiding_func = lambda state: state.function_value(guiding_func_id)[target]
+        guiding_func = lambda x: x.function_value(guiding_func_id)[target]
     else:
-        guiding_func = lambda evaluator: evaluator.function_value(guiding_func_id)
+        guiding_func = lambda x: x.function_value(guiding_func_id)
 
     opt_params['guiding_function'] = guiding_func
 
@@ -253,4 +253,4 @@ def basic(evaluator, parameters, optimiser):
     results = optimiser.run(evaluator, opt_params, end_condition)
     best_state, best_it, final_it = results
 
-    return Result([best_state], [best_it], [final_it], None)
+    return Result([best_state], [best_it], [final_it], None, None)
