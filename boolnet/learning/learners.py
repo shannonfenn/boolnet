@@ -12,7 +12,7 @@ import boolnet.learning.kfs as kfs
 
 
 Result = namedtuple('Result', [
-    'best_states', 'best_iterations', 'final_iterations', 'feature_sets'])
+    'best_states', 'best_iterations', 'final_iterations', 'target_order', 'feature_sets'])
 
 
 def per_target_error_end_condition(bit):
@@ -23,10 +23,10 @@ def guiding_error_end_condition():
     return lambda _, error: error <= 0
 
 
-def strata_boundaries(state):
+def strata_boundaries(network):
     # this allocates gate boundaries linearly, that it the first
     # target is allocate the first Ng/No gates and so on.
-    No, Ng = state.network.No, state.network.Ng
+    No, Ng = network.No, network.Ng
     upper_bounds = np.linspace((Ng-No)/No, Ng-No, No).astype(int).tolist()
     return [0] + upper_bounds
 
@@ -134,12 +134,12 @@ def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
     return input_feature_indices[feature_sets][0]
 
 
-def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feature_set_results):
+def prepare_state(state, parameters, boundaries, target_matrix, target, feature_set_results):
     # options
     use_kfs_masking = parameters['learner'].get('kfs', False)
     log_all_feature_sets = parameters['learner'].get('log_all_feature_sets', False)
 
-    network = evaluator.network
+    network = state.network
     num_targets, _ = target_matrix.shape
     lower_bound = boundaries[target]
     upper_bound = boundaries[target + 1]
@@ -147,13 +147,13 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
     if use_kfs_masking:
         one_layer_kfs = parameters['learner'].get('one_layer_kfs', False)
         # find a set of min feature sets for the next target
-        fs = get_feature_set(evaluator, parameters, target, boundaries, not one_layer_kfs)
+        fs = get_feature_set(state, parameters, target, boundaries, not one_layer_kfs)
 
         # keep a log of the feature sets found at each iteration
         if log_all_feature_sets:
             fs_list = [fs]
             for t in range(target+1, num_targets):
-                fs_list.append(get_feature_set(evaluator, parameters, lower_bound, t))
+                fs_list.append(get_feature_set(state, parameters, lower_bound, t))
             feature_set_results.append(fs_list)
         else:
             feature_set_results.append(fs)
@@ -161,7 +161,7 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
         # check for 1-FS, if we have a 1FS we have already learnt the
         # target, or its inverse, so simply map this feature to the output
         if fs.size == 1:
-            handle_single_FS(fs, evaluator, target, target_matrix)
+            handle_single_FS(fs, state, target, target_matrix)
             return False
 
         sourceable, changeable = build_mask(network, lower_bound, upper_bound, target, fs)
@@ -183,6 +183,7 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
 def stratified(state, parameters, optimiser):
     num_targets = state.network.No
     opt_params = copy(parameters['optimiser'])
+    auto_target = parameters.get('auto_target')
 
     check_parameters(parameters)
 
@@ -190,17 +191,26 @@ def stratified(state, parameters, optimiser):
     best_states = [None] * num_targets
     best_iterations = [-1] * num_targets
     final_iterations = [-1] * num_targets
+    # For recording the order in which targets where learned
+    target_order_array = [-1] * num_targets
 
     # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
-    boundaries = strata_boundaries(state)
+    boundaries = strata_boundaries(state.network)
     # the initial kfs input is just the set of all network inputs
     target_matrix = np.array(state.target_matrix)
 
     fs_results = []
 
-    for target in range(num_targets):
-        optimisation_required = prepare_state(state, parameters, boundaries,
-                                              target_matrix, target, fs_results)
+    for i in range(num_targets):
+        if auto_target:
+            raise NotImplemented
+        else:
+            target = i
+            optimisation_required = prepare_state(
+                state, parameters, boundaries, target_matrix, target, fs_results)
+
+        target_order_array[i] = target
+
         if optimisation_required:
             optimised_network, best_it, final_it = learn_single_target(
                 state, opt_params, optimiser, target)
@@ -209,11 +219,10 @@ def stratified(state, parameters, optimiser):
             best_states[target] = copy(optimised_network)
             best_iterations[target] = best_it
             final_iterations[target] = final_it
+        else:
+            best_states[target] = copy(optimised_network)
 
-    if fs_results:
-        return Result(best_states, best_iterations, final_iterations, fs_results)
-    else:
-        return Result(best_states, best_iterations, final_iterations, None)
+    return Result(best_states, best_iterations, final_iterations, target_order_array, fs_results)
 
 
 def learn_single_target(state, opt_params, optimiser, target):
@@ -231,6 +240,7 @@ def learn_single_target(state, opt_params, optimiser, target):
 
     # run the optimiser
     return optimiser.run(state, opt_params, end_condition)
+
 
 def basic(evaluator, parameters, optimiser):
     ''' This just learns by using the given optimiser and guiding function.'''
