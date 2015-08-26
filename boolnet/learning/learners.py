@@ -23,10 +23,10 @@ def guiding_error_end_condition():
     return lambda _, error: error <= 0
 
 
-def strata_boundaries(network):
+def strata_boundaries(state):
     # this allocates gate boundaries linearly, that it the first
     # target is allocate the first Ng/No gates and so on.
-    No, Ng = network.No, network.Ng
+    No, Ng = state.network.No, state.network.Ng
     upper_bounds = np.linspace((Ng-No)/No, Ng-No, No).astype(int).tolist()
     return [0] + upper_bounds
 
@@ -162,7 +162,7 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
         # target, or its inverse, so simply map this feature to the output
         if fs.size == 1:
             handle_single_FS(fs, evaluator, target, target_matrix)
-            return True
+            return False
 
         sourceable, changeable = build_mask(network, lower_bound, upper_bound, target, fs)
     else:
@@ -177,15 +177,12 @@ def prepare_state(evaluator, parameters, boundaries, target_matrix, target, feat
     # Reinitialise the next range of gates to be optimised according to the mask
     network.reconnect_masked_range()
 
-    return False
+    return True
 
 
-def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=False):
-    network = evaluator.network
-    num_targets = network.No
+def stratified(state, parameters, optimiser):
+    num_targets = state.network.No
     opt_params = copy(parameters['optimiser'])
-    guiding_func_id = function_from_name(opt_params['guiding_function'])
-    guiding_func = lambda evaluator: evaluator.function_value(guiding_func_id)
 
     check_parameters(parameters)
 
@@ -195,45 +192,47 @@ def stratified_learn(evaluator, parameters, optimiser, log_all_feature_sets=Fals
     final_iterations = [-1] * num_targets
 
     # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
-    boundaries = strata_boundaries(network)
+    boundaries = strata_boundaries(state)
     # the initial kfs input is just the set of all network inputs
-    target_matrix = np.array(evaluator.target_matrix)
+    target_matrix = np.array(state.target_matrix)
 
     fs_results = []
 
     for target in range(num_targets):
-        single_fs = prepare_state(evaluator, parameters, boundaries,
-                                  target_matrix, target, fs_results)
-        if not single_fs:
-            # generate an end condition based on the current target
-            end_condition = per_target_error_end_condition(target)
-
-            # build new guiding function for only next target if required
-            if guiding_func_id == PER_OUTPUT:
-                guiding_func = lambda evaluator: evaluator.function_value(guiding_func_id)[target]
-
-            opt_params['guiding_function'] = guiding_func
-
-            # run the optimiser
-            results = optimiser.run(evaluator, opt_params, end_condition)
-            # unpack results
-            optimised_network, best_it, final_it = results
+        optimisation_required = prepare_state(state, parameters, boundaries,
+                                              target_matrix, target, fs_results)
+        if optimisation_required:
+            optimised_network, best_it, final_it = learn_single_target(
+                state, opt_params, optimiser, target)
 
             # record result
             best_states[target] = copy(optimised_network)
             best_iterations[target] = best_it
             final_iterations[target] = final_it
 
-            # logging.info('Error per output (sample): %s', evaluator.function_value(PER_OUTPUT))
-
-    # TODO: should this return the best state out of the states according to the guiding function?
     if fs_results:
         return Result(best_states, best_iterations, final_iterations, fs_results)
     else:
         return Result(best_states, best_iterations, final_iterations, None)
 
 
-def basic_learn(evaluator, parameters, optimiser):
+def learn_single_target(state, opt_params, optimiser, target):
+    guiding_func_id = function_from_name(opt_params['guiding_function'])
+    # generate an end condition based on the current target
+    end_condition = per_target_error_end_condition(target)
+
+    # build new guiding function for only next target if required
+    if guiding_func_id == PER_OUTPUT:
+        guiding_func = lambda state: state.function_value(guiding_func_id)[target]
+    else:
+        guiding_func = lambda evaluator: evaluator.function_value(guiding_func_id)
+
+    opt_params['guiding_function'] = guiding_func
+
+    # run the optimiser
+    return optimiser.run(state, opt_params, end_condition)
+
+def basic(evaluator, parameters, optimiser):
     ''' This just learns by using the given optimiser and guiding function.'''
     opt_params = copy(parameters['optimiser'])
     end_condition = guiding_error_end_condition()
