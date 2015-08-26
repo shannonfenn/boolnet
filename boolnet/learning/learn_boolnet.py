@@ -5,25 +5,25 @@ pyximport.install()
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.functions import E1, ACCURACY, PER_OUTPUT, function_from_name
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
-from boolnet.learning.learners import basic_learn, stratified_learn
-from boolnet.learning.optimisers import SA, LAHC
 from boolnet.learning.networkstate import (StandardNetworkState, standard_from_operator,
                                            chained_from_operator)
+import boolnet.learning.learners as learners
+import boolnet.learning.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import sys
 
 
 OPTIMISERS = {
-    'SA': SA(),
-    'LAHC': LAHC(),
+    'SA': optimisers.SA(),
+    'LAHC': optimisers.LAHC(),
     }
 
 
 LEARNERS = {
-    'basic': basic_learn,
-    'stratified': stratified_learn,
-    'stratified kfs': stratified_learn
+    'basic': learners.basic,
+    'stratified': learners.stratified,
+    'stratified kfs': learners.stratified
     }
 
 
@@ -68,21 +68,24 @@ def build_test_evaluator(network, mapping, parameters, guiding_functions):
     return evaluator
 
 
-def learn_bool_net(parameters):
-    start_time = time.monotonic()
-
+def seed_rng(value):
     # seed fast random number generator using system rng (which auto seeds on module import)
-    if 'seed' in parameters:
-        seed = parameters['seed']
-        np.random.seed(seed)
+    if value is not None:
+        np.random.seed(value)
     else:
         random.seed()
         seed = random.randint(1, sys.maxsize)
     fastrand.seed(seed)
 
+
+def learn_bool_net(parameters):
+    start_time = time.monotonic()
+
+    seed_rng(parameters.get('seed'))
+
     optimiser_name = parameters['optimiser']['name']
     learner_name = parameters['learner']['name']
-    if parameters['learner'].get('kfs', False):
+    if parameters['learner'].get('kfs'):
         learner_name += ' kfs'
     guiding_function = function_from_name(parameters['optimiser']['guiding_function'])
 
@@ -108,19 +111,19 @@ def learn_bool_net(parameters):
             initial_gates[g, :] = np.random.randint(g+Ni, size=2)
 
     # create the seed network
-    if parameters['network']['node_funcs'] == 'random':
+    node_funcs = parameters['network']['node_funcs']
+    if node_funcs == 'random':
         # generate a random set of transfer functions
         transfer_functions = np.random.randint(16, size=Ng)
         initial_network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
-    elif parameters['network']['node_funcs'] == 'NOR':
+    elif node_funcs == 'NOR':
         # 1 is the decimal code for NOR
         transfer_functions = [1]*Ng
         initial_network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
-    elif parameters['network']['node_funcs'] == 'NAND':
+    elif node_funcs == 'NAND':
         initial_network = BoolNetwork(initial_gates, Ni, No)
     else:
-        raise ValueError('Invalid setting for \'transfer functions\': {}'.format(
-            parameters['network']['node_funcs']))
+        raise ValueError('Invalid setting for \'transfer functions\': {}'.format(node_funcs))
 
     # make evaluators for the training and test sets
     training_evaluator = build_training_evaluator(initial_network, training_data)
@@ -128,9 +131,9 @@ def learn_bool_net(parameters):
     learner = LEARNERS[learner_name]
     optimiser = OPTIMISERS[optimiser_name]
 
-    # learn the network
     setup_time = time.monotonic()
 
+    # learn the network
     learner_result = learner(training_evaluator, parameters, optimiser)
 
     final_network = learner_result.best_states[-1]
@@ -156,9 +159,7 @@ def learn_bool_net(parameters):
         'test_error_simple':        test_evaluator.function_value(E1),
         'test_accuracy':            test_evaluator.function_value(ACCURACY),
         'final_network':            np.array(final_network.gates),
-        'Ne':                       training_evaluator.Ne,
-        # 'training_error_guiding':   training_evaluator.function_value(guiding_function),
-        # 'test_error_guiding':       test_evaluator.function_value(guiding_function),
+        'Ne':                       training_evaluator.Ne
         }
 
     if learner_result.feature_sets:
