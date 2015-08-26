@@ -299,3 +299,51 @@ class TestFunctionality:
         expected = any_network['max depths']
         actual = net.max_node_depths()
         assert_array_equal(actual, expected)
+
+    def test_clean_copy(self, adder2, adder2_valid_mask):
+        net1 = copy(adder2)
+        sourceable, changeable = adder2_valid_mask
+        net1.set_mask(sourceable, changeable)
+        net1.move_to_random_neighbour()
+        net1.first_unevaluated_gate = 5
+        net1.changed = False
+
+        net2 = net1.clean_copy()
+        # should be the same
+        assert_array_equal(net2.gates, net1.gates)
+        assert net2.Ni == net1.Ni
+        assert net2.No == net1.No
+        assert net2.Ng == net1.Ng
+        assert_array_equal(net2.connected_gates(), net1.connected_gates())
+        assert_array_equal(net2.connected_sources(), net1.connected_sources())
+        # should be different
+        assert net2.first_unevaluated_gate == 0
+        assert net2.changed
+        assert net2.history_empty()
+        assert_array_equal(net2.changeable, np.ones(net2.Ng, dtype=np.uint8))
+        assert_array_equal(net2.sourceable, np.ones(net2.Ng + net2.Ni, dtype=np.uint8))
+
+    def test_full_copy(self, adder2, adder2_valid_mask):
+        net1 = copy(adder2)
+        sourceable, changeable = adder2_valid_mask
+        net1.set_mask(sourceable, changeable)
+        net1.move_to_random_neighbour()
+        net1.first_unevaluated_gate = 5
+        net1.changed = False
+
+        net2 = net1.full_copy()
+        assert_array_equal(net2.gates, net1.gates)
+        assert net2.Ni == net1.Ni
+        assert net2.No == net1.No
+        assert net2.Ng == net1.Ng
+        assert net2.first_unevaluated_gate == net1.first_unevaluated_gate
+        assert net2.changed == net1.changed
+        assert not net2.history_empty()
+        net2.clear_history()
+        assert net2.history_empty()
+        assert not net1.history_empty()
+
+        assert_array_equal(net2.changeable, net1.changeable)
+        assert_array_equal(net2.sourceable, net1.sourceable)
+        assert_array_equal(net2.connected_gates(), net1.connected_gates())
+        assert_array_equal(net2.connected_sources(), net1.connected_sources())
