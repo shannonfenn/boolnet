@@ -29,6 +29,7 @@ cdef class BoolNetwork:
         self.connected = np.zeros(self.Ng + Ni, dtype=np.uint8)
 
         self._check_invariants()
+        self._update_connected()
 
     def clean_copy(self):
         cdef BoolNetwork bn
@@ -234,6 +235,9 @@ cdef class BoolNetwork:
 
     def clear_history(self):
         self.inverse_moves.clear()
+
+    def history_empty(self):
+        return self.inverse_moves.empty()
 
 
 cdef class RandomBoolNetwork(BoolNetwork):
