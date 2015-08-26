@@ -94,8 +94,10 @@ network_schema_generated = Schema({
 
 learner_schema = Schema({
     'name':                     In(['basic', 'stratified']),
+    'optimiser':                optimiser_schema,
     Optional('kfs'):            bool,
-    Optional('one_layer_kfs'):  bool
+    Optional('one_layer_kfs'):  bool,
+    Optional('fabcpp_options'): list,
     })
 
 network_schema = Schema(Any(network_schema_given,
@@ -107,7 +109,6 @@ config_schema = Schema({
     'network':                  network_schema,
     'logging':                  In(['none', 'warning', 'info', 'debug']),
     'learner':                  learner_schema,
-    'optimiser':                optimiser_schema,
     'sampling':                 sampling_schema,
     'configuration_number':     All(int, Range(min=0)),
     'training_set_number':      All(int, Range(min=0)),
@@ -115,5 +116,4 @@ config_schema = Schema({
     'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
-    Optional('fabcpp_options'): list,
     }, default_keys=Required)

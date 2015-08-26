@@ -136,8 +136,8 @@ def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
 
 def prepare_state(state, parameters, boundaries, target_matrix, target, feature_set_results):
     # options
-    use_kfs_masking = parameters['learner'].get('kfs', False)
-    log_all_feature_sets = parameters['learner'].get('log_all_feature_sets', False)
+    use_kfs_masking = parameters.get('kfs', False)
+    log_all_feature_sets = parameters.get('log_all_feature_sets', False)
 
     network = state.network
     num_targets, _ = target_matrix.shape
@@ -145,7 +145,7 @@ def prepare_state(state, parameters, boundaries, target_matrix, target, feature_
     upper_bound = boundaries[target + 1]
 
     if use_kfs_masking:
-        one_layer_kfs = parameters['learner'].get('one_layer_kfs', False)
+        one_layer_kfs = parameters.get('one_layer_kfs', False)
         # find a set of min feature sets for the next target
         fs = get_feature_set(state, parameters, target, boundaries, not one_layer_kfs)
 
