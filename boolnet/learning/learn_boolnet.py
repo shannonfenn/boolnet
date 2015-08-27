@@ -114,8 +114,7 @@ def setup_local_dirs(parameters):
     # this ensures that the required temp directories exist in the event this
     # is executed remotely on a seperate filesystem from runexp.py
     inter_file_base = parameters['learner']['inter_file_base']
-    if not os.path.exists(os.path.dirname(inter_file_base)):
-        os.makedirs(os.path.dirname(inter_file_base))
+    os.makedirs(os.path.dirname(inter_file_base), exist_ok=True)
 
 
 def learn_bool_net(parameters):
