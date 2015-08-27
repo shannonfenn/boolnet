@@ -45,7 +45,7 @@ def FABCPP_cmd_line(features, target, file_name_base, options):
     abk_file(features, target, abk_file_name)
     # run FABCPP
     cmd_string = [
-        os.path.expanduser('~/CIBMTools/FABCPP/Release/FABCPP'),
+        os.path.expanduser('~/CIBMTools/FABCPP/fabcpp'),
         '-i', abk_file_name, '-o', out_file_name,
         '-m', '1', '-A', '1', '-B', '0', '-y', 'alfa',
         '-O', 'max:feature_degree']
