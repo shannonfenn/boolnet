@@ -37,7 +37,7 @@ def FABCPP_cmd_line(features, target, file_name_base, options):
     abk_file_name = file_name_base + '.abk'
     log_file_name = file_name_base + '.log'
     err_file_name = file_name_base + '.err'
-    out_file_name = file_name_base + '.out'
+    out_file_name = file_name_base + '.sol'
 
     # check if files exist and raise exception
 
@@ -46,7 +46,7 @@ def FABCPP_cmd_line(features, target, file_name_base, options):
     # run FABCPP
     cmd_string = [
         os.path.expanduser('~/CIBMTools/FABCPP/fabcpp'),
-        '-i', abk_file_name, '-o', out_file_name,
+        '-i', abk_file_name, '-o', file_name_base,
         '-m', '1', '-A', '1', '-B', '0', '-y', 'alfa',
         '-O', 'max:feature_degree']
     if options is not None:
