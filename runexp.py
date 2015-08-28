@@ -144,7 +144,7 @@ def scoop_worker_wrapper(*args, **kwargs):
     import traceback
     try:
         # call to actual worker code
-        learn_bool_net(*args, **kwargs)
+        return learn_bool_net(*args, **kwargs)
     except:
         type, value, tb = sys.exc_info()
         lines = traceback.format_exception(type, value, tb)
