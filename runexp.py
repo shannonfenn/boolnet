@@ -140,12 +140,25 @@ def run_parallel(tasks, num_processes, out_stream):
         bar.finish()
 
 
+def scoop_worker_wrapper(*args, **kwargs):
+    import traceback
+    try:
+        # call to actual worker code
+        learn_bool_net(*args, **kwargs)
+    except:
+        type, value, tb = sys.exc_info()
+        lines = traceback.format_exception(type, value, tb)
+        print(''.join(lines))
+        raise
+
+
 def run_scooped(tasks, out_stream):
     ''' runs the given configurations '''
     bar = Bar('Scooped', max=len(tasks))
     bar.update()
     # uses unordered map to ensure results are dumped as soon as available
-    for i, result in enumerate(scoop.futures.map_as_completed(learn_bool_net, tasks)):
+    # for i, result in enumerate(scoop.futures.map_as_completed(learn_bool_net, tasks)):
+    for i, result in enumerate(scoop.futures.map_as_completed(scoop_worker_wrapper, tasks)):
         config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
