@@ -41,26 +41,27 @@ def check_parameters(parameters):
         print('WARNING POTENTIALLY ERROR PRONE METRIC FOR STRATIFIED LEARNING!', file=sys.stderr)
 
 
-def handle_single_FS(feature_set, evaluator, bit, target):
+def handle_single_FS(feature_set, evaluator, bit, target, changeable_gate):
     # When we have a 1FS we have already learned the target, or its inverse,
     # simply map this feature to the output
     activation_matrix = evaluator.activation_matrix
     network = evaluator.network
-    Ni = network.Ni
     Ng = network.Ng
     No = network.No
-    gate = feature_set[0] - Ni
-    if activation_matrix[gate][0] == target[bit][0]:
-        # we have learnt the target perfectly, in this case place the
-        # current outputs inputs as the inputs to the 1FS gate
-        sources = network.gates[gate]
-        for i in [0, 1]:
-            network.apply_move({'gate': Ng - No + bit, 'terminal': i, 'new_source': sources[i]})
+    feature = feature_set[0]
+    if activation_matrix[feature][0] == target[bit][0]:
+        # we have the target perfectly, in this case place a double
+        # inverter chain (we could take the inputs from a gate if it was one
+        # but in the event the feature is an input this is not possible)
+        network.apply_move({'gate': changeable_gate, 'terminal': 0, 'new_source': feature})
+        network.apply_move({'gate': changeable_gate, 'terminal': 1, 'new_source': feature})
+        network.apply_move({'gate': Ng - No + bit, 'terminal': 0, 'new_source': changeable_gate})
+        network.apply_move({'gate': Ng - No + bit, 'terminal': 1, 'new_source': changeable_gate})
     else:
-        # we have learnt the target inverse, since a NAND gate can act
-        # as an inverter we can connect the output gate directly to this one
-        for i in [0, 1]:
-            network.apply_move({'gate': Ng - No + bit, 'terminal': i, 'new_source': gate})
+        # we have the target's inverse, since a NAND gate can act as an
+        # inverter we can connect the output gate directly to the feature
+        network.apply_move({'gate': Ng - No + bit, 'terminal': 0, 'new_source': feature})
+        network.apply_move({'gate': Ng - No + bit, 'terminal': 1, 'new_source': feature})
 
 
 def build_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
@@ -134,20 +135,20 @@ def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
     return input_feature_indices[feature_sets][0]
 
 
-def prepare_state(state, parameters, boundaries, target_matrix, target, feature_set_results):
+def prepare_state(state, parameters, gate_boundaries, target_matrix, target, feature_set_results):
     # options
     use_kfs_masking = parameters.get('kfs', False)
     log_all_feature_sets = parameters.get('log_all_feature_sets', False)
 
     network = state.network
     num_targets, _ = target_matrix.shape
-    lower_bound = boundaries[target]
-    upper_bound = boundaries[target + 1]
+    lower_bound = gate_boundaries[target]
+    upper_bound = gate_boundaries[target + 1]
 
     if use_kfs_masking:
         one_layer_kfs = parameters.get('one_layer_kfs', False)
         # find a set of min feature sets for the next target
-        fs = get_feature_set(state, parameters, target, boundaries, not one_layer_kfs)
+        fs = get_feature_set(state, parameters, target, gate_boundaries, not one_layer_kfs)
 
         # keep a log of the feature sets found at each iteration
         if log_all_feature_sets:
@@ -161,7 +162,7 @@ def prepare_state(state, parameters, boundaries, target_matrix, target, feature_
         # check for 1-FS, if we have a 1FS we have already learnt the
         # target, or its inverse, so simply map this feature to the output
         if fs.size == 1:
-            handle_single_FS(fs, state, target, target_matrix)
+            handle_single_FS(fs, state, target, target_matrix, lower_bound)
             return False
 
         sourceable, changeable = build_mask(network, lower_bound, upper_bound, target, fs)
@@ -194,7 +195,7 @@ def stratified(state, parameters, optimiser):
     target_order_array = [-1] * num_targets
 
     # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
-    boundaries = strata_boundaries(state.network)
+    gate_boundaries = strata_boundaries(state.network)
     # the initial kfs input is just the set of all network inputs
     target_matrix = np.array(state.target_matrix)
 
@@ -206,7 +207,7 @@ def stratified(state, parameters, optimiser):
         else:
             target = i
             optimisation_required = prepare_state(
-                state, parameters, boundaries, target_matrix, target, fs_results)
+                state, parameters, gate_boundaries, target_matrix, target, fs_results)
 
         target_order_array[i] = target
 
