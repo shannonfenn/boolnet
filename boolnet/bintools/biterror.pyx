@@ -35,6 +35,7 @@ cdef class StandardEvaluator:
         else:
             self.start = 0
             self.step = 1
+        self.Ne = Ne
         self.No = No
         self.divisor = No * Ne
 
@@ -122,8 +123,7 @@ cdef class StandardE3(StandardEvaluator):
 cdef class StandardE4(StandardEvaluator):
     def __init__(self, size_t Ne, size_t No, bint msb):
         super().__init__(Ne, No, msb)
-        row_width = self.cols * PACKED_SIZE
-        self.end_subtractor = row_width - Ne % row_width
+        self.end_subtractor = self.cols * PACKED_SIZE - Ne
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
@@ -146,7 +146,6 @@ cdef class StandardE5(StandardEvaluator):
     def __init__(self, size_t Ne, size_t No, bint msb):
         super().__init__(Ne, No, msb)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
-        self.row_width = Ne
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
@@ -156,17 +155,30 @@ cdef class StandardE5(StandardEvaluator):
         for i in range(self.No):
             row_sum = floodcount_vector(E[r, :], self.end_subtractor)
             if row_sum > 0:
-                return (self.row_width * (self.No - i - 1) + row_sum) / self.divisor
+                return (self.Ne * (self.No - i - 1) + row_sum) / self.divisor
             r += self.step
         return 0.0
 
 
-cdef class StandardE6(StandardEvaluator):
-    def __init__(self, size_t Ne, size_t No, bint msb):
-        super().__init__(Ne, No, msb)
-        self.row_width = self.cols * PACKED_SIZE
-        self.row_width -= self.row_width - Ne % self.row_width
+# cdef class StandardE6(StandardEvaluator):
+#     def __init__(self, size_t Ne, size_t No, bint msb):
+#         super().__init__(Ne, No, msb)
+#         self.row_width = self.cols * PACKED_SIZE
+#         self.row_width -= self.row_width - Ne % self.row_width
 
+#     cpdef double evaluate(self, packed_type_t[:, ::1] E):
+#         cdef size_t i, r, row_sum
+        
+#         # find earliest row with an error value
+#         r = self.start
+#         for i in range(self.No):
+#             row_sum = popcount_vector(E[r, :])
+#             if row_sum > 0:
+#                 return (self.row_width * (self.No - i - 1) + row_sum) / self.divisor
+#             r += self.step
+#         return 0.0
+
+cdef class StandardE6(StandardEvaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
         
@@ -175,15 +187,12 @@ cdef class StandardE6(StandardEvaluator):
         for i in range(self.No):
             row_sum = popcount_vector(E[r, :])
             if row_sum > 0:
-                return (self.row_width * (self.No - i - 1) + row_sum) / self.divisor
+                return (self.Ne * (self.No - i - 1) + row_sum) / self.divisor
             r += self.step
         return 0.0
 
 
-cdef class StandardE7(StandardE6):
-    def __init__(self, size_t Ne, size_t No, bint msb):
-        super().__init__(Ne, No, msb)
-
+cdef class StandardE7(StandardEvaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, c
         
@@ -192,6 +201,6 @@ cdef class StandardE7(StandardE6):
         for i in range(self.No):
             for c in range(self.cols):
                 if E[r, c] > 0:
-                    return self.row_width / self.divisor * (self.No - i)
+                    return self.Ne / self.divisor * (self.No - i)
             r += self.step
         return 0.0

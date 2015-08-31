@@ -51,10 +51,8 @@ cdef class StandardE5(StandardEvaluator):
 
 
 cdef class StandardE6(StandardEvaluator):
-    cdef size_t row_width
-
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE7(StandardE6):
+cdef class StandardE7(StandardEvaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
