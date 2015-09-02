@@ -160,24 +160,6 @@ cdef class StandardE5(StandardEvaluator):
         return 0.0
 
 
-# cdef class StandardE6(StandardEvaluator):
-#     def __init__(self, size_t Ne, size_t No, bint msb):
-#         super().__init__(Ne, No, msb)
-#         self.row_width = self.cols * PACKED_SIZE
-#         self.row_width -= self.row_width - Ne % self.row_width
-
-#     cpdef double evaluate(self, packed_type_t[:, ::1] E):
-#         cdef size_t i, r, row_sum
-        
-#         # find earliest row with an error value
-#         r = self.start
-#         for i in range(self.No):
-#             row_sum = popcount_vector(E[r, :])
-#             if row_sum > 0:
-#                 return (self.row_width * (self.No - i - 1) + row_sum) / self.divisor
-#             r += self.step
-#         return 0.0
-
 cdef class StandardE6(StandardEvaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E):
         cdef size_t i, r, row_sum
