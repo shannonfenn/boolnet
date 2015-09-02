@@ -54,7 +54,7 @@ def build_training_evaluator(network, mapping):
                                       operator=mapping.operator, N=mapping.N)
 
 
-def build_test_evaluator(network, mapping, parameters, guiding_functions):
+def build_test_evaluator(network, mapping, guiding_functions):
     if isinstance(mapping, FileBoolMapping):
         evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, OperatorBoolMapping):
@@ -167,7 +167,7 @@ def build_result_map(parameters, learner_result, training_evaluator, test_data):
     final_network = learner_result.best_states[-1]
 
     training_evaluator.set_network(final_network)
-    test_evaluator = build_test_evaluator(final_network, test_data, parameters,
+    test_evaluator = build_test_evaluator(final_network, test_data,
                                           [guiding_function, E1, ACCURACY, PER_OUTPUT])
 
     results = {
