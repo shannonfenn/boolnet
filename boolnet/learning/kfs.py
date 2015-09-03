@@ -65,23 +65,24 @@ def FABCPP_cmd_line(features, target, file_name_base, options):
         # TODO: Use model 5 to compute other FSs
 
 
-def minimal_feature_sets(features, target, file_name_base, options):
-    ''' Takes a featureset matrix and target vector and finds the
-        set of all minimal featuresets.
+def minimum_feature_set(features, target, file_name_base, options):
+    ''' Takes a featureset matrix and target vector and finds a minimum featureset.
     featureset  - assumed to be a 2D numpy array in example x feature format.
     target      - assumed to be a 1D numpy array of the same number of rows
                   as featureset
-    returns     - a list of lists of feature indices representing feature
-                  sets of minimal cardinality.
-
-    NOTE: Only finds a single minFS at present'''
+    returns     - a 1D numpy array of feature indices representing a feature set
+                  of minimal cardinality.'''
 
     return FABCPP_cmd_line(features, target, file_name_base, options)
 
-    # check if the features form a feature set, if not then no subset can either
-    # if is_feature_set(features, target):
-    #     return FABCPP_cmd_line(features, target, file_name_base)
-    # else:
-    #     with open(file_name_base + '.err', 'w') as f:
-    #         f.write('No feature set: using entire set.')
-    #     return list(range(features.shape[1]))
+
+def multi_target_minimum_feature_sets(features, targets, file_name_base, options):
+    ''' Takes a featureset matrix and target vector and finds a minimum featureset.
+    features    - assumed to be a 2D numpy array in example x feature format.
+    target      - assumed to be a 2D numpy array of the same number of rows as features
+    returns     - a list of 1D numpy arrays of feature indices representing a feature set
+                  of minimal cardinality for each target.'''
+    num_targets = targets.shape[1]
+    feature_sets = [FABCPP_cmd_line(features, targets[:, t], file_name_base, options)
+                    for t in range(num_targets)]
+    return feature_sets
