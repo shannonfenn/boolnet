@@ -11,7 +11,7 @@ from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
 
 
-Result = namedtuple('Result', [
+LearnerResult = namedtuple('LearnerResult', [
     'best_states', 'best_iterations', 'final_iterations', 'target_order', 'feature_sets'])
 
 
@@ -126,7 +126,7 @@ def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
 
     options = parameters.get('fabcpp_options')
     # use external solver for minFS
-    minfs = kfs.minimal_feature_set(kfs_matrix, kfs_target, file_name_base, options)
+    minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, file_name_base, options)
 
     return input_feature_indices[minfs]
 
@@ -183,19 +183,14 @@ def stratified(state, parameters, optimiser):
 
     check_parameters(parameters)
 
-    # For logging network as each new bit is learnt
-    best_states = [None] * num_targets
-    best_iterations = [-1] * num_targets
-    final_iterations = [-1] * num_targets
-    # For recording the order in which targets where learned
-    target_order_array = [-1] * num_targets
+    result = LearnerResult(best_states=[None] * num_targets, best_iterations=[-1] * num_targets,
+                           final_iterations=[-1] * num_targets, target_order=[-1] * num_targets,
+                           feature_sets=[])
 
     # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
     gate_boundaries = strata_boundaries(state.network)
     # the initial kfs input is just the set of all network inputs
     target_matrix = np.array(state.target_matrix)
-
-    fs_results = []
 
     for i in range(num_targets):
         if auto_target:
@@ -203,22 +198,22 @@ def stratified(state, parameters, optimiser):
         else:
             target = i
             optimisation_required = prepare_state(
-                state, parameters, gate_boundaries, target_matrix, target, fs_results)
+                state, parameters, gate_boundaries, target_matrix, target, result.feature_sets)
 
-        target_order_array[i] = target
+        result.target_order[i] = target
 
         if optimisation_required:
             optimised_network, best_it, final_it = learn_single_target(
                 state, parameters['optimiser'], optimiser, target)
 
             # record result
-            best_states[target] = copy(optimised_network)
-            best_iterations[target] = best_it
-            final_iterations[target] = final_it
+            result.best_states[target] = copy(optimised_network)
+            result.best_iterations[target] = best_it
+            result.final_iterations[target] = final_it
         else:
-            best_states[target] = copy(optimised_network)
+            result.best_states[target] = copy(optimised_network)
 
-    return Result(best_states, best_iterations, final_iterations, target_order_array, fs_results)
+    return result
 
 
 def learn_single_target(state, opt_params, optimiser, target):
