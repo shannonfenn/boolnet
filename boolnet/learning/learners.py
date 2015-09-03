@@ -126,13 +126,9 @@ def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
 
     options = parameters.get('fabcpp_options')
     # use external solver for minFS
-    feature_sets = kfs.minimal_feature_sets(kfs_matrix, kfs_target, file_name_base, options)
+    minfs = kfs.minimal_feature_set(kfs_matrix, kfs_target, file_name_base, options)
 
-    # for now only one feature set should exist
-    if feature_sets.shape[0] > 1:
-        raise ValueError('More than one feature set returned.')
-
-    return input_feature_indices[feature_sets][0]
+    return input_feature_indices[minfs]
 
 
 def prepare_state(state, parameters, gate_boundaries, target_matrix, target, feature_set_results):
