@@ -150,7 +150,8 @@ def prepare_state(state, parameters, gate_boundaries, target_matrix, target, fea
         if log_all_feature_sets:
             fs_list = [fs]
             for t in range(target+1, num_targets):
-                fs_list.append(get_feature_set(state, parameters, lower_bound, t))
+                fs_list.append(get_feature_set(
+                    state, parameters, target, gate_boundaries, not one_layer_kfs))
             feature_set_results.append(fs_list)
         else:
             feature_set_results.append(fs)
