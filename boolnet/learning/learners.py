@@ -245,4 +245,4 @@ def basic(evaluator, parameters, optimiser):
     results = optimiser.run(evaluator, opt_params, end_condition)
     best_state, best_it, final_it = results
 
-    return Result([best_state], [best_it], [final_it], None, None)
+    return LearnerResult([best_state], [best_it], [final_it], None, None)
