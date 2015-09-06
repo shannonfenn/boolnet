@@ -95,6 +95,8 @@ cdef class NetworkState:
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
+    cpdef representation(self):
+        return self.network
 
     ######################### Network pass-through methods #########################
     cpdef connected_gates(self):
