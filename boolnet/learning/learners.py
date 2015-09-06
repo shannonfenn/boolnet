@@ -109,7 +109,11 @@ class StratifiedLearner(BasicLearner):
         not_learned = set(range(self.num_targets)) - set(self.learned_targets)
         if self.auto_target:
             raise NotImplemented
-            self._get_feature_sets(self, not_learned)
+            strata = len(self.learned_targets)
+            self._record_feature_sets(self, state, not_learned)
+            feature_sets_sizes = [len(l) for l in self.feature_sets[strata][not_learned]]
+            indirect_simplest_target = np.argmin(feature_sets_sizes)
+            return not_learned[indirect_simplest_target]
         else:
             return min(not_learned)
 
