@@ -23,227 +23,217 @@ def guiding_error_end_condition():
     return lambda _, error: error <= 0
 
 
-def strata_boundaries(network):
-    # this allocates gate boundaries linearly, that it the first
-    # target is allocate the first Ng/No gates and so on.
-    No, Ng = network.No, network.Ng
-    upper_bounds = np.linspace((Ng-No)/No, Ng-No, No).astype(int).tolist()
-    return [0] + upper_bounds
-
-
-def check_parameters(parameters):
-    problem_funcs = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
-
-    function_name = parameters['optimiser']['guiding_function']
-    if function_name in problem_funcs:
-        logging.error(('use of %s guiding function may result in poor performance due to non-zero '
-                       'errors in earlier bits.'), function_name)
-        print('WARNING POTENTIALLY ERROR PRONE METRIC FOR STRATIFIED LEARNING!', file=sys.stderr)
-
-
-def handle_single_FS(feature_set, evaluator, bit, target, changeable_gate):
-    # When we have a 1FS we have already learned the target, or its inverse,
-    # simply map this feature to the output
-    activation_matrix = evaluator.activation_matrix
-    network = evaluator.network
-    Ng = network.Ng
-    No = network.No
-    feature = feature_set[0]
-    if activation_matrix[feature][0] == target[bit][0]:
-        # we have the target perfectly, in this case place a double
-        # inverter chain (we could take the inputs from a gate if it was one
-        # but in the event the feature is an input this is not possible)
-        network.apply_move({'gate': changeable_gate, 'terminal': 0, 'new_source': feature})
-        network.apply_move({'gate': changeable_gate, 'terminal': 1, 'new_source': feature})
-        network.apply_move({'gate': Ng - No + bit, 'terminal': 0, 'new_source': changeable_gate})
-        network.apply_move({'gate': Ng - No + bit, 'terminal': 1, 'new_source': changeable_gate})
-    else:
-        # we have the target's inverse, since a NAND gate can act as an
-        # inverter we can connect the output gate directly to the feature
-        network.apply_move({'gate': Ng - No + bit, 'terminal': 0, 'new_source': feature})
-        network.apply_move({'gate': Ng - No + bit, 'terminal': 1, 'new_source': feature})
-
-
-def build_mask(network, lower_bound, upper_bound, target_index, feature_set=None):
+def build_mask(state, lower_bound, upper_bound, target, feature_set=None):
     # IDEA: May later use entropy or something similar. For now
     #       this uses the union of all minimal feature sets the
     #       connection encoded (+Ni) values for the changeable
     #       gates - or else we could only have single layer
     #       networks at each stage!
-    Ni = network.Ni
-    Ng = network.Ng
-    No = network.No
+    Ni = state.Ni
+    Ng = state.Ng
+    No = state.No
     # give list of gates which can have their inputs reconnected
-    changeable = np.zeros(Ng, dtype=np.uint8)
-    sourceable = np.zeros(Ng+Ni, dtype=np.uint8)
+    changeable, sourceable = np.zeros(Ng, dtype=np.uint8), np.zeros(Ng+Ni, dtype=np.uint8)
 
     changeable[lower_bound:upper_bound] = 1
-    changeable[Ng - No + target_index] = 1
+    changeable[Ng - No + target] = 1
 
-    # and a list of inputs (including gate outputs) which those
-    # gates can be connected to
+    # and a list of inputs (including gates) which those gates can be connected to
     if feature_set is None:
-        # include all modifiable and previous connections
+        # all modifiable and previous connections
         sourceable[:upper_bound+Ni] = 1
     else:
-        # union of all feature sets
-        sourceable[feature_set.flat] = 1
+        sourceable[feature_set] = 1
         # and the range of modifiable gates (with Ni added)
         sourceable[lower_bound+Ni:upper_bound+Ni] = 1
 
     # include all previous final outputs
-    sourceable[Ng-No+Ni:Ng-No+Ni+target_index] = 1
-
-    # logging.info('kfs result: %s', feature_set)
-    # logging.info('prior outputs: %s', range(Ng - No + Ni, Ng - No + Ni + target_index))
-    # logging.info('Changeable: %s', changeable)
-    # logging.info('Sourceable: %s', sourceable)
+    first_output = Ng-No+Ni
+    sourceable[first_output:first_output+target] = 1
 
     return sourceable, changeable
 
 
-def get_feature_set(evaluator, parameters, target, boundaries, all_inputs):
-    activation_matrix = np.asarray(evaluator.activation_matrix)
-    Ni = evaluator.network.Ni
-    # generate input to minFS solver
-    upper_gate = boundaries[target]
-    if all_inputs or target == 0:
-        input_feature_indices = np.arange(upper_gate+Ni)
-    else:
-        lower_gate = boundaries[target - 1]
-        input_feature_indices = np.hstack((np.arange(Ni), np.arange(lower_gate+Ni, upper_gate+Ni)))
+class BasicLearner:
+    def _check_parameters(self, parameters):
+        pass
 
-    kfs_matrix = activation_matrix[input_feature_indices, :]
-    # target feature for this bit
-    kfs_target = evaluator.target_matrix[target, :]
+    def _setup(self, parameters, state):
+        self._check_parameters(self, parameters)
+        self.opt_params = copy(parameters['optimiser'])
+        guiding_func_name = self.opt_params['guiding_function']
+        self.guiding_func_id = function_from_name(guiding_func_name)
+        self.opt_params['guiding_function'] = lambda x: x.function_value(self.guiding_func_id)
 
-    logging.info('\t(examples, features): {}'.format(evaluator.Ne, kfs_matrix.shape))
+    def _optimise(self, state, optimiser):
+        ''' This just learns by using the given optimiser and guiding function.'''
+        return optimiser.run(state, self.opt_params, self.end_condition)
 
-    file_name_base = parameters['inter_file_base'] + str(target)
-
-    kfs_matrix = unpack_bool_matrix(kfs_matrix, evaluator.Ne)
-    kfs_target = unpack_bool_vector(kfs_target, evaluator.Ne)
-
-    options = parameters.get('fabcpp_options')
-    # use external solver for minFS
-    minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, file_name_base, options)
-
-    return input_feature_indices[minfs]
+    def run(self, state, parameters, optimiser):
+        self._setup(parameters)
+        self.end_condition = guiding_error_end_condition()
+        best_state, best_it, final_it = self._optimise(state, optimiser)
+        return LearnerResult([best_state], [best_it], [final_it], None, None)
 
 
-def prepare_state(state, parameters, gate_boundaries, target_matrix, target, feature_set_results):
-    # options
-    use_kfs_masking = parameters.get('kfs', False)
-    log_all_feature_sets = parameters.get('log_all_feature_sets', False)
+class StratifiedLearner(BasicLearner):
+    def _setup(self, parameters, state):
+        super()._setup(parameters)
+        self.auto_target = parameters.get('auto_target')
+        self.use_kfs_masking = parameters.get('kfs')
+        self.log_all_feature_sets = parameters.get('log_all_feature_sets')
+        self.one_layer_kfs = parameters.get('one_layer_kfs')
+        self.file_name_base = parameters['inter_file_base']
+        self.fabcpp_options = parameters.get('fabcpp_options')
 
-    network = state.network
-    num_targets, _ = target_matrix.shape
-    lower_bound = gate_boundaries[target]
-    upper_bound = gate_boundaries[target + 1]
+        self.num_targets = state.network.No
+        self.learned_targets = []
+        self.feature_sets = np.empty((self.num_targets, self.num_targets), dtype=list())
 
-    if use_kfs_masking:
-        one_layer_kfs = parameters.get('one_layer_kfs', False)
-        # find a set of min feature sets for the next target
-        fs = get_feature_set(state, parameters, target, gate_boundaries, not one_layer_kfs)
+        self.gate_boundaries = np.linspace(
+            0, state.Ng - state.No, state.No+1, dtype=int)
 
-        # keep a log of the feature sets found at each iteration
-        if log_all_feature_sets:
-            fs_list = [fs]
-            for t in range(target+1, num_targets):
-                fs_list.append(get_feature_set(
-                    state, parameters, target, gate_boundaries, not one_layer_kfs))
-            feature_set_results.append(fs_list)
-        else:
-            feature_set_results.append(fs)
+        self.target_matrix = np.array(state.target_matrix, copy=True)
 
-        # check for 1-FS, if we have a 1FS we have already learnt the
-        # target, or its inverse, so simply map this feature to the output
-        if fs.size == 1:
-            handle_single_FS(fs, state, target, target_matrix, lower_bound)
-            return False
+    def _check_parameters(self, parameters):
+        problem_funcs = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
+        function_name = parameters['optimiser']['guiding_function']
+        if function_name in problem_funcs:
+            logging.error(('use of %s guiding function may result in poor performance due to '
+                           'non-zero errors in earlier bits.'), function_name)
+            print('WARNING POTENTIALLY ERROR PRONE METRIC FOR STRATIFIED LEARNING!',
+                  file=sys.stderr)
 
-        sourceable, changeable = build_mask(network, lower_bound, upper_bound, target, fs)
-    else:
-        sourceable, changeable = build_mask(network, lower_bound, upper_bound, target)
-
-    # apply the mask to the network
-    network.set_mask(sourceable, changeable)
-
-    # TODO: Fix it so that the gate_edit boundaries aren't leaving gates unused
-    #       in the event that the learner finishes before exhausting all gates
-
-    # Reinitialise the next range of gates to be optimised according to the mask
-    network.reconnect_masked_range()
-
-    return True
-
-
-def stratified(state, parameters, optimiser):
-    num_targets = state.network.No
-    auto_target = parameters.get('auto_target')
-
-    check_parameters(parameters)
-
-    result = LearnerResult(best_states=[None] * num_targets, best_iterations=[-1] * num_targets,
-                           final_iterations=[-1] * num_targets, target_order=[-1] * num_targets,
-                           feature_sets=[])
-
-    # allocate gate pools for each bit, to avoid the problem of prematurely using all the gates
-    gate_boundaries = strata_boundaries(state.network)
-    # the initial kfs input is just the set of all network inputs
-    target_matrix = np.array(state.target_matrix)
-
-    for i in range(num_targets):
-        if auto_target:
+    def _determine_next_target(self, state):
+        not_learned = set(range(self.num_targets)) - set(self.learned_targets)
+        if self.auto_target:
             raise NotImplemented
+            self._get_feature_sets(self, not_learned)
         else:
-            target = i
-            optimisation_required = prepare_state(
-                state, parameters, gate_boundaries, target_matrix, target, result.feature_sets)
+            return min(not_learned)
 
-        result.target_order[i] = target
+    def _record_feature_sets(self, state, targets):
+        # keep a log of the feature sets found at each iteration
+        strata = len(self.learned_targets)
+        for t in targets:
+            self.feature_sets[strata, t] = self.get_feature_set(state, t, not self.one_layer_kfs)
 
-        if optimisation_required:
-            optimised_network, best_it, final_it = learn_single_target(
-                state, parameters['optimiser'], optimiser, target)
-
-            # record result
-            result.best_states[target] = copy(optimised_network)
-            result.best_iterations[target] = best_it
-            result.final_iterations[target] = final_it
+    def _get_single_fs(self, state, target, all_strata):
+        activation_matrix = np.asarray(state.activation_matrix)
+        Ni = state.Ni
+        # generate input to minFS solver
+        upper_gate = self.gate_boundaries[target]
+        if all_strata or target == 0:
+            input_feature_indices = np.arange(upper_gate+Ni)
         else:
-            result.best_states[target] = copy(optimised_network)
+            lower_gate = self.gate_boundaries[target - 1]
+            input_feature_indices = np.hstack((
+                np.arange(Ni), np.arange(lower_gate+Ni, upper_gate+Ni)))
 
-    return result
+        # input features for this target
+        kfs_matrix = activation_matrix[input_feature_indices, :]
+        kfs_matrix = unpack_bool_matrix(kfs_matrix, state.Ne)
+        # target feature for this target
+        kfs_target = self.target_matrix[target, :]
+        kfs_target = unpack_bool_vector(kfs_target, state.Ne)
 
+        kfs_filename = self.file_name_base + str(target)
 
-def learn_single_target(state, opt_params, optimiser, target):
-    opt_params = copy(opt_params)
-    guiding_func_id = function_from_name(opt_params['guiding_function'])
-    # generate an end condition based on the current target
-    end_condition = per_target_error_end_condition(target)
+        # use external solver for minFS
+        minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_options)
 
-    # build new guiding function for only next target if required
-    if guiding_func_id == PER_OUTPUT:
-        guiding_func = lambda x: x.function_value(guiding_func_id)[target]
-    else:
-        guiding_func = lambda x: x.function_value(guiding_func_id)
+        return input_feature_indices[minfs]
 
-    opt_params['guiding_function'] = guiding_func
+    def _apply_mask(self, state, target):
+        # which layer we are up to
+        strata = len(self.learned_targets)
 
-    # run the optimiser
-    return optimiser.run(state, opt_params, end_condition)
+        lower_bound = self.gate_boundaries[strata]
+        upper_bound = self.gate_boundaries[strata + 1]
 
+        if self.use_kfs_masking:
+            if not self.feature_sets[strata, target]:
+                # find a set of min feature sets for the next target
+                self._record_feature_sets([target])
 
-def basic(evaluator, parameters, optimiser):
-    ''' This just learns by using the given optimiser and guiding function.'''
-    opt_params = copy(parameters['optimiser'])
-    end_condition = guiding_error_end_condition()
+            fs = self.feature_sets[strata, target]
+            # check for 1-FS, if we have a 1FS we have already learnt the
+            # target, or its inverse, so simply map this feature to the output
+            if fs.size == 1:
+                self._handle_single_FS(fs[0], state, target)
+                return False
+        else:
+            fs = None
 
-    guiding_func_id = function_from_name(opt_params['guiding_function'])
-    opt_params['guiding_function'] = lambda evaluator: evaluator.function_value(guiding_func_id)
+        sourceable, changeable = build_mask(state, lower_bound, upper_bound, target, fs)
 
-    results = optimiser.run(evaluator, opt_params, end_condition)
-    best_state, best_it, final_it = results
+        # apply the mask to the network
+        state.set_mask(sourceable, changeable)
 
-    return LearnerResult([best_state], [best_it], [final_it], None, None)
+        # TODO: Fix it so that the gate_edit boundaries aren't leaving gates unused
+        #       in the event that the learner finishes before exhausting all gates
+
+        # Reinitialise the next range of gates to be optimised according to the mask
+        state.reconnect_masked_range()
+
+        return True
+
+    def _handle_single_FS(self, feature, state, target):
+        # When we have a 1FS we have already learned the target, or its inverse,
+        # simply map this feature to the output
+        strata = len(self.learned_targets)
+        useable_gate = self.gate_boundaries[strata]
+
+        activation_matrix = state.activation_matrix
+        Ng = state.Ng
+        No = state.No
+        if activation_matrix[feature][0] == self.target_matrix[target][0]:
+            # we have the target perfectly, in this case place a double
+            # inverter chain (we could take the inputs from a gate if it was one
+            # but in the event the feature is an input this is not possible)
+            state.apply_move({'gate': useable_gate, 'terminal': 0, 'new_source': feature})
+            state.apply_move({'gate': useable_gate, 'terminal': 1, 'new_source': feature})
+            state.apply_move({'gate': Ng - No + target, 'terminal': 0, 'new_source': useable_gate})
+            state.apply_move({'gate': Ng - No + target, 'terminal': 1, 'new_source': useable_gate})
+        else:
+            # we have the target's inverse, since a NAND gate can act as an
+            # inverter we can connect the output gate directly to the feature
+            state.apply_move({'gate': Ng - No + target, 'terminal': 0, 'new_source': feature})
+            state.apply_move({'gate': Ng - No + target, 'terminal': 1, 'new_source': feature})
+
+    def _learn_single_target(self, state, optimiser, target):
+        # build new guiding function for only next target if required
+        if self.guiding_func_id == PER_OUTPUT:
+            guiding_func = lambda x: x.function_value(self.guiding_func_id)[target]
+            self.opt_params['guiding_function'] = guiding_func
+
+        # generate an end condition based on the current target
+        end_condition = per_target_error_end_condition(target)
+
+        # run the optimiser
+        return self._optimise(state, end_condition)
+
+    def run(self, state, parameters, optimiser):
+        self._setup(parameters)
+        num_targets = state.No
+
+        result = LearnerResult(best_states=[None] * num_targets, best_iterations=[-1] * num_targets,
+                               final_iterations=[-1] * num_targets, target_order=[-1] * num_targets,
+                               feature_sets=[])
+
+        while len(self.learned_targets) < num_targets:
+            # determine target
+            target = self._determine_next_target(state)
+            # apply mask
+            optimisation_required = self._apply_mask(state, target)
+            # optimise
+            if optimisation_required:
+                network, best_it, final_it = self._learn_single_target(state, optimiser, target)
+                # record result
+                result.best_states[target] = copy(network)
+                result.best_iterations[target] = best_it
+                result.final_iterations[target] = final_it
+            else:
+                # record result
+                result.best_states[target] = copy(state.network)
+        return result
