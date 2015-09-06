@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import fixture
 from boolnet.network.boolnetwork import BoolNetwork
-from boolnet.learning.learners import strata_boundaries, build_mask
+from boolnet.learning.learners import build_mask
 
 
 # #################### Global fixtures #################### #
@@ -32,24 +32,10 @@ def harness(request):
 #     return net, bounds, feature_sets
 
 
-def test_strata_boundaries_even(harness):
-    network, _ = harness
-    bounds = strata_boundaries(network)
-    diffs = [u - l for l, u in zip(bounds[:-1], bounds[1:])]
-    assert 0 <= max(diffs) - min(diffs) <= 1
-
-
-def test_strata_boundaries(harness):
-    network, expected = harness
-    actual = strata_boundaries(network)
-    assert expected == actual
-
-
 def test_build_mask_without_kfs_sourceable(harness):
     net, bounds = harness
 
     Ni, No, Ng = net.Ni, net.No, net.Ng
-
     for target in range(No):
         l, u = bounds[target], bounds[target + 1]
         expected = np.array([1]*(Ni+l) + [1]*(u-l) + [0]*(Ng-No-u) +
