@@ -1,11 +1,12 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
+# distutils: language = c++
 import cython
 import numpy as np
 cimport numpy as np
 from copy import copy
 
-from boolnet.network.boolnetwork import BoolNetwork
+from boolnet.network.boolnetwork cimport BoolNetwork, Move
 from boolnet.bintools.functions cimport Function
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 from boolnet.bintools.biterror cimport StandardEvaluator
@@ -84,7 +85,6 @@ cdef class NetworkState:
     cpdef function_value(self, Function function):
         pass
 
-    ######################### Network pass-through methods #########################
     cpdef set_network(self, network):
         # check invariants hold
         self._check_network_invariants(network)
@@ -95,17 +95,43 @@ cdef class NetworkState:
         self.network.changed = True
         self.network.first_unevaluated_gate = 0
 
-    cpdef representation(self):
-        return self.network
+
+    ######################### Network pass-through methods #########################
+    cpdef connected_gates(self):
+        return self.network.connected_gates()
+
+    cpdef connected_sources(self):
+        return self.network.connected_sources()
+
+    cpdef max_node_depths(self):
+        return self.network.max_node_depths()
+    
+    cpdef force_reevaluation(self):
+        self.network.force_reevaluation()
+
+    cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable):
+        self.network.set_mask(sourceable, changeable)
+    
+    cpdef remove_mask(self):
+        self.network.remove_mask()
+    
+    cpdef reconnect_masked_range(self):
+        self.network.reconnect_masked_range()
 
     cpdef move_to_random_neighbour(self):
         self.network.move_to_random_neighbour()
+
+    cpdef apply_move(self, Move move):
+        self.network.apply_move(move)
 
     cpdef revert_move(self):
         self.network.revert_move()
 
     cpdef clear_history(self):
         self.network.clear_history()
+
+    cpdef history_empty(self):
+        return self.network.history_empty()
 
     ############################### Evaluation methods ###############################
     cdef void _evaluate_random(self):
