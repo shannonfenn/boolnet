@@ -58,27 +58,28 @@ class BasicLearner:
     def _check_parameters(self, parameters):
         pass
 
-    def _setup(self, parameters, state):
-        self._check_parameters(self, parameters)
+    def _setup(self, parameters, state, optimiser):
+        self._check_parameters(parameters)
         self.opt_params = copy(parameters['optimiser'])
         guiding_func_name = self.opt_params['guiding_function']
         self.guiding_func_id = function_from_name(guiding_func_name)
         self.opt_params['guiding_function'] = lambda x: x.function_value(self.guiding_func_id)
+        self.optimiser = optimiser
 
-    def _optimise(self, state, optimiser):
+    def _optimise(self, state):
         ''' This just learns by using the given optimiser and guiding function.'''
-        return optimiser.run(state, self.opt_params, self.end_condition)
+        return self.optimiser.run(state, self.opt_params, self.end_condition)
 
     def run(self, state, parameters, optimiser):
-        self._setup(parameters)
+        self._setup(parameters, state)
         self.end_condition = guiding_error_end_condition()
-        best_state, best_it, final_it = self._optimise(state, optimiser)
+        best_state, best_it, final_it = self._optimise(state)
         return LearnerResult([best_state], [best_it], [final_it], None, None)
 
 
 class StratifiedLearner(BasicLearner):
-    def _setup(self, parameters, state):
-        super()._setup(parameters)
+    def _setup(self, parameters, state, optimiser):
+        super()._setup(parameters, state, optimiser)
         self.auto_target = parameters.get('auto_target')
         self.use_kfs_masking = parameters.get('kfs')
         self.log_all_feature_sets = parameters.get('log_all_feature_sets')
@@ -88,7 +89,7 @@ class StratifiedLearner(BasicLearner):
 
         self.num_targets = state.network.No
         self.learned_targets = []
-        self.feature_sets = np.empty((self.num_targets, self.num_targets), dtype=list())
+        self.feature_sets = np.empty((self.num_targets, self.num_targets), dtype=list)
 
         self.gate_boundaries = np.linspace(
             0, state.Ng - state.No, state.No+1, dtype=int)
@@ -116,7 +117,7 @@ class StratifiedLearner(BasicLearner):
         # keep a log of the feature sets found at each iteration
         strata = len(self.learned_targets)
         for t in targets:
-            self.feature_sets[strata, t] = self.get_feature_set(state, t, not self.one_layer_kfs)
+            self.feature_sets[strata, t] = self._get_single_fs(state, t, not self.one_layer_kfs)
 
     def _get_single_fs(self, state, target, all_strata):
         activation_matrix = np.asarray(state.activation_matrix)
@@ -152,9 +153,9 @@ class StratifiedLearner(BasicLearner):
         upper_bound = self.gate_boundaries[strata + 1]
 
         if self.use_kfs_masking:
-            if not self.feature_sets[strata, target]:
+            if self.feature_sets[strata, target] is None:
                 # find a set of min feature sets for the next target
-                self._record_feature_sets([target])
+                self._record_feature_sets(state, [target])
 
             fs = self.feature_sets[strata, target]
             # check for 1-FS, if we have a 1FS we have already learnt the
@@ -201,20 +202,20 @@ class StratifiedLearner(BasicLearner):
             state.apply_move({'gate': Ng - No + target, 'terminal': 0, 'new_source': feature})
             state.apply_move({'gate': Ng - No + target, 'terminal': 1, 'new_source': feature})
 
-    def _learn_single_target(self, state, optimiser, target):
+    def _learn_target(self, state, target):
         # build new guiding function for only next target if required
         if self.guiding_func_id == PER_OUTPUT:
             guiding_func = lambda x: x.function_value(self.guiding_func_id)[target]
             self.opt_params['guiding_function'] = guiding_func
 
         # generate an end condition based on the current target
-        end_condition = per_target_error_end_condition(target)
+        self.end_condition = per_target_error_end_condition(target)
 
         # run the optimiser
-        return self._optimise(state, end_condition)
+        return self._optimise(state)
 
     def run(self, state, parameters, optimiser):
-        self._setup(parameters)
+        self._setup(parameters, state, optimiser)
         num_targets = state.No
 
         result = LearnerResult(best_states=[None] * num_targets, best_iterations=[-1] * num_targets,
@@ -228,7 +229,7 @@ class StratifiedLearner(BasicLearner):
             optimisation_required = self._apply_mask(state, target)
             # optimise
             if optimisation_required:
-                network, best_it, final_it = self._learn_single_target(state, optimiser, target)
+                network, best_it, final_it = self._learn_target(state, target)
                 # record result
                 result.best_states[target] = copy(network)
                 result.best_iterations[target] = best_it
