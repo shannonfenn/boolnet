@@ -22,9 +22,8 @@ OPTIMISERS = {
 
 
 LEARNERS = {
-    'basic': learners.basic,
-    'stratified': learners.stratified,
-    'stratified kfs': learners.stratified
+    'basic': learners.BasicLearner(),
+    'stratified': learners.StratifiedLearner(),
     }
 
 
@@ -141,7 +140,7 @@ def learn_bool_net(parameters):
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner(training_evaluator, learner_parameters, optimiser)
+    learner_result = learner.run(training_evaluator, learner_parameters, optimiser)
 
     learning_end_time = time.monotonic()
 
