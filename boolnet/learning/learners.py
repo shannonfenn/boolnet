@@ -237,4 +237,5 @@ class StratifiedLearner(BasicLearner):
             else:
                 # record result
                 result.best_states[target] = copy(state.network)
+            self.learned_targets.append(target)
         return result
