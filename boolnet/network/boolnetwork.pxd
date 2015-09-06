@@ -1,3 +1,4 @@
+#distutils: language = c++
 import numpy as np
 cimport numpy as np
 from libcpp.deque cimport deque
@@ -25,22 +26,31 @@ cdef class BoolNetwork:
         deque[Move] inverse_moves
     
     cdef _check_invariants(self)
+    cpdef clean_copy(self)
+    cpdef full_copy(self)
 
-    cdef _check_mask(self)
+    cpdef force_reevaluation(self)
 
+    # properties
     cpdef connected_gates(self)
-
     cpdef connected_sources(self)
+    cpdef max_node_depths(self)
 
+    # mask modification
+    cdef _check_mask(self)
     cpdef _update_connected(self)
+    cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable)
+    cpdef remove_mask(self)
+    cpdef reconnect_masked_range(self)
 
+    # Move handling
     cpdef move_to_random_neighbour(self)
-
     cpdef Move random_move(self) except +
-
     cpdef apply_move(self, Move move)
-
     cpdef revert_move(self)
+    cpdef revert_all_moves(self)
+    cpdef clear_history(self)
+    cpdef history_empty(self)
 
 cdef class RandomBoolNetwork(BoolNetwork):
     cdef np.uint8_t[:] _transfer_functions

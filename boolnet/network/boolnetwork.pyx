@@ -1,4 +1,5 @@
 # cython: language_level=3
+# distutils: language = c++
 import numpy as np
 cimport numpy as np
 from libcpp.deque cimport deque
@@ -31,12 +32,12 @@ cdef class BoolNetwork:
         self._check_invariants()
         self._update_connected()
 
-    def clean_copy(self):
+    cpdef clean_copy(self):
         cdef BoolNetwork bn
         bn = BoolNetwork(self.gates, self.Ni, self.No)
         return bn
 
-    def full_copy(self):
+    cpdef full_copy(self):
         cdef BoolNetwork bn
         bn = BoolNetwork(self.gates, self.Ni, self.No)
         bn.changeable[:] = self.changeable
@@ -70,7 +71,7 @@ cdef class BoolNetwork:
                 'gates:\n{}').format(self.Ni, self.Ng, self.changed,
                                      self.max_node_depths(), self.gates)
 
-    def max_node_depths(self):
+    cpdef max_node_depths(self):
         # default to stored value of No
         cdef size_t Ni, No, Ng, g
         No = self.No
@@ -78,14 +79,15 @@ cdef class BoolNetwork:
         Ni = self.Ni
         depths = [0] * (Ng + Ni)
         for g in range(Ng):
-            depths[g + Ni] = max(depths[inp] for inp in self.gates[g]) + 1
+            source_depths = [depths[inp] for inp in self.gates[g]]
+            depths[g + Ni] = max(source_depths) + 1
         # return the last No values
         return depths[-No:]
 
-    def force_reevaluation(self):
+    cpdef force_reevaluation(self):
         self.changed = True
 
-    def reconnect_masked_range(self):
+    cpdef reconnect_masked_range(self):
         # this has the side effect of clearing the history since we don't
         # want to compute all the inverse moves
         cdef size_t g, i, Ni
@@ -131,13 +133,13 @@ cdef class BoolNetwork:
                               'sourceable: {} changeable: {}').format(
                 self.sourceable, self.changeable))
 
-    def set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable):
+    cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable):
         self.changeable[:] = changeable
         self.sourceable[:] = sourceable
         self.masked = True
         self._check_mask()
 
-    def remove_mask(self):
+    cpdef remove_mask(self):
         self.changeable[:] = 1
         self.sourceable[:] = 1
         self.masked = False
@@ -229,14 +231,14 @@ cdef class BoolNetwork:
         else:
             raise RuntimeError('Tried to revert with empty inverse move list.')
 
-    def revert_all_moves(self):
+    cpdef revert_all_moves(self):
         while not self.inverse_moves.empty():
             self.revert_move()
 
-    def clear_history(self):
+    cpdef clear_history(self):
         self.inverse_moves.clear()
 
-    def history_empty(self):
+    cpdef history_empty(self):
         return self.inverse_moves.empty()
 
 
@@ -268,12 +270,12 @@ cdef class RandomBoolNetwork(BoolNetwork):
         def __get__(self):
             return self._transfer_functions
 
-    def clean_copy(self):
+    cpdef clean_copy(self):
         cdef RandomBoolNetwork bn
         bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
         return bn
 
-    def full_copy(self):
+    cpdef full_copy(self):
         cdef RandomBoolNetwork bn
         bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
         bn.changeable[:] = self.changeable
