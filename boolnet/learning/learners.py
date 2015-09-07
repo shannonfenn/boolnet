@@ -126,14 +126,15 @@ class StratifiedLearner(BasicLearner):
     def _get_single_fs(self, state, target, all_strata):
         activation_matrix = np.asarray(state.activation_matrix)
         Ni = state.Ni
+        strata = len(self.learned_targets)
         # generate input to minFS solver
-        upper_gate = self.gate_boundaries[target]
-        if all_strata or target == 0:
-            input_feature_indices = np.arange(upper_gate+Ni)
+        upper_source = self.gate_boundaries[strata] + Ni
+        if all_strata or strata == 0:
+            input_feature_indices = np.arange(upper_source)
         else:
-            lower_gate = self.gate_boundaries[target - 1]
+            lower_source = self.gate_boundaries[strata - 1] + Ni
             input_feature_indices = np.hstack((
-                np.arange(Ni), np.arange(lower_gate+Ni, upper_gate+Ni)))
+                np.arange(Ni), np.arange(lower_source, upper_source)))
 
         # input features for this target
         kfs_matrix = activation_matrix[input_feature_indices, :]
@@ -142,7 +143,7 @@ class StratifiedLearner(BasicLearner):
         kfs_target = self.target_matrix[target, :]
         kfs_target = unpack_bool_vector(kfs_target, state.Ne)
 
-        kfs_filename = self.file_name_base + str(target)
+        kfs_filename = self.file_name_base + '{}_{}'.format(strata, target)
 
         # use external solver for minFS
         minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_options)
@@ -169,6 +170,9 @@ class StratifiedLearner(BasicLearner):
                 return False
         else:
             fs = None
+
+        print('tgt:', target, ' bounds:', lower_bound, upper_bound)
+        print('fs:', fs.size, fs.shape, fs)
 
         sourceable, changeable = build_mask(state, lower_bound, upper_bound, target, fs)
 
