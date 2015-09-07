@@ -106,11 +106,11 @@ class StratifiedLearner(BasicLearner):
                   file=sys.stderr)
 
     def _determine_next_target(self, state):
-        not_learned = set(range(self.num_targets)) - set(self.learned_targets)
+        not_learned = list(set(range(self.num_targets)).difference(self.learned_targets))
         if self.auto_target:
-            raise NotImplemented
+            # raise NotImplemented
             strata = len(self.learned_targets)
-            self._record_feature_sets(self, state, not_learned)
+            self._record_feature_sets(state, not_learned)
             feature_sets_sizes = [len(l) for l in self.feature_sets[strata][not_learned]]
             indirect_simplest_target = np.argmin(feature_sets_sizes)
             return not_learned[indirect_simplest_target]
@@ -220,13 +220,12 @@ class StratifiedLearner(BasicLearner):
 
     def run(self, state, parameters, optimiser):
         self._setup(parameters, state, optimiser)
-        num_targets = state.No
+        No = state.No
 
-        result = LearnerResult(best_states=[None] * num_targets, best_iterations=[-1] * num_targets,
-                               final_iterations=[-1] * num_targets, target_order=[-1] * num_targets,
-                               feature_sets=[])
+        result = LearnerResult(best_states=[None] * No, best_iterations=[-1] * No,
+                               final_iterations=[-1] * No, target_order=[], feature_sets=[])
 
-        while len(self.learned_targets) < num_targets:
+        while len(self.learned_targets) < No:
             # determine target
             target = self._determine_next_target(state)
             # apply mask
@@ -242,4 +241,6 @@ class StratifiedLearner(BasicLearner):
                 # record result
                 result.best_states[target] = copy(state.network)
             self.learned_targets.append(target)
+            result.feature_sets[target] = [fs for fs in self.feature_sets[target] if fs is not None]
+        result.target_order = self.learned_targets
         return result
