@@ -85,7 +85,7 @@ class StratifiedLearner(BasicLearner):
         self.log_all_feature_sets = parameters.get('log_all_feature_sets')
         self.one_layer_kfs = parameters.get('one_layer_kfs')
         self.file_name_base = parameters['inter_file_base']
-        self.fabcpp_options = parameters.get('fabcpp_options')
+        self.fabcpp_opts = parameters.get('fabcpp_options')
 
         self.num_targets = state.network.No
         self.learned_targets = []
@@ -145,10 +145,15 @@ class StratifiedLearner(BasicLearner):
 
         kfs_filename = self.file_name_base + '{}_{}'.format(strata, target)
 
-        # use external solver for minFS
-        minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_options)
-
-        return input_feature_indices[minfs]
+        # check if the target is constant 1 or 0 and if so do not run minFS
+        if np.all(kfs_target) or not np.any(kfs_target):
+            print('Warning: constant target: {}'.format(target))
+            # we cannot discriminate features so simply return all inputs
+            return np.arange(Ni)
+        else:
+            # use external solver for minFS
+            minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_opts)
+            return input_feature_indices[minfs]
 
     def _apply_mask(self, state, target):
         # which layer we are up to
@@ -170,9 +175,6 @@ class StratifiedLearner(BasicLearner):
                 return False
         else:
             fs = None
-
-        print('tgt:', target, ' bounds:', lower_bound, upper_bound)
-        print('fs:', fs.size, fs.shape, fs)
 
         sourceable, changeable = build_mask(state, lower_bound, upper_bound, target, fs)
 
