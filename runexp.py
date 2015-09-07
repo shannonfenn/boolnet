@@ -207,8 +207,6 @@ def main():
 
     settings['learner']['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
 
-    print('Generating configurations...')
-
     # generate learning tasks
     configurations = config_tools.generate_configurations(settings)
 

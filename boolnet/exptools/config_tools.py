@@ -2,6 +2,7 @@ from copy import deepcopy
 from collections import MutableMapping, namedtuple
 from os import fsync
 from os.path import join, splitext
+from progress.bar import Bar
 import numpy as np
 import json
 
@@ -205,6 +206,9 @@ def generate_configurations(settings):
     settings.pop('configurations')
     # Build up the task list
     tasks = []
+
+    bar = Bar('Generating configurations', max=len(variable_sets))
+    bar.update()
     for config_no, variables in enumerate(variable_sets):
         # keep each configuration isolated
         config_settings = deepcopy(settings)
@@ -232,4 +236,6 @@ def generate_configurations(settings):
 
             # dump the iteration settings out
             tasks.append(iteration_settings)
+        bar.next()
+    bar.finish()
     return tasks
