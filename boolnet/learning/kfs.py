@@ -60,9 +60,9 @@ def FABCPP_cmd_line(features, target, file_name_base, options):
         # pull out all lines from output file which match the feature name regex
         k_feature_set = [int(l.strip()) for l in out if FEATURE_RE.match(l.strip())]
 
-        return np.array([k_feature_set])
+    return np.array(k_feature_set)
 
-        # TODO: Use model 5 to compute other FSs
+    # TODO: Use model 5 to compute other FSs
 
 
 def minimum_feature_set(features, target, file_name_base, options):
