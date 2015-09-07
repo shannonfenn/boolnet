@@ -203,16 +203,22 @@ def main():
 
     settings, result_dir = initialise(args)
 
-    print('Results in: ' + result_dir)
+    print('Directories initialised. Results in: ' + result_dir)
 
     settings['learner']['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
 
+    print('Generating configurations...')
+
+    # generate learning tasks
+    configurations = config_tools.generate_configurations(settings)
+
+    print('Done: {} configurations generated.'.format(len(configurations)))
+
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
-        # generate learning tasks
-        configurations = config_tools.generate_configurations(settings)
-        print('{} runs generated.'.format(len(configurations)))
         # Run the actual learning as a parallel process
         run_tasks(configurations, args.numprocs, results_stream)
+
+    print('Runs completed.')
 
     if not args.keep_temp:
         print('Deleting temp directory')
