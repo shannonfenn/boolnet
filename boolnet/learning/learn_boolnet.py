@@ -191,18 +191,25 @@ def build_result_map(parameters, learner_result, training_evaluator, test_data):
     if learner_parameters.get('kfs'):
         results['learner'] += ' kfs'
 
-    if learner_result.feature_sets:
-        for bit, v in enumerate(learner_result.feature_sets):
-            key = 'feature_set_target_{}'.format(bit)
-            results[key] = v
+    if learner_result.feature_sets is not None:
+        for strata, strata_feature_sets in enumerate(learner_result.feature_sets):
+            for target, v in enumerate(strata_feature_sets):
+                # only record FSes if they exist
+                if v is not None:
+                    key = 'fs_strata_{}_tgt_{}'.format(strata, target)
+                    results[key] = v
+
+    if learner_result.target_order is not None:
+        results['target_order'] = learner_result.target_order
+
     for bit, v in enumerate(training_evaluator.function_value(PER_OUTPUT)):
-        key = 'training_error_target_{}'.format(bit)
+        key = 'train_err_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(test_evaluator.function_value(PER_OUTPUT)):
-        key = 'test_error_target_{}'.format(bit)
+        key = 'test_err_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):
-        key = 'max_depth_target_{}'.format(bit)
+        key = 'max_depth_tgt_{}'.format(bit)
         results[key] = v
     for k, v in optimiser_parameters.items():
         results['optimiser_' + k] = v

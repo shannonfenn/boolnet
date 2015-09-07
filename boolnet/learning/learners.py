@@ -222,8 +222,8 @@ class StratifiedLearner(BasicLearner):
         self._setup(parameters, state, optimiser)
         No = state.No
 
-        result = LearnerResult(best_states=[None] * No, best_iterations=[-1] * No,
-                               final_iterations=[-1] * No, target_order=[], feature_sets=[])
+        best_states = [None] * No
+        best_iterations, final_iterations = [-1] * No, [-1] * No
 
         while len(self.learned_targets) < No:
             # determine target
@@ -234,13 +234,16 @@ class StratifiedLearner(BasicLearner):
             if optimisation_required:
                 network, best_it, final_it = self._learn_target(state, target)
                 # record result
-                result.best_states[target] = copy(network)
-                result.best_iterations[target] = best_it
-                result.final_iterations[target] = final_it
+                best_states[target] = copy(network)
+                best_iterations[target] = best_it
+                final_iterations[target] = final_it
             else:
                 # record result
-                result.best_states[target] = copy(state.network)
+                best_states[target] = copy(state.network)
             self.learned_targets.append(target)
-            result.feature_sets[target] = [fs for fs in self.feature_sets[target] if fs is not None]
-        result.target_order = self.learned_targets
-        return result
+
+        return LearnerResult(best_states=best_states,
+                             best_iterations=best_iterations,
+                             final_iterations=final_iterations,
+                             target_order=self.learned_targets,
+                             feature_sets=self.feature_sets)
