@@ -131,7 +131,7 @@ cdef class BoolNetwork:
         if np.sum(self.sourceable[:first_changeable + self.Ni]) < 2:
             raise ValueError(('Not enough valid connections (2 required) in: '
                               'sourceable: {} changeable: {}').format(
-                self.sourceable, self.changeable))
+                np.asarray(self.sourceable), np.asarray(self.changeable)))
 
     cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable):
         self.changeable[:] = changeable
