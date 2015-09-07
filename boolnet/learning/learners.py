@@ -147,7 +147,7 @@ class StratifiedLearner(BasicLearner):
 
         # check if the target is constant 1 or 0 and if so do not run minFS
         if np.all(kfs_target) or not np.any(kfs_target):
-            print('Warning: constant target: {}'.format(target))
+            logging.warning('Constant target: {}'.format(target))
             # we cannot discriminate features so simply return all inputs
             return np.arange(Ni)
         else:
