@@ -202,8 +202,9 @@ class StratifiedLearner(BasicLearner):
             # but in the event the feature is an input this is not possible)
             state.apply_move({'gate': useable_gate, 'terminal': 0, 'new_source': feature})
             state.apply_move({'gate': useable_gate, 'terminal': 1, 'new_source': feature})
-            state.apply_move({'gate': target_gate, 'terminal': 0, 'new_source': useable_gate})
-            state.apply_move({'gate': target_gate, 'terminal': 1, 'new_source': useable_gate})
+            useable_gate_input = useable_gate + state.Ni
+            state.apply_move({'gate': target_gate, 'terminal': 0, 'new_source': useable_gate_input})
+            state.apply_move({'gate': target_gate, 'terminal': 1, 'new_source': useable_gate_input})
         else:
             # we have the target's inverse, since a NAND gate can act as an
             # inverter we can connect the output gate directly to the feature
