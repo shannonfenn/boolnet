@@ -33,7 +33,8 @@ def build_mask(state, lower_bound, upper_bound, target, feature_set=None):
     Ng = state.Ng
     No = state.No
     # give list of gates which can have their inputs reconnected
-    changeable, sourceable = np.zeros(Ng, dtype=np.uint8), np.zeros(Ng+Ni, dtype=np.uint8)
+    changeable = np.zeros(Ng, dtype=np.uint8)
+    sourceable = np.zeros(Ng+Ni, dtype=np.uint8)
 
     changeable[lower_bound:upper_bound] = 1
     changeable[Ng - No + target] = 1
@@ -102,8 +103,6 @@ class StratifiedLearner(BasicLearner):
         if function_name in problem_funcs:
             logging.error(('use of %s guiding function may result in poor performance due to '
                            'non-zero errors in earlier bits.'), function_name)
-            print('WARNING POTENTIALLY ERROR PRONE METRIC FOR STRATIFIED LEARNING!',
-                  file=sys.stderr)
 
     def _determine_next_target(self, state):
         not_learned = list(set(range(self.num_targets)).difference(self.learned_targets))
@@ -230,7 +229,7 @@ class StratifiedLearner(BasicLearner):
         best_states = [None] * No
         best_iterations, final_iterations = [-1] * No, [-1] * No
 
-        while len(self.learned_targets) < No:
+        for i in range(No):
             # determine target
             target = self._determine_next_target(state)
             # apply mask
@@ -239,12 +238,12 @@ class StratifiedLearner(BasicLearner):
             if optimisation_required:
                 network, best_it, final_it = self._learn_target(state, target)
                 # record result
-                best_states[target] = copy(network)
-                best_iterations[target] = best_it
-                final_iterations[target] = final_it
+                best_states[i] = copy(network)
+                best_iterations[i] = best_it
+                final_iterations[i] = final_it
             else:
                 # record result
-                best_states[target] = copy(state.network)
+                best_states[i] = copy(state.network)
             self.learned_targets.append(target)
 
         return LearnerResult(best_states=best_states,
