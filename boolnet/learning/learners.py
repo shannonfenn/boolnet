@@ -48,8 +48,8 @@ def build_mask(state, lower_bound, upper_bound, target, feature_set=None):
         sourceable[lower_bound+Ni:upper_bound+Ni] = 1
 
     # include all previous final outputs
-    first_output = Ng-No+Ni
-    sourceable[first_output:first_output+target] = 1
+    # first_output = Ng-No+Ni
+    # sourceable[first_output:first_output+target] = 1
 
     return sourceable, changeable
 
@@ -196,21 +196,20 @@ class StratifiedLearner(BasicLearner):
         useable_gate = self.gate_boundaries[strata]
 
         activation_matrix = state.activation_matrix
-        Ng = state.Ng
-        No = state.No
+        target_gate = state.Ng - state.No + target
         if activation_matrix[feature][0] == self.target_matrix[target][0]:
             # we have the target perfectly, in this case place a double
             # inverter chain (we could take the inputs from a gate if it was one
             # but in the event the feature is an input this is not possible)
             state.apply_move({'gate': useable_gate, 'terminal': 0, 'new_source': feature})
             state.apply_move({'gate': useable_gate, 'terminal': 1, 'new_source': feature})
-            state.apply_move({'gate': Ng - No + target, 'terminal': 0, 'new_source': useable_gate})
-            state.apply_move({'gate': Ng - No + target, 'terminal': 1, 'new_source': useable_gate})
+            state.apply_move({'gate': target_gate, 'terminal': 0, 'new_source': useable_gate})
+            state.apply_move({'gate': target_gate, 'terminal': 1, 'new_source': useable_gate})
         else:
             # we have the target's inverse, since a NAND gate can act as an
             # inverter we can connect the output gate directly to the feature
-            state.apply_move({'gate': Ng - No + target, 'terminal': 0, 'new_source': feature})
-            state.apply_move({'gate': Ng - No + target, 'terminal': 1, 'new_source': feature})
+            state.apply_move({'gate': target_gate, 'terminal': 0, 'new_source': feature})
+            state.apply_move({'gate': target_gate, 'terminal': 1, 'new_source': feature})
 
     def _learn_target(self, state, target):
         # build new guiding function for only next target if required
