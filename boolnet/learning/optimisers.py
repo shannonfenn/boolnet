@@ -19,32 +19,54 @@ def geometric(a, r, n):
         val *= r
 
 
-class SA:
-    def accept(self, old_error, new_error, temperature):
-        delta = new_error - old_error
-        # DETERMINISTIC
-        # return delta < -temperature or 0 <= delta < temperature
-        # STOCHASTIC
-        # Accept all movements for which dE is non-negative
-        # or accept with probability P = e^(-dE/T)
-        return (delta <= 0) or (temperature > 0 and
-                                random() < exp(-delta/temperature))
+class LocalSearch:
+    def initialise(self, parameters):
+        # unpack options
+        try:
+            self.guiding_function = parameters['guiding_function']
+            self.stopping_criterion = parameters['stopping_criterion']
+            self.max_restarts = parameters.get('max_restarts', 0)
+            self.reached_stopping_criterion = False
+        except KeyError:
+            print('Optimiser parameters missing!', sys.stderr)
+            raise
 
-    def move(self, state, temp):
+    def move(self, state):
         state.move_to_random_neighbour()
 
     def undo_move(self, state):
         state.revert_move()
 
-    def initialise(self, parameters):
+    def _optimise(self, state):
+        raise NotImplemented
+
+    def run(self, state, parameters):
         # unpack options
+        self.initialise(parameters)
+
+        for i in range(self.max_restarts + 1):
+            results = self._optimise(state)
+            if self.reached_stopping_criterion:
+                return results
+        return results
+
+
+class SA(LocalSearch):
+    def accept(self, old_error, new_error, temperature):
+        delta = new_error - old_error
+        # DETERMINISTIC
+        # return delta < -temperature or 0 <= delta < temperature
+        # STOCHASTIC
+        # Accept all movements for which dE is non-negative or accept with probability P = e^(-dE/T)
+        return (delta <= 0) or (temperature > 0 and random() < exp(-delta/temperature))
+
+    def initialise(self, parameters):
+        super().initialise(parameters)
         try:
             self.num_temps = parameters['num_temps']
             self.steps_per_temp = parameters['steps_per_temp']
             self.init_temp = parameters['init_temp']
             self.temp_rate = parameters['temp_rate']
-            self.guiding_function = parameters['guiding_function']
-            self.stopping_criterion = parameters['stopping_criterion']
         except KeyError:
             print('Optimiser parameters missing!', sys.stderr)
             raise
@@ -78,7 +100,7 @@ class SA:
                 last_temp = temp
 
             # perform random move
-            self.move(state, temp)
+            self.move(state)
 
             # calculate error for new state
             new_error = self.guiding_function(state)
@@ -101,28 +123,13 @@ class SA:
 
         return (best_state, best_iteration, iteration)
 
-    def run(self, state, parameters):
-        """This learns a network using SA."""
-        # initialise
-        self.initialise(parameters)
-        return self._optimise(state)
 
-
-class LAHC:
-    def move(self, state, iteration):
-        state.move_to_random_neighbour()
-
-    def undo_move(self, state):
-        state.revert_move()
-
+class LAHC(LocalSearch):
     def initialise(self, parameters):
-        # unpack options
+        super().initialise(parameters)
         try:
             self.cost_list_len = parameters['cost_list_length']
             self.max_iterations = parameters['max_iterations']
-            self.guiding_function = parameters['guiding_function']
-            self.stopping_criterion = parameters['stopping_criterion']
-            self.reached_stopping_criterion = False
         except KeyError:
             print('Optimiser parameters missing!', sys.stderr)
             raise
@@ -149,7 +156,7 @@ class LAHC:
                 break
 
             # perform random move
-            self.move(state, iteration)
+            self.move(state)
 
             # calculate error for new state
             new_error = self.guiding_function(state)
@@ -172,12 +179,6 @@ class LAHC:
             state.clear_history()
 
         return (best_state, best_iteration, iteration)
-
-    def run(self, state, parameters):
-        # unpack options
-        self.initialise(parameters)
-
-        return self._optimise(state)
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()

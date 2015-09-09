@@ -31,29 +31,6 @@ def is_int_arr(v):
         raise ValueError
     return v
 
-SA_schema = Schema({
-    'name':             'SA',
-    'num_temps':        All(int, Range(min=1)),
-    'init_temp':        Range(min=0.0),
-    'temp_rate':        Range(min=0.0, max=1.0),
-    'steps_per_temp':   All(int, Range(min=1)),
-    'guiding_function': In(guiding_functions)
-    }, default_keys=Required)
-
-LAHC_schema = Schema({
-    'name':             'LAHC',
-    'cost_list_length': All(int, Range(min=1)),
-    'max_iterations':   All(int, Range(min=1)),
-    'guiding_function': In(guiding_functions)
-    }, default_keys=Required)
-
-optimiser_base_schema = Schema({
-    'name':             In(OPTIMISERS.keys())
-    }, extra_keys=Allow)
-
-optimiser_schema = Schema(
-    All(Any(SA_schema, LAHC_schema), optimiser_base_schema))
-
 data_schema_generated = Schema({
     'type':                     'generated',
     'dir':                      IsDir(),
@@ -91,10 +68,27 @@ network_schema_generated = Schema({
     'node_funcs':   In(['NAND', 'NOR', 'random'])
     }, default_keys=Required)
 
+SA_schema = Schema({
+    'name':                     'SA',
+    'num_temps':                All(int, Range(min=1)),
+    'init_temp':                Range(min=0.0),
+    'temp_rate':                Range(min=0.0, max=1.0),
+    'steps_per_temp':           All(int, Range(min=1)),
+    'guiding_function':         In(guiding_functions),
+    Optional('max_restarts'):   All(int, Range(min=0))
+    }, default_keys=Required)
+
+LAHC_schema = Schema({
+    'name':                     'LAHC',
+    'cost_list_length':         All(int, Range(min=1)),
+    'max_iterations':           All(int, Range(min=1)),
+    'guiding_function':         In(guiding_functions),
+    Optional('max_restarts'):   All(int, Range(min=0))
+    }, default_keys=Required)
 
 learner_schema = Schema({
     'name':                     In(['basic', 'stratified']),
-    'optimiser':                optimiser_schema,
+    'optimiser':                Any(SA_schema, LAHC_schema),
     'inter_file_base':          str,
     Optional('kfs'):            bool,
     Optional('one_layer_kfs'):  bool,
