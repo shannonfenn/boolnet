@@ -44,17 +44,14 @@ class SA:
             self.init_temp = parameters['init_temp']
             self.temp_rate = parameters['temp_rate']
             self.guiding_function = parameters['guiding_function']
+            self.stopping_criterion = parameters['stopping_criterion']
         except KeyError:
             print('Optimiser parameters missing!', sys.stderr)
             raise
         self.temperatures = stepped_exp_decrease(
             self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)
 
-    def run(self, state, parameters, end_condition):
-        """This learns a network using SA."""
-        # initialise
-        self.initialise(parameters)
-
+    def _optimise(self, state):
         # Calculate initial error
         error = self.guiding_function(state)
 
@@ -70,7 +67,7 @@ class SA:
         # annealing loop
         for iteration, temp in enumerate(self.temperatures):
             # Stop on user defined condition
-            if end_condition(state, best_error):
+            if self.stopping_criterion(state, best_error):
                 break
 
             # Log error on new temperature if logging
@@ -104,6 +101,12 @@ class SA:
 
         return (best_state, best_iteration, iteration)
 
+    def run(self, state, parameters):
+        """This learns a network using SA."""
+        # initialise
+        self.initialise(parameters)
+        return self._optimise(state)
+
 
 class LAHC:
     def move(self, state, iteration):
@@ -118,14 +121,13 @@ class LAHC:
             self.cost_list_len = parameters['cost_list_length']
             self.max_iterations = parameters['max_iterations']
             self.guiding_function = parameters['guiding_function']
+            self.stopping_criterion = parameters['stopping_criterion']
+            self.reached_stopping_criterion = False
         except KeyError:
             print('Optimiser parameters missing!', sys.stderr)
             raise
 
-    def run(self, state, parameters, end_condition):
-        # unpack options
-        self.initialise(parameters)
-
+    def _optimise(self, state):
         # Calculate initial error
         error = self.guiding_function(state)
         # error = evaluator.function_value(self.guiding_function)
@@ -138,10 +140,12 @@ class LAHC:
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
+        self.reached_stopping_criterion = False
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
-            if end_condition(state, best_error):
+            if self.stopping_criterion(state, best_error):
+                self.reached_stopping_criterion = True
                 break
 
             # perform random move
@@ -168,6 +172,12 @@ class LAHC:
             state.clear_history()
 
         return (best_state, best_iteration, iteration)
+
+    def run(self, state, parameters):
+        # unpack options
+        self.initialise(parameters)
+
+        return self._optimise(state)
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()

@@ -69,11 +69,11 @@ class BasicLearner:
 
     def _optimise(self, state):
         ''' This just learns by using the given optimiser and guiding function.'''
-        return self.optimiser.run(state, self.opt_params, self.end_condition)
+        return self.optimiser.run(state, self.opt_params)
 
     def run(self, state, parameters, optimiser):
         self._setup(parameters, state)
-        self.end_condition = guiding_error_end_condition()
+        self.opt_params['end_condition'] = guiding_error_end_condition()
         best_state, best_it, final_it = self._optimise(state)
         return LearnerResult([best_state], [best_it], [final_it], None, None)
 
@@ -218,7 +218,7 @@ class StratifiedLearner(BasicLearner):
             self.opt_params['guiding_function'] = guiding_func
 
         # generate an end condition based on the current target
-        self.end_condition = per_target_error_end_condition(target)
+        self.opt_params['end_condition'] = per_target_error_end_condition(target)
 
         # run the optimiser
         return self._optimise(state)
