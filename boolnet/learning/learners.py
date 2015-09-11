@@ -15,11 +15,11 @@ LearnerResult = namedtuple('LearnerResult', [
     'best_states', 'best_iterations', 'final_iterations', 'target_order', 'feature_sets'])
 
 
-def per_target_error_end_condition(bit):
+def per_target_error_stop_criterion(bit):
     return lambda ev, _: ev.function_value(PER_OUTPUT)[bit] <= 0
 
 
-def guiding_error_end_condition():
+def guiding_error_stop_criterion():
     return lambda _, error: error <= 0
 
 
@@ -72,8 +72,8 @@ class BasicLearner:
         return self.optimiser.run(state, self.opt_params)
 
     def run(self, state, parameters, optimiser):
-        self._setup(parameters, state)
-        self.opt_params['end_condition'] = guiding_error_end_condition()
+        self._setup(parameters, state, optimiser)
+        self.opt_params['stopping_criterion'] = guiding_error_stop_criterion()
         best_state, best_it, final_it = self._optimise(state)
         return LearnerResult([best_state], [best_it], [final_it], None, None)
 
@@ -218,7 +218,7 @@ class StratifiedLearner(BasicLearner):
             self.opt_params['guiding_function'] = guiding_func
 
         # generate an end condition based on the current target
-        self.opt_params['end_condition'] = per_target_error_end_condition(target)
+        self.opt_params['stopping_criterion'] = per_target_error_stop_criterion(target)
 
         # run the optimiser
         return self._optimise(state)
