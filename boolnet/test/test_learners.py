@@ -38,11 +38,14 @@ def test_build_mask_without_kfs_sourceable(harness):
     Ni, No, Ng = net.Ni, net.No, net.Ng
     for target in range(No):
         l, u = bounds[target], bounds[target + 1]
+        # commented out: version where prior outputs were sourceable
+        # expected = np.array([1]*(Ni+l) + [1]*(u-l) + [0]*(Ng-No-u) +
+        #                     [1]*target + [0]*(No-target), dtype=np.uint8)
         expected = np.array([1]*(Ni+l) + [1]*(u-l) + [0]*(Ng-No-u) +
-                            [1]*target + [0]*(No-target), dtype=np.uint8)
+                            [0]*(No), dtype=np.uint8)
         actual, _ = build_mask(net, l, u, target)
-        print(expected)
-        print(actual)
+        print('expected:\n', expected)
+        print('actual:\n', actual)
         assert_array_equal(expected, actual)
 
 
@@ -56,8 +59,8 @@ def test_build_mask_without_kfs_changeable(harness):
         expected = np.array([0]*l + [1]*(u-l) + [0]*(Ng-No-u) +
                             [0]*target + [1] + [0]*(No-target-1), dtype=np.uint8)
         _, actual = build_mask(net, l, u, target)
-        print(expected)
-        print(actual)
+        # print('expected:\n', expected)
+        # print('actual:\n', actual)
         assert_array_equal(expected, actual)
 
 
