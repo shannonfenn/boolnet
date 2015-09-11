@@ -28,7 +28,7 @@ class LocalSearch:
             self.max_restarts = parameters.get('max_restarts', 0)
             self.reached_stopping_criterion = False
         except KeyError:
-            print('Optimiser parameters missing!', sys.stderr)
+            print('Optimiser parameters missing!', file=sys.stderr)
             raise
 
     def move(self, state):
@@ -68,7 +68,7 @@ class SA(LocalSearch):
             self.init_temp = parameters['init_temp']
             self.temp_rate = parameters['temp_rate']
         except KeyError:
-            print('Optimiser parameters missing!', sys.stderr)
+            print('Optimiser parameters missing!', file=sys.stderr)
             raise
         self.temperatures = stepped_exp_decrease(
             self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)
@@ -131,7 +131,7 @@ class LAHC(LocalSearch):
             self.cost_list_len = parameters['cost_list_length']
             self.max_iterations = parameters['max_iterations']
         except KeyError:
-            print('Optimiser parameters missing!', sys.stderr)
+            print('Optimiser parameters missing!', file=sys.stderr)
             raise
 
     def _optimise(self, state):
