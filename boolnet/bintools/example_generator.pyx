@@ -48,10 +48,9 @@ cdef class PackedExampleGenerator:
 
     # cdef void _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t col):
     cdef _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t block):
-        cdef size_t remaining = len(self.example_iter)
+        cdef size_t remaining
 
-        if remaining >= PACKED_SIZE:
-            remaining = PACKED_SIZE
+        remaining = min(len(self.example_iter), PACKED_SIZE)
 
         for i in range(remaining):
             self.inp_block[i], self.tgt_block[i] = next(self.example_iter)
