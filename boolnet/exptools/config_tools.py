@@ -207,7 +207,7 @@ def generate_configurations(settings):
     # Build up the task list
     tasks = []
 
-    bar = Bar('Generating configurations', max=len(variable_sets))
+    bar = Bar('Generating configurations', max=len(variable_sets), suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
     for config_no, variables in enumerate(variable_sets):
         # keep each configuration isolated
