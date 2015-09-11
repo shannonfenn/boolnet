@@ -93,6 +93,7 @@ learner_schema = Schema({
     Optional('kfs'):            bool,
     Optional('one_layer_kfs'):  bool,
     Optional('auto_target'):    bool,
+    Optional('keep_files'):     bool,
     Optional('fabcpp_options'): list,
     })
 

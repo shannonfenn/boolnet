@@ -87,6 +87,7 @@ class StratifiedLearner(BasicLearner):
         self.one_layer_kfs = parameters.get('one_layer_kfs')
         self.file_name_base = parameters['inter_file_base']
         self.fabcpp_opts = parameters.get('fabcpp_options')
+        self.keep_files = parameters.get('keep_files', False)
 
         self.num_targets = state.network.No
         self.learned_targets = []
@@ -151,7 +152,7 @@ class StratifiedLearner(BasicLearner):
             return np.arange(Ni)
         else:
             # use external solver for minFS
-            minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_opts)
+            minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_opts, self.keep_files)
             return input_feature_indices[minfs]
 
     def _apply_mask(self, state, target):

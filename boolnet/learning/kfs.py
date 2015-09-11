@@ -33,7 +33,7 @@ def abk_file(features, target, file_name):
                header=header, footer=target_row, comments='')
 
 
-def FABCPP_cmd_line(features, target, file_name_base, options):
+def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
     abk_file_name = file_name_base + '.abk'
     log_file_name = file_name_base + '.log'
     err_file_name = file_name_base + '.err'
@@ -60,12 +60,18 @@ def FABCPP_cmd_line(features, target, file_name_base, options):
         # pull out all lines from output file which match the feature name regex
         k_feature_set = [int(l.strip()) for l in out if FEATURE_RE.match(l.strip())]
 
+    if not keep_files:
+        os.remove(abk_file_name)
+        os.remove(log_file_name)
+        os.remove(err_file_name)
+        os.remove(out_file_name)
+
     return np.array(k_feature_set)
 
     # TODO: Use model 5 to compute other FSs
 
 
-def minimum_feature_set(features, target, file_name_base, options):
+def minimum_feature_set(features, target, file_name_base, fabcpp_options, keep_files):
     ''' Takes a featureset matrix and target vector and finds a minimum featureset.
     featureset  - assumed to be a 2D numpy array in example x feature format.
     target      - assumed to be a 1D numpy array of the same number of rows
@@ -73,16 +79,16 @@ def minimum_feature_set(features, target, file_name_base, options):
     returns     - a 1D numpy array of feature indices representing a feature set
                   of minimal cardinality.'''
 
-    return FABCPP_cmd_line(features, target, file_name_base, options)
+    return FABCPP_cmd_line(features, target, file_name_base, fabcpp_options, keep_files)
 
 
-def multi_target_minimum_feature_sets(features, targets, file_name_base, options):
+def multi_target_minimum_feature_sets(features, targets, file_name_base, fabcpp_options, keep_files):
     ''' Takes a featureset matrix and target vector and finds a minimum featureset.
     features    - assumed to be a 2D numpy array in example x feature format.
     target      - assumed to be a 2D numpy array of the same number of rows as features
     returns     - a list of 1D numpy arrays of feature indices representing a feature set
                   of minimal cardinality for each target.'''
     num_targets = targets.shape[1]
-    feature_sets = [FABCPP_cmd_line(features, targets[:, t], file_name_base, options)
+    feature_sets = [FABCPP_cmd_line(features, targets[:, t], file_name_base, fabcpp_options, keep_files)
                     for t in range(num_targets)]
     return feature_sets
