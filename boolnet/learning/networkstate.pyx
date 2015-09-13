@@ -76,7 +76,7 @@ cdef class NetworkState:
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
 
-        self.set_network(network)
+        self.set_representation(network)
         self.err_evaluators = dict()
 
     cpdef add_function(self, Function function):
@@ -85,7 +85,7 @@ cdef class NetworkState:
     cpdef function_value(self, Function function):
         pass
 
-    cpdef set_network(self, network):
+    cpdef set_representation(self, network):
         # check invariants hold
         self._check_network_invariants(network)
         self.Ng = network.Ng

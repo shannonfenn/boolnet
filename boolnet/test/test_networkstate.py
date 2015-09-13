@@ -432,7 +432,7 @@ class TestStandard:
         assert_array_equal(expected_s, actual)
 
         # check full evaluator is still giving original results
-        evaluator_f.set_network(net)
+        evaluator_f.set_representation(net)
         actual = eval_func_f(evaluator_f.activation_matrix)
         assert_array_equal(expected_f, actual)
 

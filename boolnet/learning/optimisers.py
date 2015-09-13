@@ -44,13 +44,12 @@ class LocalSearch:
         # unpack options
         self.initialise(parameters)
 
+        original_state = copy(state.representation())
         for i in range(self.max_restarts + 1):
-            temp_state = copy(state)
-            results = self._optimise(temp_state)
+            state.set_representation(original_state)
+            results = self._optimise(state)
             if self.reached_stopping_criterion:
-                state = temp_state
-                return results
-        state = temp_state
+                break
         return results + (i, )
 
 
