@@ -48,7 +48,7 @@ class LocalSearch:
             results = self._optimise(state)
             if self.reached_stopping_criterion:
                 return results
-        return results
+        return results + (i, )
 
 
 class SA(LocalSearch):

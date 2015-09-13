@@ -12,7 +12,8 @@ import boolnet.learning.kfs as kfs
 
 
 LearnerResult = namedtuple('LearnerResult', [
-    'best_states', 'best_iterations', 'final_iterations', 'target_order', 'feature_sets'])
+    'best_states', 'best_iterations', 'final_iterations',
+    'target_order', 'feature_sets', 'restarts'])
 
 
 def per_target_error_stop_criterion(bit):
@@ -74,8 +75,8 @@ class BasicLearner:
     def run(self, state, parameters, optimiser):
         self._setup(parameters, state, optimiser)
         self.opt_params['stopping_criterion'] = guiding_error_stop_criterion()
-        best_state, best_it, final_it = self._optimise(state)
-        return LearnerResult([best_state], [best_it], [final_it], None, None)
+        best_state, best_it, final_it, restarts = self._optimise(state)
+        return LearnerResult([best_state], [best_it], [final_it], None, None, restarts)
 
 
 class StratifiedLearner(BasicLearner):
@@ -229,7 +230,9 @@ class StratifiedLearner(BasicLearner):
         No = state.No
 
         best_states = [None] * No
-        best_iterations, final_iterations = [-1] * No, [-1] * No
+        best_iterations, final_iterations = [-1] * No
+        final_iterations = [-1] * No
+        restarts = [-1] * No
 
         for i in range(No):
             # determine target
@@ -238,11 +241,12 @@ class StratifiedLearner(BasicLearner):
             optimisation_required = self._apply_mask(state, target)
             # optimise
             if optimisation_required:
-                network, best_it, final_it = self._learn_target(state, target)
+                opt_results = self._learn_target(state, target)
                 # record result
-                best_states[i] = copy(network)
-                best_iterations[i] = best_it
-                final_iterations[i] = final_it
+                best_states[i] = copy(opt_results[0])
+                best_iterations[i] = opt_results[1]
+                final_iterations[i] = opt_results[2]
+                restarts[i] = opt_results[3]
             else:
                 # record result
                 best_states[i] = copy(state.network)
@@ -252,4 +256,5 @@ class StratifiedLearner(BasicLearner):
                              best_iterations=best_iterations,
                              final_iterations=final_iterations,
                              target_order=self.learned_targets,
-                             feature_sets=self.feature_sets)
+                             feature_sets=self.feature_sets,
+                             restarts=restarts)
