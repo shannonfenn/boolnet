@@ -25,7 +25,8 @@ class LocalSearch:
         try:
             self.guiding_function = parameters['guiding_function']
             self.stopping_criterion = parameters['stopping_criterion']
-            self.max_restarts = parameters.get('max_restarts', 0)
+            # self.max_restarts = parameters.get('max_restarts', 0)
+            self.max_restarts = parameters['max_restarts']
             self.reached_stopping_criterion = False
         except KeyError:
             print('Optimiser parameters missing!', file=sys.stderr)
