@@ -5,8 +5,6 @@ import os.path
 from copy import copy
 from pytest import fixture
 from boolnet.bintools.packing import unpack_bool_matrix
-import pyximport
-pyximport.install()
 from boolnet.bintools.functions import all_functions
 
 

@@ -9,9 +9,6 @@ from os.path import dirname, realpath, join
 import os
 sys.path.append(os.path.expanduser('~/HMRI/Code/Python/'))
 
-import pyximport
-pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
-
 from BoolNet.NetworkEvaluator import NetworkEvaluator
 from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
 from BoolNet.function_names import all_functions, function_name, Function

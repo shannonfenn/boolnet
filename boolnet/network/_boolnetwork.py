@@ -1,11 +1,6 @@
 import numpy as np
 from collections import deque
-try:
-    import boolnet.network.algorithms as algorithms
-except ImportError:
-    import pyximport
-    pyximport.install()
-    import boolnet.network.algorithms as algorithms
+import boolnet.network.algorithms as algorithms
 
 
 class BoolNetwork:

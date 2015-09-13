@@ -1,7 +1,5 @@
 import time
 import random
-import pyximport
-pyximport.install()
 from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
 from boolnet.bintools.functions import E1, ACCURACY, PER_OUTPUT, function_from_name
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping

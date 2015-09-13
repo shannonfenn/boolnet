@@ -9,9 +9,6 @@ from os.path import dirname, realpath, join
 import os
 sys.path.append(os.path.expanduser('~/HMRI/code/python/'))
 
-import pyximport
-pyximport.install(build_dir=join(dirname(realpath(__file__)), '.pyxbld'))
-
 from BoolNet.function_names import all_functions, function_name, function_value
 
 from BoolNet.Packing import pack_bool_matrix, packed_type, generate_end_mask

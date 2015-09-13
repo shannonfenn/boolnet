@@ -1,7 +1,5 @@
 from boolnet.bintools.functions import function_name
 from numpy.testing import assert_array_equal as assert_array_equal
-import pyximport
-pyximport.install()
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 
 

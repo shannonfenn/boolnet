@@ -3,9 +3,7 @@ from collections import namedtuple
 from itertools import product
 import sys
 import logging
-import pyximport
 import numpy as np
-pyximport.install()
 from boolnet.bintools.functions import PER_OUTPUT, function_from_name
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
 import boolnet.learning.kfs as kfs
