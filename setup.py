@@ -13,8 +13,9 @@ extensions = [
     Extension("boolnet.exptools.fastrand", ["boolnet/exptools/fastrand.pyx"],
               libraries=cython_gsl.get_libraries(),
               library_dirs=[cython_gsl.get_library_dir()],
-              include_dirs=[cython_gsl.get_cython_include_dir()]),
-    Extension("boolnet.network.algorithms", ["boolnet/network/algorithms.pyx"]),
+              include_dirs=[cython_gsl.get_cython_include_dir()],),
+    Extension("boolnet.network.algorithms", ["boolnet/network/algorithms.pyx"],
+              language='c++'),
     Extension("boolnet.network.boolnetwork", ["boolnet/network/boolnetwork.pyx"],
               language='c++'),
     ]
