@@ -14,7 +14,6 @@ cdef struct Move:
 
 cdef class BoolNetwork:
     cdef:
-        public size_t first_unevaluated_gate
         public bint changed
         public np.uint32_t[:, :] gates
         public np.uint8_t[:] changeable, sourceable

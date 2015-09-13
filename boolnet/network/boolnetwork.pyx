@@ -10,7 +10,6 @@ cimport boolnet.network.algorithms as algorithms
 cdef class BoolNetwork:    
     def __init__(self, initial_gates, size_t Ni, size_t No):
         self.changed = True
-        self.first_unevaluated_gate = 0
 
         # copy gate array
         self.gates = np.array(initial_gates, dtype=np.uint32, copy=True)
@@ -44,7 +43,6 @@ cdef class BoolNetwork:
         bn.sourceable[:] = self.sourceable
         bn.connected[:] = self.connected
         bn.changed = self.changed
-        bn.first_unevaluated_gate = self.first_unevaluated_gate
         bn.masked = self.masked
         bn.inverse_moves = self.inverse_moves
         return bn
@@ -108,13 +106,6 @@ cdef class BoolNetwork:
 
         # Update the first changeable gate
         first_changeable = np.flatnonzero(np.asarray(self.changeable))[0]
-        if self.changed:
-            # In this case the earliest out of the first changeable and the prior unevaluated start point
-            self.first_unevaluated_gate = min(
-                self.first_unevaluated_gate, first_changeable)
-        else:
-            # In this case just the first of the changeable
-            self.first_unevaluated_gate = first_changeable
         # indicate the network must be reevaluated
         self.changed = True
 
@@ -197,14 +188,9 @@ cdef class BoolNetwork:
         return Move(gate, terminal, new_source)
 
     cpdef apply_move(self, Move move):
-        cdef Move inverse
         # expects iterable with the form (gate, terminal, new_source)
-        if self.changed:
-            self.first_unevaluated_gate = min(self.first_unevaluated_gate, move.gate)
-        else:
-            self.first_unevaluated_gate = move.gate
-
         # record the inverse move
+        cdef Move inverse
         inverse.gate = move.gate
         inverse.terminal = move.terminal
         inverse.new_source = self.gates[move.gate][move.terminal]
@@ -220,14 +206,9 @@ cdef class BoolNetwork:
         if not self.inverse_moves.empty():
             inverse = self.inverse_moves.back()
             self.inverse_moves.pop_back()
-            if self.changed:
-                # if multiple moves are undone there are no issues with recomputation since
-                # the earliest gate ever changed will be the startpoint
-                self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse.gate)
-            else:
-                self.first_unevaluated_gate = inverse.gate
             self.changed = True
             self.gates[inverse.gate][inverse.terminal] = inverse.new_source
+            return inverse
         else:
             raise RuntimeError('Tried to revert with empty inverse move list.')
 
@@ -282,7 +263,6 @@ cdef class RandomBoolNetwork(BoolNetwork):
         bn.sourceable[:] = self.sourceable
         bn.connected[:] = self.connected
         bn.changed = self.changed
-        bn.first_unevaluated_gate = self.first_unevaluated_gate
         bn.masked = self.masked
         bn.inverse_moves = self.inverse_moves
         return bn
