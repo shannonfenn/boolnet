@@ -45,9 +45,12 @@ class LocalSearch:
         self.initialise(parameters)
 
         for i in range(self.max_restarts + 1):
-            results = self._optimise(state)
+            temp_state = copy(state)
+            results = self._optimise(temp_state)
             if self.reached_stopping_criterion:
+                state = temp_state
                 return results
+        state = temp_state
         return results + (i, )
 
 
