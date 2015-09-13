@@ -200,6 +200,9 @@ def build_result_map(parameters, learner_result, training_evaluator, test_data):
     if learner_result.target_order is not None:
         results['target_order'] = learner_result.target_order
 
+    if learner_result.restarts is not None:
+        results['optimiser_restarts'] = learner_result.restarts
+
     for bit, v in enumerate(training_evaluator.function_value(PER_OUTPUT)):
         key = 'train_err_tgt_{}'.format(bit)
         results[key] = v

@@ -73,7 +73,7 @@ class BasicLearner:
         self._setup(parameters, state, optimiser)
         self.opt_params['stopping_criterion'] = guiding_error_stop_criterion()
         best_state, best_it, final_it, restarts = self._optimise(state)
-        return LearnerResult([best_state], [best_it], [final_it], None, None, restarts)
+        return LearnerResult([best_state], [best_it], [final_it], None, None, [restarts])
 
 
 class StratifiedLearner(BasicLearner):
@@ -229,7 +229,7 @@ class StratifiedLearner(BasicLearner):
         best_states = [None] * No
         best_iterations = [-1] * No
         final_iterations = [-1] * No
-        restarts = [-1] * No
+        restarts = [None] * No
 
         for i in range(No):
             # determine target
