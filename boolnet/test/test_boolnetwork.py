@@ -305,7 +305,6 @@ class TestFunctionality:
         sourceable, changeable = adder2_valid_mask
         net1.set_mask(sourceable, changeable)
         net1.move_to_random_neighbour()
-        net1.first_unevaluated_gate = 5
         net1.changed = False
 
         net2 = net1.clean_copy()
@@ -317,7 +316,6 @@ class TestFunctionality:
         assert_array_equal(net2.connected_gates(), net1.connected_gates())
         assert_array_equal(net2.connected_sources(), net1.connected_sources())
         # should be different
-        assert net2.first_unevaluated_gate == 0
         assert net2.changed
         assert net2.history_empty()
         assert_array_equal(net2.changeable, np.ones(net2.Ng, dtype=np.uint8))
@@ -328,7 +326,6 @@ class TestFunctionality:
         sourceable, changeable = adder2_valid_mask
         net1.set_mask(sourceable, changeable)
         net1.move_to_random_neighbour()
-        net1.first_unevaluated_gate = 5
         net1.changed = False
 
         net2 = net1.full_copy()
@@ -336,7 +333,6 @@ class TestFunctionality:
         assert net2.Ni == net1.Ni
         assert net2.No == net1.No
         assert net2.Ng == net1.Ng
-        assert net2.first_unevaluated_gate == net1.first_unevaluated_gate
         assert net2.changed == net1.changed
         assert not net2.history_empty()
         net2.clear_history()

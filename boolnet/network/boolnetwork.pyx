@@ -201,7 +201,7 @@ cdef class BoolNetwork:
         # indicate the network must be reevaluated
         self.changed = True
 
-    cpdef revert_move(self):
+    cpdef Move revert_move(self):
         cdef Move inverse
         if not self.inverse_moves.empty():
             inverse = self.inverse_moves.back()

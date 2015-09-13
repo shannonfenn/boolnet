@@ -289,12 +289,11 @@ class TestStandard:
     def output_different_helper(self, instance):
         evaluator, _, eval_func = self.build_instance(instance, 'full',
                                                       'error matrix')
-        net = evaluator.network
         for k in range(10):
             old_error = eval_func(evaluator.error_matrix)
-            net.move_to_random_neighbour()
+            evaluator.move_to_random_neighbour()
             assert not np.array_equal(eval_func(evaluator.error_matrix), old_error)
-            net.revert_move()
+            evaluator.revert_move()
 
     # ##################### FIXTURES ##################### #
     @fixture(params=TEST_NETWORKS)
@@ -373,27 +372,24 @@ class TestStandard:
         evaluator, expected, eval_func = self.build_instance(
             single_layer_zero, 'full', 'error matrix')
 
-        net = evaluator.network
-
         actual = eval_func(evaluator.error_matrix)
         assert_array_equal(expected, actual)
 
         test_case = single_layer_zero['multiple_moves_test_case'][4]
         expected = test_case.expected
 
-        net.apply_move(test_case.move)
+        evaluator.apply_move(test_case.move)
         actual = eval_func(evaluator.error_matrix)
         assert_array_equal(expected, actual)
 
     def test_multiple_moves_error_matrix(self, single_layer_zero):
         evaluator, _, eval_func = self.build_instance(
             single_layer_zero, 'full', 'error matrix')
-        net = evaluator.network
 
         test_case = single_layer_zero['multiple_moves_test_case']
 
         for move, expected in test_case:
-            net.apply_move(move)
+            evaluator.apply_move(move)
             actual = eval_func(evaluator.error_matrix)
             assert_array_equal(expected, actual)
 
@@ -401,17 +397,15 @@ class TestStandard:
         evaluator, _, eval_func = self.build_instance(
             single_layer_zero, 'full', 'error matrix')
 
-        net = evaluator.network
-
         test_case = single_layer_zero['multiple_moves_test_case']
 
         for move, _ in test_case:
-            net.apply_move(move)
+            evaluator.apply_move(move)
 
         for _, expected in reversed(test_case):
             actual = eval_func(evaluator.error_matrix)
             assert_array_equal(expected, actual)
-            net.revert_move()
+            evaluator.revert_move()
 
     def test_pre_evaluated_network(self, standard_state):
         evaluator_s, expected_s, eval_func_s = self.build_instance(
@@ -419,18 +413,17 @@ class TestStandard:
         evaluator_f, expected_f, eval_func_f = self.build_instance(
             standard_state, 'full', 'activation matrix')
 
-        net = evaluator_s.network
         for i in range(10):
-            net.move_to_random_neighbour()
+            evaluator_s.move_to_random_neighbour()
             evaluator_s.evaluate()
-        net.revert_all_moves()
+        evaluator_s.revert_all_moves()
 
         # check sample evaluator is still giving original results
         actual = eval_func_s(evaluator_s.activation_matrix)
         assert_array_equal(expected_s, actual)
 
         # check full evaluator is still giving original results
-        evaluator_f.set_representation(net)
+        evaluator_f.set_representation(evaluator_s.representation())
         actual = eval_func_f(evaluator_f.activation_matrix)
         assert_array_equal(expected_f, actual)
 

@@ -48,7 +48,7 @@ cdef class NetworkState:
         readonly size_t Ne, Ni, No, Ng, cols
         packed_type_t[:, :] activation, inputs, outputs, target, error
         readonly packed_type_t zero_mask
-        object network
+        readonly object network
         dict err_evaluators
         public size_t first_unevaluated_gate
 
@@ -63,8 +63,6 @@ cdef class NetworkState:
         self.Ni = Ni
         self.No = No
         self.cols = cols
-
-        self.first_unevaluated_gate = 0
 
         self.zero_mask = generate_end_mask(Ne)
 
@@ -96,7 +94,7 @@ cdef class NetworkState:
         self.network = network.full_copy()
         # force reevaluation of the copied network
         self.network.changed = True
-        self.network.first_unevaluated_gate = 0
+        self.first_unevaluated_gate = 0
 
     cpdef representation(self):
         return self.network.full_copy()
@@ -135,13 +133,17 @@ cdef class NetworkState:
         self.network.apply_move(move)
 
     cpdef revert_move(self):
-        inverse_move = self.network.revert_move()
+        cdef Move inverse_move = self.network.revert_move()
         if self.network.changed:
             # if multiple moves are undone there are no issues with recomputation since
             # the earliest gate ever changed will be the startpoint
             self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse_move.gate)
         else:
             self.first_unevaluated_gate = inverse_move.gate
+
+    cpdef revert_all_moves(self):
+        self.network.revert_all_moves()
+        self.first_unevaluated_gate = 0
 
     cpdef clear_history(self):
         self.network.clear_history()
@@ -174,7 +176,7 @@ cdef class NetworkState:
         cols = activation.shape[1]
 
         # evaluate the state matrix
-        start = self.network.first_unevaluated_gate
+        start = self.first_unevaluated_gate
 
         for g in range(start, Ng):
             in1 = gates[g, 0]
@@ -210,7 +212,7 @@ cdef class NetworkState:
         cols = activation.shape[1]
 
         # evaluate the state matrix
-        start = self.network.first_unevaluated_gate
+        start = self.first_unevaluated_gate
         for g in range(start, Ng):
             in1 = gates[g, 0]
             in2 = gates[g, 1]
