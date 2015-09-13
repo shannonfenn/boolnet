@@ -230,7 +230,7 @@ class StratifiedLearner(BasicLearner):
         No = state.No
 
         best_states = [None] * No
-        best_iterations, final_iterations = [-1] * No
+        best_iterations = [-1] * No
         final_iterations = [-1] * No
         restarts = [-1] * No
 
