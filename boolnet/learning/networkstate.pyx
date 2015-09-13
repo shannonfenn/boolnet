@@ -42,14 +42,15 @@ cpdef chained_from_operator(network, indices, Nb, No, operator, window_size, N=0
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
     return ChainedNetworkState(network, packed_ex_factory, window_size)
 
-        
+
 cdef class NetworkState:
     cdef:
         readonly size_t Ne, Ni, No, Ng, cols
         packed_type_t[:, :] activation, inputs, outputs, target, error
         readonly packed_type_t zero_mask
-        public object network
+        object network
         dict err_evaluators
+        public size_t first_unevaluated_gate
 
     def __init__(self, network, size_t Ne, size_t Ni, size_t No, size_t cols):
         ''' Sets up the activation and error matrices for a new network.
@@ -62,6 +63,8 @@ cdef class NetworkState:
         self.Ni = Ni
         self.No = No
         self.cols = cols
+
+        self.first_unevaluated_gate = 0
 
         self.zero_mask = generate_end_mask(Ne)
 
@@ -96,7 +99,7 @@ cdef class NetworkState:
         self.network.first_unevaluated_gate = 0
 
     cpdef representation(self):
-        return self.network
+        return self.network.full_copy()
 
     ######################### Network pass-through methods #########################
     cpdef connected_gates(self):
@@ -119,15 +122,26 @@ cdef class NetworkState:
     
     cpdef reconnect_masked_range(self):
         self.network.reconnect_masked_range()
+        self.first_unevaluated_gate = 0
 
     cpdef move_to_random_neighbour(self):
         self.network.move_to_random_neighbour()
 
     cpdef apply_move(self, Move move):
+        if self.network.changed:
+            self.first_unevaluated_gate = min(self.first_unevaluated_gate, move.gate)
+        else:
+            self.first_unevaluated_gate = move.gate
         self.network.apply_move(move)
 
     cpdef revert_move(self):
-        self.network.revert_move()
+        inverse_move = self.network.revert_move()
+        if self.network.changed:
+            # if multiple moves are undone there are no issues with recomputation since
+            # the earliest gate ever changed will be the startpoint
+            self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse_move.gate)
+        else:
+            self.first_unevaluated_gate = inverse_move.gate
 
     cpdef clear_history(self):
         self.network.clear_history()

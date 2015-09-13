@@ -45,7 +45,7 @@ class LocalSearch:
         # unpack options
         self.initialise(parameters)
 
-        original_state = copy(state.representation())
+        original_state = state.representation()
         for i in range(self.max_restarts + 1):
             state.set_representation(original_state)
             results = self._optimise(state)
