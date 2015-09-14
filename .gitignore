@@ -6,3 +6,4 @@ py*.cpp
 *.pyc
 *.html
 *.pytest.restart
+/boolnet.sublime-workspace
