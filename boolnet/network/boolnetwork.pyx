@@ -85,7 +85,7 @@ cdef class BoolNetwork:
     cpdef force_reevaluation(self):
         self.changed = True
 
-    cpdef reconnect_masked_range(self):
+    cpdef randomise(self):
         # this has the side effect of clearing the history since we don't
         # want to compute all the inverse moves
         cdef size_t g, i, Ni
@@ -93,8 +93,6 @@ cdef class BoolNetwork:
 
         Ni = self.Ni
         sources = np.array(self.sourceable, copy=True, dtype=np.uint8)
-
-        self.clear_history()
         
         for g in range(self.Ng):
             sources[g + Ni] = sources[g + Ni] or self.changeable[g]
@@ -104,10 +102,10 @@ cdef class BoolNetwork:
                 self.gates[g, 0] = algorithms.sample_bool(sources, g + Ni)
                 self.gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
 
-        # Update the first changeable gate
-        first_changeable = np.flatnonzero(np.asarray(self.changeable))[0]
         # indicate the network must be reevaluated
         self.changed = True
+
+        self.clear_history()
 
     cdef _check_mask(self):
         # check for validity here rather than when attempting to
@@ -201,15 +199,15 @@ cdef class BoolNetwork:
         # indicate the network must be reevaluated
         self.changed = True
 
-    cpdef Move revert_move(self):
+    cpdef revert_move(self):
         cdef Move inverse
         if not self.inverse_moves.empty():
             inverse = self.inverse_moves.back()
             self.inverse_moves.pop_back()
             self.changed = True
             self.gates[inverse.gate][inverse.terminal] = inverse.new_source
-            return inverse
         else:
+            print('wtf')
             raise RuntimeError('Tried to revert with empty inverse move list.')
 
     cpdef revert_all_moves(self):

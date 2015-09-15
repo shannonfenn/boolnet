@@ -40,13 +40,13 @@ cdef class BoolNetwork:
     cpdef _update_connected(self)
     cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable)
     cpdef remove_mask(self)
-    cpdef reconnect_masked_range(self)
+    cpdef randomise(self)
 
     # Move handling
     cpdef move_to_random_neighbour(self)
     cpdef Move random_move(self) except +
     cpdef apply_move(self, Move move)
-    cpdef Move revert_move(self)
+    cpdef revert_move(self)
     cpdef revert_all_moves(self)
     cpdef clear_history(self)
     cpdef history_empty(self)

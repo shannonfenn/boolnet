@@ -272,14 +272,14 @@ class TestFunctionality:
         assert new_source != net.gates[gate, terminal]
 
     @mark.parametrize('repeats', range(10))
-    def test_reconnect_masked_range(self, repeats, adder2, adder2_valid_mask):
+    def test_randomise(self, repeats, adder2, adder2_valid_mask):
         net = copy(adder2)
         sourceable, changeable = adder2_valid_mask
         # check the changeable range all connect to sourceable nodes
         valid = sourceable | np.hstack((np.zeros(net.Ni, dtype=np.uint8), changeable))
 
         net.set_mask(sourceable, changeable)
-        net.reconnect_masked_range()
+        net.randomise()
 
         for g in range(net.Ng):
             if changeable[g]:
@@ -287,11 +287,11 @@ class TestFunctionality:
                 assert valid[net.gates[g, 1]] == 1
 
     @mark.parametrize('repeats', range(10))
-    def test_feedforward_after_reconnect(self, repeats, adder2, adder2_valid_mask):
+    def test_feedforward_after_randomise(self, repeats, adder2, adder2_valid_mask):
         net = copy(adder2)
         sourceable, changeable = adder2_valid_mask
         net.set_mask(sourceable, changeable)
-        net.reconnect_masked_range()
+        net.randomise()
         self.assert_feedforward(net)
 
     def test_max_depth(self, any_network):

@@ -118,8 +118,8 @@ cdef class NetworkState:
     cpdef remove_mask(self):
         self.network.remove_mask()
     
-    cpdef reconnect_masked_range(self):
-        self.network.reconnect_masked_range()
+    cpdef randomise(self):
+        self.network.randomise()
         self.first_unevaluated_gate = 0
 
     cpdef move_to_random_neighbour(self):
