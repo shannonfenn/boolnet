@@ -17,6 +17,15 @@ from boolnet.bintools.packing import packed_type
 from boolnet.bintools.example_generator cimport PackedExampleGenerator, OperatorExampleIteratorFactory
 
 
+cpdef standard_from_mapping(network, mapping):
+    if isinstance(mapping, FileBoolMapping):
+        return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
+    elif isinstance(mapping, OperatorBoolMapping):
+        return standard_from_operator(network, mapping.indices,
+                                      mapping.Nb, mapping.No,
+                                      mapping.operator, mapping.N)
+
+
 cpdef standard_from_operator(network, indices, Nb, No, operator, N=0):
     cdef packed_type_t[:, :] inp, tgt
     ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
