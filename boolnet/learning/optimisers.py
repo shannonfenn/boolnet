@@ -20,13 +20,14 @@ def geometric(a, r, n):
 
 
 class LocalSearch:
+
     def initialise(self, parameters):
         # unpack options
         try:
             self.guiding_function = parameters['guiding_function']
             self.stopping_criterion = parameters['stopping_criterion']
             # self.max_restarts = parameters.get('max_restarts', 0)
-            self.max_restarts = parameters['max_restarts']
+            self.max_restarts = parameters.get('max_restarts', 0)
             self.reached_stopping_criterion = False
         except KeyError:
             print('Optimiser parameters missing!', file=sys.stderr)
@@ -55,13 +56,15 @@ class LocalSearch:
 
 
 class SA(LocalSearch):
+
     def accept(self, old_error, new_error, temperature):
         delta = new_error - old_error
         # DETERMINISTIC
         # return delta < -temperature or 0 <= delta < temperature
         # STOCHASTIC
-        # Accept all movements for which dE is non-negative or accept with probability P = e^(-dE/T)
-        return (delta <= 0) or (temperature > 0 and random() < exp(-delta/temperature))
+        # Accept when dE is non-negative or with probability P = e^(-dE/T)
+        return (delta <= 0) or (temperature > 0 and
+                                random() < exp(-delta/temperature))
 
     def initialise(self, parameters):
         super().initialise(parameters)
@@ -74,7 +77,8 @@ class SA(LocalSearch):
             print('Optimiser parameters missing!', file=sys.stderr)
             raise
         self.temperatures = stepped_exp_decrease(
-            self.init_temp, self.temp_rate, self.num_temps, self.steps_per_temp)
+            self.init_temp, self.temp_rate,
+            self.num_temps, self.steps_per_temp)
 
     def _optimise(self, state):
         # Calculate initial error
@@ -89,16 +93,20 @@ class SA(LocalSearch):
 
         last_temp = self.init_temp  # so we can check for temp changes
 
+        self.reached_stopping_criterion = False
+
         # annealing loop
         for iteration, temp in enumerate(self.temperatures):
             # Stop on user defined condition
             if self.stopping_criterion(state, best_error):
+                self.reached_stopping_criterion = True
                 break
 
             # Log error on new temperature if logging
             best_error_for_temp = min(best_error_for_temp, error)
             if last_temp != temp:
-                logging.debug('temp: %f best_err:%f ', last_temp, best_error_for_temp)
+                logging.debug('temp: %f best_err:%f ',
+                              last_temp, best_error_for_temp)
                 best_error_for_temp = error
                 last_temp = temp
 
@@ -128,6 +136,7 @@ class SA(LocalSearch):
 
 
 class LAHC(LocalSearch):
+
     def initialise(self, parameters):
         super().initialise(parameters)
         try:

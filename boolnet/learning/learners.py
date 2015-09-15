@@ -54,6 +54,7 @@ def build_mask(state, lower_bound, upper_bound, target, feature_set=None):
 
 
 class BasicLearner:
+
     def _check_parameters(self, parameters):
         pass
 
@@ -62,21 +63,24 @@ class BasicLearner:
         self.opt_params = copy(parameters['optimiser'])
         guiding_func_name = self.opt_params['guiding_function']
         self.guiding_func_id = function_from_name(guiding_func_name)
-        self.opt_params['guiding_function'] = lambda x: x.function_value(self.guiding_func_id)
+        self.opt_params['guiding_function'] = (
+            lambda x: x.function_value(self.guiding_func_id))
         self.optimiser = optimiser
 
     def _optimise(self, state):
-        ''' This just learns by using the given optimiser and guiding function.'''
+        ''' Just learns by using the given optimiser and guiding function.'''
         return self.optimiser.run(state, self.opt_params)
 
     def run(self, state, parameters, optimiser):
         self._setup(parameters, state, optimiser)
         self.opt_params['stopping_criterion'] = guiding_error_stop_criterion()
         best_state, best_it, final_it, restarts = self._optimise(state)
-        return LearnerResult([best_state], [best_it], [final_it], None, None, [restarts])
+        return LearnerResult([best_state], [best_it], [final_it],
+                             None, None, [restarts])
 
 
 class StratifiedLearner(BasicLearner):
+
     def _setup(self, parameters, state, optimiser):
         super()._setup(parameters, state, optimiser)
         self.auto_target = parameters.get('auto_target')
@@ -89,7 +93,8 @@ class StratifiedLearner(BasicLearner):
 
         self.num_targets = state.network.No
         self.learned_targets = []
-        self.feature_sets = np.empty((self.num_targets, self.num_targets), dtype=list)
+        self.feature_sets = np.empty((self.num_targets, self.num_targets),
+                                     dtype=list)
 
         self.gate_boundaries = np.linspace(
             0, state.Ng - state.No, state.No+1, dtype=int)
@@ -97,19 +102,22 @@ class StratifiedLearner(BasicLearner):
         self.target_matrix = np.array(state.target_matrix, copy=True)
 
     def _check_parameters(self, parameters):
-        problem_funcs = ['e{} {}'.format(i, j) for i, j in product([4, 5, 6, 7], ['msb', 'lsb'])]
+        problem_funcs = ['e4M', 'e4L', 'e5M', 'e5L',
+                         'e6M', 'e6L', 'e7M', 'e7L']
         function_name = parameters['optimiser']['guiding_function']
         if function_name in problem_funcs:
-            logging.error(('use of %s guiding function may result in poor performance due to '
-                           'non-zero errors in earlier bits.'), function_name)
+            logging.error(('Guiding Function: %s may result in poor '
+                           'performance .'), function_name)
 
     def _determine_next_target(self, state):
-        not_learned = list(set(range(self.num_targets)).difference(self.learned_targets))
+        not_learned = list(set(range(self.num_targets)).difference(
+            self.learned_targets))
         if self.auto_target:
             # raise NotImplemented
             strata = len(self.learned_targets)
             self._record_feature_sets(state, not_learned)
-            feature_sets_sizes = [len(l) for l in self.feature_sets[strata][not_learned]]
+            feature_sets_sizes = [len(l) for l in
+                                  self.feature_sets[strata][not_learned]]
             indirect_simplest_target = np.argmin(feature_sets_sizes)
             return not_learned[indirect_simplest_target]
         else:
@@ -119,7 +127,8 @@ class StratifiedLearner(BasicLearner):
         # keep a log of the feature sets found at each iteration
         strata = len(self.learned_targets)
         for t in targets:
-            self.feature_sets[strata, t] = self._get_single_fs(state, t, not self.one_layer_kfs)
+            self.feature_sets[strata, t] = self._get_single_fs(
+                state, t, not self.one_layer_kfs)
 
     def _get_single_fs(self, state, target, all_strata):
         activation_matrix = np.asarray(state.activation_matrix)
@@ -150,7 +159,9 @@ class StratifiedLearner(BasicLearner):
             return np.arange(Ni)
         else:
             # use external solver for minFS
-            minfs = kfs.minimum_feature_set(kfs_matrix, kfs_target, kfs_filename, self.fabcpp_opts, self.keep_files)
+            minfs = kfs.minimum_feature_set(
+                kfs_matrix, kfs_target, kfs_filename,
+                self.fabcpp_opts, self.keep_files)
             return input_feature_indices[minfs]
 
     def _apply_mask(self, state, target):
@@ -174,50 +185,57 @@ class StratifiedLearner(BasicLearner):
         else:
             fs = None
 
-        sourceable, changeable = build_mask(state, lower_bound, upper_bound, target, fs)
+        sourceable, changeable = build_mask(state, lower_bound,
+                                            upper_bound, target, fs)
 
         # apply the mask to the network
         state.set_mask(sourceable, changeable)
 
-        # TODO: Fix it so that the gate_edit boundaries aren't leaving gates unused
-        #       in the event that the learner finishes before exhausting all gates
+        # TODO: Fix it so that the gate_edit boundaries aren't leaving gates
+        #       unused in the event that the learner finishes before
+        #       exhausting all gates
 
-        # Reinitialise the next range of gates to be optimised according to the mask
-        state.reconnect_masked_range()
+        # Reinitialise the next range of changeable gates
+        state.randomise()
 
         return True
 
     def _handle_single_FS(self, feature, state, target):
-        # When we have a 1FS we have already learned the target, or its inverse,
-        # simply map this feature to the output
+        # When we have a 1FS we have already learned the target,
+        # ot its inverse, simply map this feature to the output
         strata = len(self.learned_targets)
         useable_gate = self.gate_boundaries[strata]
 
         activation_matrix = state.activation_matrix
-        target_gate = state.Ng - state.No + target
+        tgt_gate = state.Ng - state.No + target
         if activation_matrix[feature][0] == self.target_matrix[target][0]:
             # we have the target perfectly, in this case place a double
-            # inverter chain (we could take the inputs from a gate if it was one
+            # inverter chain (if it was a gate we could just take the inputs
             # but in the event the feature is an input this is not possible)
-            state.apply_move({'gate': useable_gate, 'terminal': 0, 'new_source': feature})
-            state.apply_move({'gate': useable_gate, 'terminal': 1, 'new_source': feature})
-            useable_gate_input = useable_gate + state.Ni
-            state.apply_move({'gate': target_gate, 'terminal': 0, 'new_source': useable_gate_input})
-            state.apply_move({'gate': target_gate, 'terminal': 1, 'new_source': useable_gate_input})
+            useable_src = useable_gate + state.Ni
+            moves = [
+                {'gate': useable_gate, 'terminal': 0, 'new_source': feature},
+                {'gate': useable_gate, 'terminal': 1, 'new_source': feature},
+                {'gate': tgt_gate, 'terminal': 0, 'new_source': useable_src},
+                {'gate': tgt_gate, 'terminal': 1, 'new_source': useable_src}]
         else:
             # we have the target's inverse, since a NAND gate can act as an
             # inverter we can connect the output gate directly to the feature
-            state.apply_move({'gate': target_gate, 'terminal': 0, 'new_source': feature})
-            state.apply_move({'gate': target_gate, 'terminal': 1, 'new_source': feature})
+            moves = [{'gate': tgt_gate, 'terminal': 0, 'new_source': feature},
+                     {'gate': tgt_gate, 'terminal': 1, 'new_source': feature}]
+        for move in moves:
+            state.apply_move(move)
 
     def _learn_target(self, state, target):
         # build new guiding function for only next target if required
         if self.guiding_func_id == PER_OUTPUT:
-            guiding_func = lambda x: x.function_value(self.guiding_func_id)[target]
+            guiding_func = (
+                lambda x: x.function_value(self.guiding_func_id)[target])
             self.opt_params['guiding_function'] = guiding_func
 
         # generate an end condition based on the current target
-        self.opt_params['stopping_criterion'] = per_target_error_stop_criterion(target)
+        self.opt_params['stopping_criterion'] = (
+            per_target_error_stop_criterion(target))
 
         # run the optimiser
         return self._optimise(state)
