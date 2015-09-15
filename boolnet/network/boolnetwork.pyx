@@ -8,7 +8,9 @@ cimport boolnet.network.algorithms as algorithms
 
 
 cdef class BoolNetwork:    
-    def __init__(self, initial_gates, size_t Ni, size_t No):
+    def __init__(self, initial_gates, transfer_functions, size_t Ni, size_t No):
+        self.transfer_functions = np.array(transfer_functions, copy=True, dtype=np.uint8)
+
         self.changed = True
 
         # copy gate array
@@ -33,12 +35,11 @@ cdef class BoolNetwork:
 
     cpdef clean_copy(self):
         cdef BoolNetwork bn
-        bn = BoolNetwork(self.gates, self.Ni, self.No)
+        bn = BoolNetwork(self.gates, self.transfer_functions, self.Ni, self.No)
         return bn
 
     cpdef full_copy(self):
-        cdef BoolNetwork bn
-        bn = BoolNetwork(self.gates, self.Ni, self.No)
+        cdef BoolNetwork bn = self.clean_copy()
         bn.changeable[:] = self.changeable
         bn.sourceable[:] = self.sourceable
         bn.connected[:] = self.connected
@@ -51,7 +52,6 @@ cdef class BoolNetwork:
         return self.clean_copy()
 
     cdef _check_invariants(self):
-        ''' [TODO] Add more here. '''
         if self.Ng == 0:
             raise ValueError('Empty initial gates list')
         if self.Ni <= 0:
@@ -62,12 +62,19 @@ cdef class BoolNetwork:
             raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
         if self.gates.ndim != 2 or self.gates.shape[1] != 2:
             raise ValueError('initial_gates must be 2D with dim2==2')
-        # could have a check for recurrence
+        if self.transfer_functions.ndim != 1 or self.transfer_functions.shape[0] != self.Ng:
+            raise ValueError('Invalid transfer function matrix shape: {}'.format(
+                self.transfer_functions.shape))
+        if max(self.transfer_functions) > 15:
+            raise ValueError('Invalid transfer function matrix max value: {}'.format(
+                max(self.transfer_functions)))
 
     def __str__(self):
-        return ('Ni: {} Ng: {} changed: {} max node depths: {}\n'
-                'gates:\n{}').format(self.Ni, self.Ng, self.changed,
-                                     self.max_node_depths(), self.gates)
+        fmt_str = ('Ni: {} Ng: {} changed: {} max node depths: {}\ngates:\n{}'
+                   '\ntransfer functions:\n{}')
+        return fmt_str.format(self.Ni, self.Ng, self.changed,
+                              self.max_node_depths(), self.gates,
+                              self.transfer_functions)
 
     cpdef max_node_depths(self):
         # default to stored value of No
@@ -219,48 +226,3 @@ cdef class BoolNetwork:
 
     cpdef history_empty(self):
         return self.inverse_moves.empty()
-
-
-cdef class RandomBoolNetwork(BoolNetwork):
-    def __init__(self, initial_gates, Ni, No, transfer_functions):
-        self._transfer_functions = np.array(transfer_functions, copy=True, dtype=np.uint8)
-        super().__init__(initial_gates, Ni, No)
-
-    cdef _check_invariants(self):
-        ''' [TODO] Add more here. '''
-        if self.Ng == 0:
-            raise ValueError('Empty initial gates list')
-        if self.Ni <= 0:
-            raise ValueError('Invalid Ni ({})'.format(self.Ni))
-        if self.No <= 0:
-            raise ValueError('Invalid No ({})'.format(self.No))
-        if self.No > self.Ng:
-            raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
-        if self.gates.ndim != 2 or self.gates.shape[1] != 2:
-            raise ValueError('initial_gates must be 2D with dim2==2')
-        if self._transfer_functions.ndim != 1 or self._transfer_functions.shape[0] != self.Ng:
-            raise ValueError('Invalid transfer function matrix shape: {}'.format(
-                self._transfer_functions.shape))
-
-    def __str__(self):
-        return super().__str__() + '\ntransfer functions:\n{}'.format(self._transfer_functions)
-
-    property transfer_functions:
-        def __get__(self):
-            return self._transfer_functions
-
-    cpdef clean_copy(self):
-        cdef RandomBoolNetwork bn
-        bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
-        return bn
-
-    cpdef full_copy(self):
-        cdef RandomBoolNetwork bn
-        bn = RandomBoolNetwork(self.gates, self.Ni, self.No, self._transfer_functions)
-        bn.changeable[:] = self.changeable
-        bn.sourceable[:] = self.sourceable
-        bn.connected[:] = self.connected
-        bn.changed = self.changed
-        bn.masked = self.masked
-        bn.inverse_moves = self.inverse_moves
-        return bn

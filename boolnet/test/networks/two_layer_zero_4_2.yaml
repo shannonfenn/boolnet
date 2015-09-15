@@ -10,6 +10,7 @@ gates:
 - [0, 1]
 - [2, 3]
 - [4, 5]
+transfer functions: [7, 7, 7]
 
 max depths: [1, 2]
 

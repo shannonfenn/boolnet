@@ -16,6 +16,7 @@ cdef class BoolNetwork:
     cdef:
         public bint changed
         public np.uint32_t[:, :] gates
+        public np.uint8_t[:] transfer_functions
         public np.uint8_t[:] changeable, sourceable
 
         readonly size_t Ng, Ni, No
@@ -50,8 +51,3 @@ cdef class BoolNetwork:
     cpdef revert_all_moves(self)
     cpdef clear_history(self)
     cpdef history_empty(self)
-
-cdef class RandomBoolNetwork(BoolNetwork):
-    cdef np.uint8_t[:] _transfer_functions
-
-    cdef _check_invariants(self)

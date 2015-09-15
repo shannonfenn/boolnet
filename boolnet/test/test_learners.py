@@ -15,7 +15,8 @@ def harness(request):
     gates = np.empty(shape=(Ng, 2), dtype=np.int32)
     for g in range(Ng):
         gates[g, :] = np.random.randint(g+Ni, size=2)
-    net = BoolNetwork(gates, Ni, No)
+    tfs = np.random.choice(16, size=Ng)
+    net = BoolNetwork(gates, tfs, Ni, No)
     return net, bounds
 
 

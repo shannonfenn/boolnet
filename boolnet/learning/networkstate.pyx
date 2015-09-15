@@ -52,7 +52,7 @@ cdef class NetworkState:
         dict err_evaluators
         public size_t first_unevaluated_gate
 
-    def __init__(self, network, size_t Ne, size_t Ni, size_t No, size_t cols):
+    def __init__(self, BoolNetwork network, size_t Ne, size_t Ni, size_t No, size_t cols):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
@@ -133,13 +133,16 @@ cdef class NetworkState:
         self.network.apply_move(move)
 
     cpdef revert_move(self):
-        cdef Move inverse_move = self.network.revert_move()
-        if self.network.changed:
-            # if multiple moves are undone there are no issues with recomputation since
-            # the earliest gate ever changed will be the startpoint
-            self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse_move.gate)
-        else:
-            self.first_unevaluated_gate = inverse_move.gate
+        self.network.revert_move()
+
+        # for now
+        self.first_unevaluated_gate = 0
+        # if self.network.changed:
+        #     # if multiple moves are undone there are no issues with recomputation since
+        #     # the earliest gate ever changed will be the startpoint
+        #     self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse_move.gate)
+        # else:
+        #     self.first_unevaluated_gate = inverse_move.gate
 
     cpdef revert_all_moves(self):
         self.network.revert_all_moves()
@@ -152,7 +155,7 @@ cdef class NetworkState:
         return self.network.history_empty()
 
     ############################### Evaluation methods ###############################
-    cdef void _evaluate_random(self):
+    cdef void _evaluate(self):
         ''' Evaluate the activation and error matrices for the network
             getting node TFs from network. '''
         cdef:
@@ -184,40 +187,6 @@ cdef class NetworkState:
             transfer_func = function_list[transfer_functions[g]]
             for c in range(cols):
                 activation[Ni+g, c] = transfer_func(activation[in1, c], activation[in2, c])
-
-        # evaluate the error matrix
-        for o in range(No):
-            for c in range(cols):
-                error[o, c] = (target[o, c] ^ outputs[o, c])
-
-    cdef void _evaluate_NAND(self):
-        ''' Evaluate the activation and error matrices for the network
-            assuming each node TF is NAND. '''
-        cdef:
-            size_t Ni, No, Ng, cols, c, g, o, in1, in2, start
-            packed_type_t[:, :] activation, outputs, error, target
-            np.uint32_t[:, :] gates
-                
-        Ng = self.Ng
-        Ni = self.Ni
-        No = self.No
-
-        # local memoryviews to avoid 'self' evaluation later
-        activation = self.activation
-        outputs = self.outputs
-        error = self.error
-        target = self.target
-        gates = self.network.gates
-        
-        cols = activation.shape[1]
-
-        # evaluate the state matrix
-        start = self.first_unevaluated_gate
-        for g in range(start, Ng):
-            in1 = gates[g, 0]
-            in2 = gates[g, 1]
-            for c in range(cols):
-                activation[Ni+g, c] = ~(activation[in1, c] & activation[in2, c])
 
         # evaluate the error matrix
         for o in range(No):
@@ -294,10 +263,7 @@ cdef class StandardNetworkState(NetworkState):
         if not self.network.changed:
             return
 
-        if hasattr(self.network, 'transfer_functions'):
-            self._evaluate_random()
-        else:
-            self._evaluate_NAND()
+        self._evaluate()
 
         self._apply_zero_mask(self.activation)   # this does output_matrix as well (since it is a view)
         self._apply_zero_mask(self.error)
@@ -375,21 +341,16 @@ cdef class ChainedNetworkState(NetworkState):
 
     cdef evaluate(self):
         cdef:
-            bint is_nand
             size_t block
             dict evaluators = self.err_evaluators
 
-        is_nand = not hasattr(self.network, 'transfer_functions')
         self.example_generator.reset()
         for m in evaluators:
             evaluators[m].reset()
 
         for block in range(self.blocks):
             self.example_generator.next_examples(self.inputs, self.target)
-            if is_nand:
-                self._evaluate_NAND()
-            else:
-                self._evaluate_random()
+            self._evaluate()
             # on the last iteration we must not perform a partial evaluation
             if block < self.blocks - 1:
                 for m in evaluators:

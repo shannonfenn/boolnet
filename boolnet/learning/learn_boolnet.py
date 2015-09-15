@@ -1,10 +1,11 @@
 import time
 import random
-from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
-from boolnet.bintools.functions import E1, ACCURACY, PER_OUTPUT, function_from_name
+from boolnet.network.boolnetwork import BoolNetwork
+from boolnet.bintools.functions import (
+    E1, ACCURACY, PER_OUTPUT, function_from_name)
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
-from boolnet.learning.networkstate import (StandardNetworkState, standard_from_operator,
-                                           chained_from_operator)
+from boolnet.learning.networkstate import (
+    StandardNetworkState, standard_from_operator, chained_from_operator)
 import boolnet.learning.learners as learners
 import boolnet.learning.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
@@ -65,7 +66,8 @@ def build_test_evaluator(network, mapping, guiding_functions):
 
 
 def seed_rng(value):
-    # seed fast random number generator using system rng (which auto seeds on module import)
+    # seed fast random number generator using system rng which auto seeds
+    # on module import
     if value is not None:
         np.random.seed(value)
     else:
@@ -79,32 +81,33 @@ def build_initial_network(parameters, training_data):
 
     # Create the initial connection matrix
     if 'initial_gates' in parameters['network']:
-        initial_gates = np.asarray(parameters['network']['initial_gates'], dtype=np.int32)
+        initial_gates = np.asarray(parameters['network']['initial_gates'],
+                                   dtype=np.int32)
         Ng = initial_gates.shape[0]
         # Currently only works for NAND
         if parameters['network']['node_funcs'] != 'NAND':
-            raise ValueError('Given initial network only supported for node_funcs=NAND')
+            raise ValueError(
+                'Given initial network only supported for node_funcs=NAND')
     else:
         Ng = parameters['network']['Ng']
         # generate random feedforward network
         initial_gates = np.empty(shape=(Ng, 2), dtype=np.int32)
         for g in range(Ng):
             initial_gates[g, :] = np.random.randint(g+Ni, size=2)
+
     # create the seed network
     node_funcs = parameters['network']['node_funcs']
     if node_funcs == 'random':
         # generate a random set of transfer functions
         transfer_functions = np.random.randint(16, size=Ng)
-        network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
     elif node_funcs == 'NOR':
-        # 1 is the decimal code for NOR
-        transfer_functions = [1]*Ng
-        network = RandomBoolNetwork(initial_gates, Ni, No, transfer_functions)
+        transfer_functions = [1]*Ng     # 1 is the decimal code for NOR
     elif node_funcs == 'NAND':
-        network = BoolNetwork(initial_gates, Ni, No)
+        transfer_functions = [7]*Ng     # 7 is the decimal code for NAND
     else:
-        raise ValueError('Invalid setting for \'transfer functions\': {}'.format(node_funcs))
-    return network
+        raise ValueError('Invalid setting for \'transfer functions\': {}'.
+                         format(node_funcs))
+    return BoolNetwork(initial_gates, transfer_functions, Ni, No)
 
 
 def setup_local_dirs(parameters):
@@ -130,7 +133,8 @@ def learn_bool_net(parameters):
     initial_network = build_initial_network(parameters, training_data)
 
     # make evaluators for the training and test sets
-    training_evaluator = build_training_evaluator(initial_network, training_data)
+    training_evaluator = build_training_evaluator(initial_network,
+                                                  training_data)
 
     learner = LEARNERS[learner_parameters['name']]
     optimiser = OPTIMISERS[optimiser_parameters['name']]
@@ -138,11 +142,13 @@ def learn_bool_net(parameters):
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner.run(training_evaluator, learner_parameters, optimiser)
+    learner_result = learner.run(training_evaluator, learner_parameters,
+                                 optimiser)
 
     learning_end_time = time.monotonic()
 
-    results = build_result_map(parameters, learner_result, training_evaluator, test_data)
+    results = build_result_map(parameters, learner_result,
+                               training_evaluator, test_data)
 
     end_time = time.monotonic()
 
@@ -155,17 +161,18 @@ def learn_bool_net(parameters):
     return results
 
 
-def build_result_map(parameters, learner_result, training_evaluator, test_data):
+def build_result_map(parameters, learner_result, trg_evaluator, test_data):
     learner_parameters = parameters['learner']
     optimiser_parameters = parameters['learner']['optimiser']
 
-    guiding_function = function_from_name(optimiser_parameters['guiding_function'])
+    guiding_function = function_from_name(
+        optimiser_parameters['guiding_function'])
 
     final_network = learner_result.best_states[-1]
 
-    training_evaluator.set_representation(final_network)
-    test_evaluator = build_test_evaluator(final_network, test_data,
-                                          [guiding_function, E1, ACCURACY, PER_OUTPUT])
+    trg_evaluator.set_representation(final_network)
+    test_evaluator = build_test_evaluator(
+        final_network, test_data, [guiding_function, E1, ACCURACY, PER_OUTPUT])
 
     results = {
         'Ni':                       final_network.Ni,
@@ -177,12 +184,12 @@ def build_result_map(parameters, learner_result, training_evaluator, test_data):
         'transfer_functions':       parameters['network']['node_funcs'],
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
-        'training_error_simple':    training_evaluator.function_value(E1),
-        'training_accuracy':        training_evaluator.function_value(ACCURACY),
+        'training_error_simple':    trg_evaluator.function_value(E1),
+        'training_accuracy':        trg_evaluator.function_value(ACCURACY),
         'test_error_simple':        test_evaluator.function_value(E1),
         'test_accuracy':            test_evaluator.function_value(ACCURACY),
         'final_network':            np.array(final_network.gates),
-        'Ne':                       training_evaluator.Ne
+        'Ne':                       trg_evaluator.Ne
         }
 
     # add ' kfs' on the end of the learner name in the result dict if required
@@ -190,8 +197,8 @@ def build_result_map(parameters, learner_result, training_evaluator, test_data):
         results['learner'] += ' kfs'
 
     if learner_result.feature_sets is not None:
-        for strata, strata_feature_sets in enumerate(learner_result.feature_sets):
-            for target, v in enumerate(strata_feature_sets):
+        for strata, strata_f_sets in enumerate(learner_result.feature_sets):
+            for target, v in enumerate(strata_f_sets):
                 # only record FSes if they exist
                 if v is not None:
                     key = 'fs_strata_{}_tgt_{}'.format(strata, target)
@@ -203,7 +210,7 @@ def build_result_map(parameters, learner_result, training_evaluator, test_data):
     if learner_result.restarts is not None:
         results['optimiser_restarts'] = learner_result.restarts
 
-    for bit, v in enumerate(training_evaluator.function_value(PER_OUTPUT)):
+    for bit, v in enumerate(trg_evaluator.function_value(PER_OUTPUT)):
         key = 'train_err_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(test_evaluator.function_value(PER_OUTPUT)):

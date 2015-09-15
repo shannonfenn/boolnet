@@ -8,7 +8,7 @@ from copy import copy
 from itertools import chain
 from pytest import fixture, raises
 from pytest import mark
-from boolnet.network.boolnetwork import BoolNetwork, RandomBoolNetwork
+from boolnet.network.boolnetwork import BoolNetwork
 
 
 # ############# Global helpers ################# #
@@ -23,12 +23,9 @@ def harness_to_fixture(stream):
     Ni = test['Ni']
     No = test['No']
     gates = np.array(test['gates'], np.uint32)
+    tf = test['transfer functions']
     # add network to test
-    if 'transfer functions' in test:
-        tf = test['transfer functions']
-        test['net'] = RandomBoolNetwork(gates, Ni, No, tf)
-    else:
-        test['net'] = BoolNetwork(gates, Ni, No)
+    test['net'] = BoolNetwork(gates, tf, Ni, No)
     return test
 
 
@@ -70,23 +67,31 @@ def network_file_instance(request):
 # #################### Exception Testing #################### #
 class TestExceptions:
     invalid_constructions = [
-        ([], 0, 0),             # all invalid
-        ([], 0, 1),             # gates and Ni invalid, No > Ng
-        ([], 1, 0),             # gates and No invalid
-        ([], 1, 1),             # gates invalid, No > Ng
-        ([[0, 0]], 0, 0),       # Ni and No invalid
-        ([[0, 0]], 1, 0),       # No invalid
-        ([[0, 0]], 0, 1),       # Ni invalid
-        ([[0, 0]], 1, 2),       # No > Ng
-        ([0, 0], 1, 1),         # gates not 2D
-        ([[]], 0, 1),           # gates not mx2
-        ([[0]], 0, 1),          # gates not mx2
-        ([[0, 0, 0]], 0, 1)]    # gates not mx2
+        ([], [], 0, 0),             # all invalid
+        ([], [], 0, 1),             # gates, tf and Ni invalid, No > Ng
+        ([], [], 1, 0),             # gates, tf and No invalid
+        ([], [], 1, 1),             # gates and tf invalid, No > Ng
+        ([[0, 0]], [], 1, 1),           # tf empty
+        ([[0, 0]], [1, 1], 1, 1),       # |tf| > |gates|
+        ([[0, 0], [0, 0]], [1], 1, 1),  # |tf| < |gates|
+        ([[0, 0]], [16], 1, 1),         # tf > 15
+        ([], [], 0, 1),             # gates, tf and Ni invalid, No > Ng
+        ([], [], 1, 0),             # gates, tf and No invalid
+        ([], [], 1, 1),             # gates and tf invalid, No > Ng
+        ([[0, 0]], [1], 0, 0),       # Ni and No invalid
+        ([[0, 0]], [1], 1, 0),       # No invalid
+        ([[0, 0]], [1], 0, 1),       # Ni invalid
+        ([[0, 0]], [1], 1, 2),       # No > Ng
+        ([0, 0], [1], 1, 1),         # gates not 2D
+        ([[]], [1], 0, 1),           # gates not mx2
+        ([[0]], [1], 0, 1),          # gates not mx2
+        ([[0, 0, 0]], [1], 0, 1)    # gates not mx2
+        ]
 
     # ############## Fixtures ##################### #
     @fixture
     def network(self):
-        return BoolNetwork([(0, 1)], 2, 1)
+        return BoolNetwork([(0, 1)], [0], 2, 1)
 
     @fixture(params=invalid_constructions)
     def invalid_construction(self, request):
@@ -175,13 +180,15 @@ class TestFunctionality:
         Ni = randint(1, 10)
         No = randint(1, 10)
         Ng = randint(No, 20)
-        random_gates = [(randint(0, g+Ni), randint(0, g+Ni)) for g in range(Ng)]
+        gates = [(randint(0, g+Ni), randint(0, g+Ni)) for g in range(Ng)]
+        tfs = np.random.choice(16, size=Ng)
         # create the seed network
-        return BoolNetwork(random_gates, Ni, No)
+        return BoolNetwork(gates, tfs, Ni, No)
 
     # ############## Tests ##################### #
     def test_acyclic(self, random_network):
-        DG = self.graph_from_gates(random_network.gates, random_network.Ni, random_network.No)
+        DG = self.graph_from_gates(
+            random_network.gates, random_network.Ni, random_network.No)
         assert nx.is_directed_acyclic_graph(DG)
 
     def test_feedforward(self, random_network):

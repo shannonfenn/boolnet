@@ -14,6 +14,7 @@ gates:
     - [8, 8]
     - [9, 9]
     - [10, 11]
+transfer functions: [7, 7, 7, 7, 7, 7, 7, 7, 7]
 max depths: [4]
 # state can be extracted from full state table
 samples: [2, 6, 7, 8, 9, 10, 12, 14]
