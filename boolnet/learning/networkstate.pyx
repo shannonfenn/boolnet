@@ -185,9 +185,6 @@ cdef class NetworkState(BoolNetwork):
         if self.cols == 0 or self.Ne == 0:
             raise ValueError('Zero value for cols ({}) or Ne ({}).'.
                              format(self.cols, self.Ne))
-        if self.cols > self.Ne // PACKED_SIZE + 1:
-            raise ValueError('Number of columns ({}) too large for Ne ({}) with PACKED_SIZE={}.'.
-                             format(self.cols, self.Ne, PACKED_SIZE))
         if self.activation.shape[0] != self.Ni + self.Ng:
             raise ValueError('Activation length ({}) does not match Ni+Ng ({}).'.
                              format(self.activation.shape[0], self.Ni + self.Ng))
