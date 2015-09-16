@@ -118,20 +118,17 @@ def standard_harness_to_fixture(test):
     test['activation matrix']['test'] = activation_t
     test['error matrix']['test'] = error[samples_t]
 
-    # add network to test
-    tf = test['transfer functions']
-
-    # add states
+    # add states to test
     test['state'] = {
-        'sample': StandardNetworkState(gates, tf,
+        'sample': StandardNetworkState(gates,
                                        pack_bool_matrix(inputs_s),
                                        pack_bool_matrix(target_s),
                                        Ne_s),
-        'full': StandardNetworkState(gates, tf,
+        'full': StandardNetworkState(gates,
                                      pack_bool_matrix(inputs),
                                      pack_bool_matrix(target),
                                      Ne),
-        'test': StandardNetworkState(gates, tf,
+        'test': StandardNetworkState(gates,
                                      pack_bool_matrix(inputs_t),
                                      pack_bool_matrix(target_t),
                                      Ne_t)
@@ -154,9 +151,6 @@ def chained_harness_to_fixture(test):
 
     op = operator_map[test['target function']]
 
-    # add network to test
-    tf = test['transfer functions']
-
     if test['target function'].startswith('unary'):
         Nb = Ni
     else:
@@ -177,9 +171,9 @@ def chained_harness_to_fixture(test):
 
     # add states to test
     test['state'] = {
-        'sample': ChainedNetworkState(gates, tf, generator_s, window_size_s),
-        'full': ChainedNetworkState(gates, tf, generator_f, window_size_f),
-        'test': ChainedNetworkState(gates, tf, generator_t, window_size_t),
+        'sample': ChainedNetworkState(gates, generator_s, window_size_s),
+        'full': ChainedNetworkState(gates, generator_f, window_size_f),
+        'test': ChainedNetworkState(gates, generator_t, window_size_t),
     }
 
     return test
@@ -319,7 +313,7 @@ class TestStandard:
         print(inp.shape)
         print(tgt.shape)
         with raises(ValueError):
-            StandardNetworkState([(0, 1)], [0], inp, tgt, Ne)
+            StandardNetworkState([(0, 1, 3)], inp, tgt, Ne)
 
     # ################### Functionality Testing ################### #
     def test_input_matrix(self, standard_state, sample_type):
@@ -419,11 +413,11 @@ class TestStandard:
 
 
 class TestBoth:
+
     def build_from_params(self, params, eval_type, sample_type):
         if eval_type == 'standard':
             return standard_from_operator(
                 gates=params['gates'],
-                functions=params['transfer functions'],
                 indices=params['indices'][sample_type],
                 Nb=params['Nb'], No=params['No'],
                 operator=params['operator'],
@@ -432,7 +426,6 @@ class TestBoth:
         elif eval_type == 'chained':
             return chained_from_operator(
                 gates=params['gates'],
-                functions=params['transfer functions'],
                 indices=params['indices'][sample_type],
                 Nb=params['Nb'],
                 No=params['No'],

@@ -23,12 +23,9 @@ cdef class BoolNetwork:
 
         np.uint8_t[:] connected
         deque[Move] inverse_moves
-    
-    cpdef clean_copy(self)
-    cpdef full_copy(self)
 
     cpdef representation(self)
-    cpdef set_representation(self, BoolNetwork gates)
+    cpdef set_representation(self, np.uint32_t[:, :] gates)
 
     # properties
     cpdef connected_gates(self)

@@ -26,7 +26,7 @@ from boolnet.bintools.example_generator cimport PackedExampleGenerator, Operator
 #                                       mapping.operator, mapping.N)
 
 
-cpdef standard_from_operator(gates, functions, indices, Nb, No, operator, N=0):
+cpdef standard_from_operator(gates, indices, Nb, No, operator, N=0):
     cdef packed_type_t[:, :] inp, tgt
     ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
     packed_factory = PackedExampleGenerator(ex_factory, No)
@@ -43,13 +43,13 @@ cpdef standard_from_operator(gates, functions, indices, Nb, No, operator, N=0):
 
     packed_factory.reset()
     packed_factory.next_examples(inp, tgt)
-    return StandardNetworkState(gates, functions, inp, tgt, Ne)
+    return StandardNetworkState(gates, inp, tgt, Ne)
 
 
-cpdef chained_from_operator(gates, functions, indices, Nb, No, operator, window_size, N=0):
+cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, N=0):
     ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
-    return ChainedNetworkState(gates, functions, packed_ex_factory, window_size)
+    return ChainedNetworkState(gates, packed_ex_factory, window_size)
 
 
 cdef class NetworkState(BoolNetwork):
@@ -61,7 +61,7 @@ cdef class NetworkState(BoolNetwork):
         public size_t first_unevaluated_gate
         readonly bint evaluated
 
-    def __init__(self, initial_gates, transfer_functions, size_t Ni, size_t No, size_t Ne, size_t cols):
+    def __init__(self, gates, size_t Ni, size_t No, size_t Ne, size_t cols):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
@@ -69,7 +69,7 @@ cdef class NetworkState(BoolNetwork):
             raise ValueError('More examples ({}) than #inputs ({}) '
                              'can represent.'.format(Ne, Ni))
 
-        super().__init__(initial_gates, transfer_functions, Ni, No)
+        super().__init__(gates, Ni, No)
 
         self.Ne = Ne
         self.cols = cols
@@ -100,7 +100,7 @@ cdef class NetworkState(BoolNetwork):
     cpdef function_value(self, Function function):
         pass
 
-    cpdef set_representation(self, BoolNetwork network):
+    cpdef set_representation(self, np.uint32_t[:, :] network):
         # force reevaluation
         self.evaluated = False
         self.first_unevaluated_gate = 0
@@ -149,11 +149,10 @@ cdef class NetworkState(BoolNetwork):
         ''' Evaluate the activation and error matrices for the network
             getting node TFs from network. '''
         cdef:
-            size_t Ni, No, Ng, cols, c, g, o, in1, in2, start
+            size_t Ni, No, Ng, cols, c, g, o, src1, src2, start
             packed_type_t[:, :] activation, outputs, error, target
-            np.uint8_t[:] transfer_functions
             np.uint32_t[:, :] gates
-            f_type transfer_func
+            f_type func
 
         Ng = self.Ng
         Ni = self.Ni
@@ -164,19 +163,18 @@ cdef class NetworkState(BoolNetwork):
         error = self.error
         target = self.target
         gates = self.gates
-        transfer_functions = self.transfer_functions
-
+        
         cols = activation.shape[1]
 
         # evaluate the state matrix
         start = self.first_unevaluated_gate
 
         for g in range(start, Ng):
-            in1 = gates[g, 0]
-            in2 = gates[g, 1]
-            transfer_func = function_list[transfer_functions[g]]
+            src1 = gates[g, 0]
+            src2 = gates[g, 1]
+            func = function_list[gates[g, 2]]
             for c in range(cols):
-                activation[Ni+g, c] = transfer_func(activation[in1, c], activation[in2, c])
+                activation[Ni+g, c] = func(activation[src1, c], activation[src2, c])
 
         # evaluate the error matrix
         for o in range(No):
@@ -214,14 +212,14 @@ cdef class NetworkState(BoolNetwork):
 
 cdef class StandardNetworkState(NetworkState):
 
-    def __init__(self, initial_gates, transfer_functions,
-                 packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t Ne):
+    def __init__(self, gates, packed_type_t[:, :] inputs,
+                 packed_type_t[:, :] target, size_t Ne):
         if inputs.shape[1] != target.shape[1]:
             raise ValueError('Input ({}) and target ({}) widths do not match'.
                              format(inputs.shape[1], target.shape[1]))
         # if inputs.shape[0] != Ne:
-        super().__init__(initial_gates, transfer_functions, inputs.shape[0],
-                         target.shape[0], Ne, inputs.shape[1])
+        super().__init__(gates, inputs.shape[0], target.shape[0],
+                         Ne, inputs.shape[1])
         self.inputs[...] = inputs
         self.target[...] = target
 
@@ -291,12 +289,10 @@ cdef class ChainedNetworkState(NetworkState):
         size_t blocks, zero_mask_cols
         dict function_value_cache
 
-    def __init__(self, initial_gates, transfer_functions, PackedExampleGenerator example_generator, size_t window_size):
-        ''' Sets up the activation and error matrices for a new network.
-            Note: This copies the provided network, so do not expect modifications
-                  to pass through transparently without reacquiring the new alias.'''
-        super().__init__(initial_gates, transfer_functions, example_generator.Ni,
-                         example_generator.No, example_generator.Ne, window_size)
+    def __init__(self, gates, PackedExampleGenerator example_generator,
+                 size_t window_size):
+        super().__init__(gates, example_generator.Ni, example_generator.No,
+                         example_generator.Ne, window_size)
         block_width = (self.cols * PACKED_SIZE)
         self.blocks = self.Ne // block_width
         if self.Ne % block_width:

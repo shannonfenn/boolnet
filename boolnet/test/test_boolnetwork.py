@@ -23,9 +23,8 @@ def harness_to_fixture(stream):
     Ni = test['Ni']
     No = test['No']
     gates = np.array(test['gates'], np.uint32)
-    tf = test['transfer functions']
     # add network to test
-    test['net'] = BoolNetwork(gates, tf, Ni, No)
+    test['net'] = BoolNetwork(gates, Ni, No)
     return test
 
 
@@ -39,7 +38,8 @@ def adder2():
 
 @fixture(
     scope='module',
-    params=load_field_from_yaml('boolnet/test/networks/adder2.yaml', 'valid_masks'))
+    params=load_field_from_yaml('boolnet/test/networks/adder2.yaml',
+                                'valid_masks'))
 def adder2_valid_mask(request):
     harness = request.param
     harness[0] = np.array(harness[0], dtype=np.uint8)
@@ -49,7 +49,8 @@ def adder2_valid_mask(request):
 
 @fixture(
     scope='module',
-    params=load_field_from_yaml('boolnet/test/networks/adder2.yaml', 'invalid_masks'))
+    params=load_field_from_yaml('boolnet/test/networks/adder2.yaml',
+                                'invalid_masks'))
 def adder2_invalid_mask(request):
     harness = request.param
     harness[0] = np.array(harness[0], dtype=np.uint8)
@@ -66,34 +67,28 @@ def network_file_instance(request):
 
 # #################### Exception Testing #################### #
 class TestExceptions:
-    invalid_constructions = [
-        ([], [], 0, 0),             # all invalid
-        ([], [], 0, 1),             # gates, tf and Ni invalid, No > Ng
-        ([], [], 1, 0),             # gates, tf and No invalid
-        ([], [], 1, 1),             # gates and tf invalid, No > Ng
-        ([[0, 0]], [], 1, 1),           # tf empty
-        ([[0, 0]], [1, 1], 1, 1),       # |tf| > |gates|
-        ([[0, 0], [0, 0]], [1], 1, 1),  # |tf| < |gates|
-        ([[0, 0]], [16], 1, 1),         # tf > 15
-        ([], [], 0, 1),             # gates, tf and Ni invalid, No > Ng
-        ([], [], 1, 0),             # gates, tf and No invalid
-        ([], [], 1, 1),             # gates and tf invalid, No > Ng
-        ([[0, 0]], [1], 0, 0),       # Ni and No invalid
-        ([[0, 0]], [1], 1, 0),       # No invalid
-        ([[0, 0]], [1], 0, 1),       # Ni invalid
-        ([[0, 0]], [1], 1, 2),       # No > Ng
-        ([0, 0], [1], 1, 1),         # gates not 2D
-        ([[]], [1], 0, 1),           # gates not mx2
-        ([[0]], [1], 0, 1),          # gates not mx2
-        ([[0, 0, 0]], [1], 0, 1)    # gates not mx2
-        ]
-
     # ############## Fixtures ##################### #
+
     @fixture
     def network(self):
-        return BoolNetwork([(0, 1)], [0], 2, 1)
+        return BoolNetwork([(0, 1, 0)], 2, 1)
 
-    @fixture(params=invalid_constructions)
+    @fixture(params=[
+        ([], 0, 0),             # all invalid
+        ([], 0, 1),             # gates and Ni invalid, No > Ng
+        ([], 1, 0),             # gates and No invalid
+        ([], 1, 1),             # gates invalid, No > Ng
+        ([[0, 0, 16]], 1, 1),         # tf > 15
+        ([[0, 0, 1]], 0, 0),       # Ni and No invalid
+        ([[0, 0, 1]], 1, 0),       # No invalid
+        ([[0, 0, 1]], 0, 1),       # Ni invalid
+        ([[0, 0, 1]], 1, 2),       # No > Ng
+        ([0, 0, 1], 1, 1),         # gates not 2D
+        ([[]], 0, 1),           # gates not mx3
+        ([[1]], 0, 1),           # gates not mx3
+        ([[0, 3]], 0, 1),          # gates not mx3
+        ([[0, 0, 0, 0]], 0, 1)    # gates not mx3
+        ])
     def invalid_construction(self, request):
         return request.param
 
@@ -180,10 +175,10 @@ class TestFunctionality:
         Ni = randint(1, 10)
         No = randint(1, 10)
         Ng = randint(No, 20)
-        gates = [(randint(0, g+Ni), randint(0, g+Ni)) for g in range(Ng)]
-        tfs = np.random.choice(16, size=Ng)
+        gates = [(randint(g+Ni), randint(g+Ni), randint(16))
+                 for g in range(Ng)]
         # create the seed network
-        return BoolNetwork(gates, tfs, Ni, No)
+        return BoolNetwork(gates, Ni, No)
 
     # ############## Tests ##################### #
     def test_acyclic(self, random_network):
@@ -307,32 +302,13 @@ class TestFunctionality:
         actual = net.max_node_depths()
         assert_array_equal(actual, expected)
 
-    def test_clean_copy(self, adder2, adder2_valid_mask):
+    def test_copy(self, adder2, adder2_valid_mask):
         net1 = copy(adder2)
         sourceable, changeable = adder2_valid_mask
         net1.set_mask(sourceable, changeable)
         net1.move_to_random_neighbour()
 
-        net2 = net1.clean_copy()
-        # should be the same
-        assert_array_equal(net2.gates, net1.gates)
-        assert net2.Ni == net1.Ni
-        assert net2.No == net1.No
-        assert net2.Ng == net1.Ng
-        assert_array_equal(net2.connected_gates(), net1.connected_gates())
-        assert_array_equal(net2.connected_sources(), net1.connected_sources())
-        # should be different
-        assert net2.history_empty()
-        assert_array_equal(net2.changeable, np.ones(net2.Ng, dtype=np.uint8))
-        assert_array_equal(net2.sourceable, np.ones(net2.Ng + net2.Ni, dtype=np.uint8))
-
-    def test_full_copy(self, adder2, adder2_valid_mask):
-        net1 = copy(adder2)
-        sourceable, changeable = adder2_valid_mask
-        net1.set_mask(sourceable, changeable)
-        net1.move_to_random_neighbour()
-
-        net2 = net1.full_copy()
+        net2 = copy(net1)
         assert_array_equal(net2.gates, net1.gates)
         assert net2.Ni == net1.Ni
         assert net2.No == net1.No

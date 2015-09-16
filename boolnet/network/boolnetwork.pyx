@@ -8,9 +8,7 @@ cimport boolnet.network.algorithms as algorithms
 
 
 cdef class BoolNetwork:    
-    def __init__(self, initial_gates, transfer_functions, size_t Ni, size_t No):
-        self.transfer_functions = np.array(transfer_functions, copy=True, dtype=np.uint8)
-
+    def __init__(self, initial_gates, size_t Ni, size_t No):
         # copy gate array
         self.gates = np.array(initial_gates, dtype=np.uint32, copy=True)
         if self.gates.size == 0:
@@ -31,13 +29,9 @@ cdef class BoolNetwork:
         self._check_network_invariants()
         self._update_connected()
 
-    cpdef clean_copy(self):
+    def __copy__(self):
         cdef BoolNetwork bn
-        bn = BoolNetwork(self.gates, self.transfer_functions, self.Ni, self.No)
-        return bn
-
-    cpdef full_copy(self):
-        cdef BoolNetwork bn = self.clean_copy()
+        bn = BoolNetwork(self.gates, self.Ni, self.No)
         bn.changeable[:] = self.changeable
         bn.sourceable[:] = self.sourceable
         bn.connected[:] = self.connected
@@ -45,14 +39,9 @@ cdef class BoolNetwork:
         bn.inverse_moves = self.inverse_moves
         return bn
 
-    def __copy__(self):
-        return self.clean_copy()
-
     def __str__(self):
-        fmt_str = ('Ni: {} Ng: {} max node depths: {}\ngates:\n{}'
-                   '\ntransfer functions:\n{}')
-        return fmt_str.format(self.Ni, self.Ng, self.max_node_depths(),
-                              self.gates, self.transfer_functions)
+        return 'Ni: {} Ng: {} max node depths: {}\ngates:\n{}'.format(
+            self.Ni, self.Ng, self.max_node_depths(), self.gates)
 
     cpdef max_node_depths(self):
         # default to stored value of No
@@ -62,17 +51,17 @@ cdef class BoolNetwork:
         Ni = self.Ni
         depths = [0] * (Ng + Ni)
         for g in range(Ng):
-            source_depths = [depths[inp] for inp in self.gates[g]]
+            # don't include the transfer function
+            source_depths = [depths[inp] for inp in self.gates[g][:-1]]
             depths[g + Ni] = max(source_depths) + 1
         # return the last No values
         return depths[-No:]
 
     cpdef representation(self):
-        return self.clean_copy()
+        return np.array(self.gates)
 
-    cpdef set_representation(self, BoolNetwork network):
-        self.gates[...] = network.gates
-        self.transfer_functions[...] = network.transfer_functions
+    cpdef set_representation(self, np.uint32_t[:, :] gates):
+        self.gates[...] = gates
         # check invariants hold
         self._check_network_invariants()
 
@@ -214,12 +203,9 @@ cdef class BoolNetwork:
             raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
         if self.gates.ndim != 2:
             raise ValueError('initial_gates must be 2D')
-        if self.gates.shape[0] != self.Ng and self.gates.shape[1] != 2:
+        if self.gates.shape[0] != self.Ng and self.gates.shape[1] != 3:
             raise ValueError('Wrong shape ({}, {}) for gate matrix, Ng={}.'.
                 format(self.gates.shape[0], self.gates.shape[1], self.Ng))
-        if self.transfer_functions.ndim != 1 or self.transfer_functions.shape[0] != self.Ng:
-            raise ValueError('Invalid transfer function matrix shape: {}'.format(
-                self.transfer_functions.shape))
-        if max(self.transfer_functions) > 15:
-            raise ValueError('Invalid transfer function matrix max value: {}'.format(
-                max(self.transfer_functions)))
+        if max(self.gates[:, 2]) > 15:
+            raise ValueError('Invalid transfer functions: {}'.format(
+                max(self.gates[:, 2])))

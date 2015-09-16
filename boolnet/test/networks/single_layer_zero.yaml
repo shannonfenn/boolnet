@@ -4,8 +4,7 @@ invariant under single move: yes
 invariant under multiple moves: yes
 Ni: 4
 'No': 2
-gates: [[0, 1], [2, 3]]
-transfer functions: [7, 7]
+gates: [[0, 1, 7], [2, 3, 7]]
 max depths: [1, 1]
 # state can be extracted from full state table
 samples: [0, 2, 6, 8, 9, 10, 14, 15]

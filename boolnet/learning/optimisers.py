@@ -49,10 +49,81 @@ class LocalSearch:
         original_state = state.representation()
         for i in range(self.max_restarts + 1):
             state.set_representation(original_state)
+            state.randomise()
             results = self._optimise(state)
             if self.reached_stopping_criterion:
                 break
         return results + (i, )
+
+
+class LAHC(LocalSearch):
+
+    def initialise(self, parameters):
+        super().initialise(parameters)
+        try:
+            self.cost_list_len = parameters['cost_list_length']
+            self.max_iterations = parameters['max_iterations']
+        except KeyError:
+            print('Optimiser parameters missing!', file=sys.stderr)
+            raise
+
+    def _optimise(self, state):
+        # Calculate initial error
+        error = self.guiding_function(state)
+        # error = evaluator.function_value(self.guiding_function)
+
+        # set up aspiration criteria
+        best_error = error
+        best_state = copy(state)
+        best_iteration = 0
+
+        # initialise cost list
+        self.costs = deque(repeat(error, self.cost_list_len))
+
+        self.reached_stopping_criterion = False
+        # optimisation loop
+        for iteration in range(self.max_iterations):
+            # Stop on user defined condition
+            if self.stopping_criterion(state, best_error):
+                self.reached_stopping_criterion = True
+                break
+
+            # perform random move
+            self.move(state)
+
+            # calculate error for new state
+            new_error = self.guiding_function(state)
+            # new_error = evaluator.function_value(self.guiding_function)
+
+            # Keep best state seen
+            if new_error < best_error:
+                best_state = copy(state)
+                best_error = new_error
+                best_iteration = iteration
+
+            # Determine whether to accept the new state
+            if self.accept(new_error, error):
+                error = new_error
+            else:
+                self.undo_move(state)
+
+            # In any case, clear the move history to save memory
+            # and prevent accidentally undoing accepted moves later
+            state.clear_history()
+
+        return (best_state, best_iteration, iteration)
+
+    def accept(self, new_error, current_error):
+        oldest_error = self.costs.popleft()
+        if new_error <= current_error:
+            self.costs.append(new_error)
+            return True
+        elif new_error < oldest_error:
+            self.costs.append(min(new_error, self.costs[-1]))
+            return True
+        else:
+            self.costs.append(min(oldest_error, self.costs[-1]))
+            return False
 
 
 class SA(LocalSearch):
@@ -86,7 +157,7 @@ class SA(LocalSearch):
 
         # Setup aspiration criteria
         best_error = error
-        best_state = copy(state.representation())
+        best_state = copy(state)
         best_iteration = 0
 
         best_error_for_temp = error
@@ -118,7 +189,7 @@ class SA(LocalSearch):
 
             # Keep best state seen
             if new_error < best_error:
-                best_state = copy(state.representation())
+                best_state = copy(state)
                 best_error = new_error
                 best_iteration = iteration
 
@@ -133,73 +204,3 @@ class SA(LocalSearch):
             state.clear_history()
 
         return (best_state, best_iteration, iteration)
-
-
-class LAHC(LocalSearch):
-
-    def initialise(self, parameters):
-        super().initialise(parameters)
-        try:
-            self.cost_list_len = parameters['cost_list_length']
-            self.max_iterations = parameters['max_iterations']
-        except KeyError:
-            print('Optimiser parameters missing!', file=sys.stderr)
-            raise
-
-    def _optimise(self, state):
-        # Calculate initial error
-        error = self.guiding_function(state)
-        # error = evaluator.function_value(self.guiding_function)
-
-        # set up aspiration criteria
-        best_error = error
-        best_state = copy(state.representation())
-        best_iteration = 0
-
-        # initialise cost list
-        self.costs = deque(repeat(error, self.cost_list_len))
-
-        self.reached_stopping_criterion = False
-        # optimisation loop
-        for iteration in range(self.max_iterations):
-            # Stop on user defined condition
-            if self.stopping_criterion(state, best_error):
-                self.reached_stopping_criterion = True
-                break
-
-            # perform random move
-            self.move(state)
-
-            # calculate error for new state
-            new_error = self.guiding_function(state)
-            # new_error = evaluator.function_value(self.guiding_function)
-
-            # Keep best state seen
-            if new_error < best_error:
-                best_state = copy(state.representation())
-                best_error = new_error
-                best_iteration = iteration
-
-            # Determine whether to accept the new state
-            if self.accept(new_error, error):
-                error = new_error
-            else:
-                self.undo_move(state)
-
-            # In any case, clear the move history to save memory
-            # and prevent accidentally undoing accepted moves later
-            state.clear_history()
-
-        return (best_state, best_iteration, iteration)
-
-    def accept(self, new_error, current_error):
-        oldest_error = self.costs.popleft()
-        if new_error <= current_error:
-            self.costs.append(new_error)
-            return True
-        elif new_error < oldest_error:
-            self.costs.append(min(new_error, self.costs[-1]))
-            return True
-        else:
-            self.costs.append(min(oldest_error, self.costs[-1]))
-            return False

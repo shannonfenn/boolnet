@@ -12,11 +12,11 @@ from boolnet.learning.learners import build_mask
 def harness(request):
     # load experiment file
     Ng, Ni, No, bounds = request.param
-    gates = np.empty(shape=(Ng, 2), dtype=np.int32)
+    gates = np.empty(shape=(Ng, 3), dtype=np.int32)
     for g in range(Ng):
-        gates[g, :] = np.random.randint(g+Ni, size=2)
-    tfs = np.random.choice(16, size=Ng)
-    net = BoolNetwork(gates, tfs, Ni, No)
+        gates[g, :-1] = np.random.randint(g+Ni, size=2)
+        gates[g, -1] = np.random.randint(16)
+    net = BoolNetwork(gates, Ni, No)
     return net, bounds
 
 
@@ -58,7 +58,8 @@ def test_build_mask_without_kfs_changeable(harness):
     for target in range(No):
         l, u = bounds[target], bounds[target + 1]
         expected = np.array([0]*l + [1]*(u-l) + [0]*(Ng-No-u) +
-                            [0]*target + [1] + [0]*(No-target-1), dtype=np.uint8)
+                            [0]*target + [1] + [0]*(No-target-1),
+                            dtype=np.uint8)
         _, actual = build_mask(net, l, u, target)
         # print('expected:\n', expected)
         # print('actual:\n', actual)
