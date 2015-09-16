@@ -11,8 +11,6 @@ cdef class BoolNetwork:
     def __init__(self, initial_gates, transfer_functions, size_t Ni, size_t No):
         self.transfer_functions = np.array(transfer_functions, copy=True, dtype=np.uint8)
 
-        self.changed = True
-
         # copy gate array
         self.gates = np.array(initial_gates, dtype=np.uint32, copy=True)
         if self.gates.size == 0:
@@ -30,7 +28,7 @@ cdef class BoolNetwork:
         self.sourceable = np.ones(self.Ng + Ni, dtype=np.uint8)
         self.connected = np.zeros(self.Ng + Ni, dtype=np.uint8)
 
-        self._check_invariants()
+        self._check_network_invariants()
         self._update_connected()
 
     cpdef clean_copy(self):
@@ -43,7 +41,6 @@ cdef class BoolNetwork:
         bn.changeable[:] = self.changeable
         bn.sourceable[:] = self.sourceable
         bn.connected[:] = self.connected
-        bn.changed = self.changed
         bn.masked = self.masked
         bn.inverse_moves = self.inverse_moves
         return bn
@@ -51,30 +48,11 @@ cdef class BoolNetwork:
     def __copy__(self):
         return self.clean_copy()
 
-    cdef _check_invariants(self):
-        if self.Ng == 0:
-            raise ValueError('Empty initial gates list')
-        if self.Ni <= 0:
-            raise ValueError('Invalid Ni ({})'.format(self.Ni))
-        if self.No <= 0:
-            raise ValueError('Invalid No ({})'.format(self.No))
-        if self.No > self.Ng:
-            raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
-        if self.gates.ndim != 2 or self.gates.shape[1] != 2:
-            raise ValueError('initial_gates must be 2D with dim2==2')
-        if self.transfer_functions.ndim != 1 or self.transfer_functions.shape[0] != self.Ng:
-            raise ValueError('Invalid transfer function matrix shape: {}'.format(
-                self.transfer_functions.shape))
-        if max(self.transfer_functions) > 15:
-            raise ValueError('Invalid transfer function matrix max value: {}'.format(
-                max(self.transfer_functions)))
-
     def __str__(self):
-        fmt_str = ('Ni: {} Ng: {} changed: {} max node depths: {}\ngates:\n{}'
+        fmt_str = ('Ni: {} Ng: {} max node depths: {}\ngates:\n{}'
                    '\ntransfer functions:\n{}')
-        return fmt_str.format(self.Ni, self.Ng, self.changed,
-                              self.max_node_depths(), self.gates,
-                              self.transfer_functions)
+        return fmt_str.format(self.Ni, self.Ng, self.max_node_depths(),
+                              self.gates, self.transfer_functions)
 
     cpdef max_node_depths(self):
         # default to stored value of No
@@ -89,8 +67,14 @@ cdef class BoolNetwork:
         # return the last No values
         return depths[-No:]
 
-    cpdef force_reevaluation(self):
-        self.changed = True
+    cpdef representation(self):
+        return self.clean_copy()
+
+    cpdef set_representation(self, BoolNetwork network):
+        self.gates[...] = network.gates
+        self.transfer_functions[...] = network.transfer_functions
+        # check invariants hold
+        self._check_network_invariants()
 
     cpdef randomise(self):
         # this has the side effect of clearing the history since we don't
@@ -108,10 +92,6 @@ cdef class BoolNetwork:
                 # modify the connections of this gate with two random inputs
                 self.gates[g, 0] = algorithms.sample_bool(sources, g + Ni)
                 self.gates[g, 1] = algorithms.sample_bool(sources, g + Ni)
-
-        # indicate the network must be reevaluated
-        self.changed = True
-
         self.clear_history()
 
     cdef _check_mask(self):
@@ -203,18 +183,14 @@ cdef class BoolNetwork:
 
         # modify the connection
         self.gates[move.gate][move.terminal] = move.new_source
-        # indicate the network must be reevaluated
-        self.changed = True
 
     cpdef revert_move(self):
         cdef Move inverse
         if not self.inverse_moves.empty():
             inverse = self.inverse_moves.back()
             self.inverse_moves.pop_back()
-            self.changed = True
             self.gates[inverse.gate][inverse.terminal] = inverse.new_source
         else:
-            print('wtf')
             raise RuntimeError('Tried to revert with empty inverse move list.')
 
     cpdef revert_all_moves(self):
@@ -226,3 +202,24 @@ cdef class BoolNetwork:
 
     cpdef history_empty(self):
         return self.inverse_moves.empty()
+
+    cdef _check_network_invariants(self):
+        if self.Ng == 0:
+            raise ValueError('Empty initial gates list')
+        if self.Ni <= 0:
+            raise ValueError('Invalid Ni ({})'.format(self.Ni))
+        if self.No <= 0:
+            raise ValueError('Invalid No ({})'.format(self.No))
+        if self.No > self.Ng:
+            raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
+        if self.gates.ndim != 2:
+            raise ValueError('initial_gates must be 2D')
+        if self.gates.shape[0] != self.Ng and self.gates.shape[1] != 2:
+            raise ValueError('Wrong shape ({}, {}) for gate matrix, Ng={}.'.
+                format(self.gates.shape[0], self.gates.shape[1], self.Ng))
+        if self.transfer_functions.ndim != 1 or self.transfer_functions.shape[0] != self.Ng:
+            raise ValueError('Invalid transfer function matrix shape: {}'.format(
+                self.transfer_functions.shape))
+        if max(self.transfer_functions) > 15:
+            raise ValueError('Invalid transfer function matrix max value: {}'.format(
+                max(self.transfer_functions)))

@@ -91,7 +91,7 @@ class StratifiedLearner(BasicLearner):
         self.fabcpp_opts = parameters.get('fabcpp_options')
         self.keep_files = parameters.get('keep_files', False)
 
-        self.num_targets = state.network.No
+        self.num_targets = state.No
         self.learned_targets = []
         self.feature_sets = np.empty((self.num_targets, self.num_targets),
                                      dtype=list)
@@ -267,7 +267,7 @@ class StratifiedLearner(BasicLearner):
                 restarts[i] = opt_results[3]
             else:
                 # record result
-                best_states[i] = copy(state.network)
+                best_states[i] = copy(state)
             self.learned_targets.append(target)
 
         return LearnerResult(best_states=best_states,

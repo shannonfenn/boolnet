@@ -1,6 +1,5 @@
 import time
 import random
-from boolnet.network.boolnetwork import BoolNetwork
 from boolnet.bintools.functions import (
     E1, ACCURACY, PER_OUTPUT, function_from_name)
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
@@ -43,25 +42,29 @@ def check_data(training_mapping, test_mapping):
             training_mapping.No, test_mapping.No))
 
 
-def build_training_evaluator(network, mapping):
+def build_training_state(gates, transfer_funcs, mapping):
     if isinstance(mapping, FileBoolMapping):
-        return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
+        return StandardNetworkState(
+            gates, transfer_funcs, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, OperatorBoolMapping):
-        return standard_from_operator(network=network, indices=mapping.indices,
-                                      Nb=mapping.Nb, No=mapping.No,
-                                      operator=mapping.operator, N=mapping.N)
+        return standard_from_operator(
+            gates, transfer_funcs, mapping.indices, mapping.Nb,
+            mapping.No, mapping.operator, mapping.N)
 
 
-def build_test_evaluator(network, mapping, guiding_functions):
+def build_test_state(source_state, mapping, guiding_funcs):
+    gates = source_state.gates
+    transfer_funcs = source_state.transfer_functions
     if isinstance(mapping, FileBoolMapping):
-        evaluator = StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
+        evaluator = StandardNetworkState(
+            gates, transfer_funcs, mapping.inputs, mapping.target, mapping.Ne)
     elif isinstance(mapping, OperatorBoolMapping):
         evaluator = chained_from_operator(
-            network=network, indices=mapping.indices, Nb=mapping.Nb, No=mapping.No,
-            operator=mapping.operator, window_size=mapping.window_size, N=mapping.N)
+            gates, transfer_funcs, mapping.indices, mapping.Nb, mapping.No,
+            mapping.operator, mapping.window_size, mapping.N)
         # pre-add functions to avoid redundant network evaluations
-        for func in guiding_functions:
-            evaluator.add_function(func)
+        for f in guiding_funcs:
+            evaluator.add_function(f)
     return evaluator
 
 
@@ -77,7 +80,7 @@ def seed_rng(value):
 
 
 def build_initial_network(parameters, training_data):
-    Ni, No = training_data.Ni, training_data.No
+    Ni = training_data.Ni
 
     # Create the initial connection matrix
     if 'initial_gates' in parameters['network']:
@@ -93,7 +96,7 @@ def build_initial_network(parameters, training_data):
         # generate random feedforward network
         initial_gates = np.empty(shape=(Ng, 2), dtype=np.int32)
         for g in range(Ng):
-            initial_gates[g, :] = np.random.randint(g+Ni, size=2)
+            initial_gates[g, :] = np.random.randint(g + Ni, size=2)
 
     # create the seed network
     node_funcs = parameters['network']['node_funcs']
@@ -107,7 +110,7 @@ def build_initial_network(parameters, training_data):
     else:
         raise ValueError('Invalid setting for \'transfer functions\': {}'.
                          format(node_funcs))
-    return BoolNetwork(initial_gates, transfer_functions, Ni, No)
+    return initial_gates, transfer_functions
 
 
 def setup_local_dirs(parameters):
@@ -130,11 +133,11 @@ def learn_bool_net(parameters):
     test_data = parameters['test_mapping']
     check_data(training_data, test_data)
 
-    initial_network = build_initial_network(parameters, training_data)
+    gates, transfer_funcs = build_initial_network(parameters, training_data)
 
     # make evaluators for the training and test sets
-    training_evaluator = build_training_evaluator(initial_network,
-                                                  training_data)
+    training_state = build_training_state(
+        gates, transfer_funcs, training_data)
 
     learner = LEARNERS[learner_parameters['name']]
     optimiser = OPTIMISERS[optimiser_parameters['name']]
@@ -142,13 +145,13 @@ def learn_bool_net(parameters):
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner.run(training_evaluator, learner_parameters,
+    learner_result = learner.run(training_state, learner_parameters,
                                  optimiser)
 
     learning_end_time = time.monotonic()
 
     results = build_result_map(parameters, learner_result,
-                               training_evaluator, test_data)
+                               training_state, test_data)
 
     end_time = time.monotonic()
 
@@ -171,7 +174,7 @@ def build_result_map(parameters, learner_result, trg_evaluator, test_data):
     final_network = learner_result.best_states[-1]
 
     trg_evaluator.set_representation(final_network)
-    test_evaluator = build_test_evaluator(
+    test_evaluator = build_test_state(
         final_network, test_data, [guiding_function, E1, ACCURACY, PER_OUTPUT])
 
     results = {

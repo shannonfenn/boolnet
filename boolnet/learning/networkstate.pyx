@@ -17,16 +17,16 @@ from boolnet.bintools.packing import packed_type
 from boolnet.bintools.example_generator cimport PackedExampleGenerator, OperatorExampleIteratorFactory
 
 
-cpdef standard_from_mapping(network, mapping):
-    if isinstance(mapping, FileBoolMapping):
-        return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
-    elif isinstance(mapping, OperatorBoolMapping):
-        return standard_from_operator(network, mapping.indices,
-                                      mapping.Nb, mapping.No,
-                                      mapping.operator, mapping.N)
+# cpdef standard_from_mapping(network, mapping):
+#     if isinstance(mapping, FileBoolMapping):
+#         return StandardNetworkState(network, mapping.inputs, mapping.target, mapping.Ne)
+#     elif isinstance(mapping, OperatorBoolMapping):
+#         return standard_from_operator(network, mapping.indices,
+#                                       mapping.Nb, mapping.No,
+#                                       mapping.operator, mapping.N)
 
 
-cpdef standard_from_operator(network, indices, Nb, No, operator, N=0):
+cpdef standard_from_operator(gates, functions, indices, Nb, No, operator, N=0):
     cdef packed_type_t[:, :] inp, tgt
     ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
     packed_factory = PackedExampleGenerator(ex_factory, No)
@@ -43,51 +43,56 @@ cpdef standard_from_operator(network, indices, Nb, No, operator, N=0):
 
     packed_factory.reset()
     packed_factory.next_examples(inp, tgt)
-    return StandardNetworkState(network, inp, tgt, Ne)
+    return StandardNetworkState(gates, functions, inp, tgt, Ne)
 
 
-cpdef chained_from_operator(network, indices, Nb, No, operator, window_size, N=0):
+cpdef chained_from_operator(gates, functions, indices, Nb, No, operator, window_size, N=0):
     ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
-    return ChainedNetworkState(network, packed_ex_factory, window_size)
+    return ChainedNetworkState(gates, functions, packed_ex_factory, window_size)
 
 
-cdef class NetworkState:
+cdef class NetworkState(BoolNetwork):
     cdef:
-        readonly size_t Ne, Ni, No, Ng, cols
+        readonly size_t Ne, cols
         packed_type_t[:, :] activation, inputs, outputs, target, error
         readonly packed_type_t zero_mask
-        readonly object network
         dict err_evaluators
         public size_t first_unevaluated_gate
+        readonly bint evaluated
 
-    def __init__(self, BoolNetwork network, size_t Ne, size_t Ni, size_t No, size_t cols):
+    def __init__(self, initial_gates, transfer_functions, size_t Ni, size_t No, size_t Ne, size_t cols):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
         if 2**Ni < Ne:
             raise ValueError('More examples ({}) than #inputs ({}) '
                              'can represent.'.format(Ne, Ni))
+
+        super().__init__(initial_gates, transfer_functions, Ni, No)
+
         self.Ne = Ne
-        self.Ni = Ni
-        self.No = No
         self.cols = cols
 
         self.zero_mask = generate_end_mask(Ne)
 
         # instantiate a matrix for activation
-        self.activation = np.empty((network.Ng + self.Ni, self.cols), dtype=packed_type)
+        self.activation = np.empty((self.Ng + Ni, cols), dtype=packed_type)
 
         # create input and output view into activation matrix
-        self.inputs = self.activation[:self.Ni, :]
-        self.outputs = self.activation[-<int>self.No:, :]
+        self.inputs = self.activation[:Ni, :]
+        self.outputs = self.activation[-<int>No:, :]
 
-        self.target = np.empty((self.No, self.cols), dtype=packed_type)
+        self.target = np.empty((No, cols), dtype=packed_type)
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
 
-        self.set_representation(network)
         self.err_evaluators = dict()
+
+        self.evaluated = False
+        self.first_unevaluated_gate = 0
+        self._check_state_invariants()
+
 
     cpdef add_function(self, Function function):
         pass
@@ -95,73 +100,49 @@ cdef class NetworkState:
     cpdef function_value(self, Function function):
         pass
 
-    cpdef set_representation(self, network):
-        # check invariants hold
-        self._check_network_invariants(network)
-        self.Ng = network.Ng
-        # prevent another evaluator causing problems with this network
-        self.network = network.full_copy()
-        # force reevaluation of the copied network
-        self.network.changed = True
+    cpdef set_representation(self, BoolNetwork network):
+        # force reevaluation
+        self.evaluated = False
         self.first_unevaluated_gate = 0
-
-    cpdef representation(self):
-        return self.network.full_copy()
-
-    ######################### Network pass-through methods #########################
-    cpdef connected_gates(self):
-        return self.network.connected_gates()
-
-    cpdef connected_sources(self):
-        return self.network.connected_sources()
-
-    cpdef max_node_depths(self):
-        return self.network.max_node_depths()
-    
+        BoolNetwork.set_representation(self, network)
+        self._check_network_invariants()
+        self._check_state_invariants()
+        
     cpdef force_reevaluation(self):
-        self.network.force_reevaluation()
-
-    cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable):
-        self.network.set_mask(sourceable, changeable)
-    
-    cpdef remove_mask(self):
-        self.network.remove_mask()
+        self.evaluated = False
+        self.first_unevaluated_gate = 0
     
     cpdef randomise(self):
-        self.network.randomise()
+        BoolNetwork.randomise(self)
+        # indicate the network must be reevaluated
+        self.evaluated = False
         self.first_unevaluated_gate = 0
-
-    cpdef move_to_random_neighbour(self):
-        self.network.move_to_random_neighbour()
 
     cpdef apply_move(self, Move move):
-        if self.network.changed:
-            self.first_unevaluated_gate = min(self.first_unevaluated_gate, move.gate)
-        else:
+        # indicate the network must be reevaluated
+        self.evaluated = False
+        if self.evaluated:
             self.first_unevaluated_gate = move.gate
-        self.network.apply_move(move)
+        else:
+            self.first_unevaluated_gate = min(self.first_unevaluated_gate, move.gate)
+        BoolNetwork.apply_move(self, move)
 
     cpdef revert_move(self):
-        self.network.revert_move()
-
-        # for now
-        self.first_unevaluated_gate = 0
-        # if self.network.changed:
-        #     # if multiple moves are undone there are no issues with recomputation since
-        #     # the earliest gate ever changed will be the startpoint
-        #     self.first_unevaluated_gate = min(self.first_unevaluated_gate, inverse_move.gate)
-        # else:
-        #     self.first_unevaluated_gate = inverse_move.gate
+        cdef Move inverse_move
+        inverse_move = self.inverse_moves.back()
+        BoolNetwork.revert_move(self)
+        if self.evaluated:
+            self.first_unevaluated_gate = inverse_move.gate
+        else:
+            # if multiple moves are undone the network needs to
+            # be recomputed from the earliest gate ever changed
+            self.first_unevaluated_gate = min(
+                self.first_unevaluated_gate, inverse_move.gate)
+        self.evaluated = False
 
     cpdef revert_all_moves(self):
-        self.network.revert_all_moves()
+        BoolNetwork.revert_all_moves(self)
         self.first_unevaluated_gate = 0
-
-    cpdef clear_history(self):
-        self.network.clear_history()
-
-    cpdef history_empty(self):
-        return self.network.history_empty()
 
     ############################### Evaluation methods ###############################
     cdef void _evaluate(self):
@@ -182,8 +163,8 @@ cdef class NetworkState:
         outputs = self.outputs
         error = self.error
         target = self.target
-        gates = self.network.gates
-        transfer_functions = self.network.transfer_functions
+        gates = self.gates
+        transfer_functions = self.transfer_functions
 
         cols = activation.shape[1]
 
@@ -202,31 +183,45 @@ cdef class NetworkState:
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
 
-    cdef _check_network_invariants(self, network):
-        if self.Ng > 0 and network.Ng != self.Ng:
-            raise ValueError(
-                ('Network gate # ({}) does not match that of the network '
-                'this evaluator was instantiatied with ({}).').format(network.Ng, self.Ng))
-        if not isinstance(network, BoolNetwork):
-            raise ValueError('\"network\" parameter not a subclass of \"BoolNetwork\"')
-        if network.Ni != self.Ni:
-            raise ValueError(('Network input # ({}) does not match input '
-                             '({}).').format(network.No, self.Ni))
-        if network.No != self.No:
-            raise ValueError(('Network output # ({}) does not match target '
-                             '({}).').format(network.No, self.No))
+    cdef _check_state_invariants(self):
+        if self.cols == 0 or self.Ne == 0:
+            raise ValueError('Zero value for cols ({}) or Ne ({}).'.
+                             format(self.cols, self.Ne))
+        if self.cols > self.Ne // PACKED_SIZE + 1:
+            raise ValueError('Number of columns ({}) too large for Ne ({}) with PACKED_SIZE={}.'.
+                             format(self.cols, self.Ne, PACKED_SIZE))
+        if self.activation.shape[0] != self.Ni + self.Ng:
+            raise ValueError('Activation length ({}) does not match Ni+Ng ({}).'.
+                             format(self.activation.shape[0], self.Ni + self.Ng))
+        if self.inputs.shape[0] != self.Ni:
+            raise ValueError('Inputs length ({}) does not match Ni ({}).'.
+                             format(self.inputs.shape[0], self.Ni))
+        if self.outputs.shape[0] != self.No:
+            raise ValueError('Outputs length ({}) does not match No ({}).'.
+                             format(self.outputs.shape[0], self.No))
+        if self.target.shape[0] != self.No:
+            raise ValueError('Target length ({}) does not match No ({}).'.
+                             format(self.target.shape[0], self.No))
+        if self.error.shape[0] != self.No:
+            raise ValueError('Error length ({}) does not match No ({}).'.
+                             format(self.error.shape[0], self.No))
+        shapes = [self.activation.shape[1], self.inputs.shape[1], self.target.shape[1],
+                  self.outputs.shape[1], self.error.shape[1]]
+        if not (min(shapes) == max(shapes) == self.cols):
+            raise ValueError('Matrix column widths ({}) and cols not matching.'.
+                             format(shapes, self.cols))
 
 
 cdef class StandardNetworkState(NetworkState):
 
-    def __init__(self, network, packed_type_t[:, :] inputs,
-                 packed_type_t[:, :] target, size_t Ne):
-        ''' Sets up the activation and error matrices for a new network.
-            Note: This copies the provided network, so do not expect modifications
-                  to pass through transparently without reacquiring the new alias.'''
-        # check invariants hold
-        self._check_instance_invariants(inputs, target, Ne)
-        super().__init__(network, Ne, inputs.shape[0], target.shape[0], inputs.shape[1])
+    def __init__(self, initial_gates, transfer_functions,
+                 packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t Ne):
+        if inputs.shape[1] != target.shape[1]:
+            raise ValueError('Input ({}) and target ({}) widths do not match'.
+                             format(inputs.shape[1], target.shape[1]))
+        # if inputs.shape[0] != Ne:
+        super().__init__(initial_gates, transfer_functions, inputs.shape[0],
+                         target.shape[0], Ne, inputs.shape[1])
         self.inputs[...] = inputs
         self.target[...] = target
 
@@ -256,12 +251,12 @@ cdef class StandardNetworkState(NetworkState):
     cpdef add_function(self, Function function):
         eval_class, msb = STANDARD_EVALUATORS[function]
         self.err_evaluators[function] = eval_class(self.Ne, self.No, msb)
-        self.network.changed = True
+        self.evaluated = False
 
     cpdef function_value(self, Function function):
         if function not in self.err_evaluators:
             self.add_function(function)
-        if self.network.changed:
+        if not self.evaluated:
             self.evaluate()
         return self.err_evaluators[function].evaluate(self.error)
 
@@ -269,7 +264,7 @@ cdef class StandardNetworkState(NetworkState):
         ''' Evaluate the activation and error matrices if the
             network has been modified since the last evaluation. '''
 
-        if not self.network.changed:
+        if self.evaluated:
             return
 
         self._evaluate()
@@ -277,31 +272,17 @@ cdef class StandardNetworkState(NetworkState):
         self._apply_zero_mask(self.activation)   # this does output_matrix as well (since it is a view)
         self._apply_zero_mask(self.error)
 
-        self.network.changed = False
+        self.evaluated = True
 
     cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
-        cdef:
-            size_t r
-            size_t rows = matrix.shape[0]
-            size_t cols = matrix.shape[1]
+        cdef size_t r, rows, cols
+
+        rows, cols = matrix.shape[0], matrix.shape[1]
 
         for r in range(rows):
             matrix[r, cols-1] &= self.zero_mask
-
-    cdef _check_instance_invariants(self, packed_type_t[:, :] inputs,
-                                    packed_type_t[:, :] target, size_t Ne):
-        Ni = inputs.shape[0]
-        No = target.shape[0]
-        # Test if the matrices are valid
-        if inputs.shape[1] == 0 or Ni == 0:
-            raise ValueError('Empty input matrix.')
-        if target.shape[1] == 0 or No == 0:
-            raise ValueError('Empty target matrix.')
-        if inputs.shape[1] != target.shape[1]:
-            raise ValueError('Incompatible input/target shapes: {} {}.'.format(
-                             inputs.shape[1], target.shape[1]))
 
 
 cdef class ChainedNetworkState(NetworkState):
@@ -309,14 +290,13 @@ cdef class ChainedNetworkState(NetworkState):
         readonly PackedExampleGenerator example_generator
         size_t blocks, zero_mask_cols
         dict function_value_cache
-        bint evaluated
 
-    def __init__(self, network, PackedExampleGenerator example_generator, size_t window_size):
+    def __init__(self, initial_gates, transfer_functions, PackedExampleGenerator example_generator, size_t window_size):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
-        super().__init__(network, example_generator.Ne, example_generator.Ni,
-                         example_generator.No, window_size)
+        super().__init__(initial_gates, transfer_functions, example_generator.Ni,
+                         example_generator.No, example_generator.Ne, window_size)
         block_width = (self.cols * PACKED_SIZE)
         self.blocks = self.Ne // block_width
         if self.Ne % block_width:
@@ -338,13 +318,13 @@ cdef class ChainedNetworkState(NetworkState):
     cpdef add_function(self, Function function):
         eval_class, msb = CHAINED_EVALUATORS[function]
         self.err_evaluators[function] = eval_class(self.Ne, self.No, self.cols, msb)
-        self.network.changed = True
+        self.evaluated = False
 
     cpdef function_value(self, Function function):
         if function not in self.err_evaluators:
-            raise ValueError('Guiding function must be added to evaluator prior to evaluation')
+            raise ValueError('Guiding function must be added to chained evaluator prior to evaluation.')
 
-        if self.network.changed:
+        if not self.evaluated:
             self.evaluate()
         return self.function_value_cache[function]
 
@@ -368,15 +348,14 @@ cdef class ChainedNetworkState(NetworkState):
         self._apply_zero_mask(self.error)
         for m in evaluators:
             self.function_value_cache[m] = evaluators[m].final_evaluation(self.error)
-        self.network.changed = False
+        self.evaluated = True
 
     cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
-        cdef:
-            size_t r, c
-            size_t rows = matrix.shape[0]
-            size_t cols = matrix.shape[1]
+        cdef size_t r, c, rows, cols
+
+        rows, cols = matrix.shape[0], matrix.shape[1]
 
         for r in range(rows):
             matrix[r, cols-self.zero_mask_cols] &= self.zero_mask

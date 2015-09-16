@@ -14,7 +14,6 @@ cdef struct Move:
 
 cdef class BoolNetwork:
     cdef:
-        public bint changed
         public np.uint32_t[:, :] gates
         public np.uint8_t[:] transfer_functions
         public np.uint8_t[:] changeable, sourceable
@@ -25,11 +24,11 @@ cdef class BoolNetwork:
         np.uint8_t[:] connected
         deque[Move] inverse_moves
     
-    cdef _check_invariants(self)
     cpdef clean_copy(self)
     cpdef full_copy(self)
 
-    cpdef force_reevaluation(self)
+    cpdef representation(self)
+    cpdef set_representation(self, BoolNetwork gates)
 
     # properties
     cpdef connected_gates(self)
@@ -51,3 +50,5 @@ cdef class BoolNetwork:
     cpdef revert_all_moves(self)
     cpdef clear_history(self)
     cpdef history_empty(self)
+
+    cdef _check_network_invariants(self)
