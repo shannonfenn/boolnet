@@ -1,6 +1,7 @@
 from distutils.core import setup
 from Cython.Distutils import Extension
 from Cython.Distutils import build_ext
+import numpy as np
 import cython_gsl
 import os
 
@@ -32,7 +33,7 @@ extensions = [
 
 setup(
     name='boolnet',
-    include_dirs=[cython_gsl.get_include()],
+    include_dirs=[np.get_include(), cython_gsl.get_include()],
     cmdclass={'build_ext': build_ext},
     ext_modules=extensions
     )
