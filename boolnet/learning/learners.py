@@ -1,6 +1,5 @@
 from copy import copy
 from collections import namedtuple
-from itertools import product
 import logging
 import numpy as np
 from boolnet.bintools.functions import PER_OUTPUT, function_from_name
