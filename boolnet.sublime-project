@@ -2,6 +2,19 @@
 	"build_systems":
 	[
 		{
+			"cmd":
+			[
+				"python",
+				"setup.py",
+				"build_ext",
+				"--inplace"
+			],
+			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+			"name": "Cython",
+			"path": "$HOME/hyrule/bin:$PATH",
+			"working_dir": "$project_path"
+		},
+		{
 			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
 			"name": "Anaconda Python Builder",
 			"selector": "source.python",
