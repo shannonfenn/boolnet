@@ -300,12 +300,12 @@ class TestStandard:
 
     # ################### Exception Testing ################### #
     @mark.parametrize("Ni, Tshape, Ne", [
-        (7, (1, 1), 1),  # inputs.cols != target.cols
-        (1, (65, 1), 1),  # inputs.cols != target.cols
-        (7, (65, 1), 1),  # Ne < inputs / target Ne
-        (1, (2, 4), 4),        # net.No != #tgts
-        (2, (1, 4), 4),        # net.Ni != #inps
-        (2, (2, 4), 4)         # both
+        (7, (1, 1), 1),     # inputs.cols != target.cols
+        (1, (65, 1), 1),    # inputs.cols != target.cols
+        (1, (65, 1), 4),    # Ne > 2**Ni
+        (1, (2, 4), 4),     # net.No != #tgts
+        (2, (1, 4), 4),     # net.Ni != #inps
+        (2, (2, 4), 4)      # both
     ])
     def test_static_construction_exceptions(self, Ni, Tshape, Ne):
         inp = all_possible_inputs(Ni)
