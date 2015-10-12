@@ -69,7 +69,8 @@ def load_dataset(settings):
     elif data_settings['type'] == 'generated':
         return generated_instance(data_settings, sampling_settings)
     else:
-        raise ValueError('Invalid dataset type {}'.format(data_settings['type']))
+        raise ValueError('Invalid dataset type {}'.
+                         format(data_settings['type']))
 
 
 def load_samples(params, data_dir, N, Ni):
@@ -78,10 +79,8 @@ def load_samples(params, data_dir, N, Ni):
         # prepare filename
         Ns = params['Ns']
         Ne = params['Ne']
-        if 'file_suffix' in params:
-            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, params['file_suffix'])
-        else:
-            base_name = '{}_{}_{}.npy'.format(Ni, Ns, Ne)
+        suffix = params.get('file_suffix', '')
+        base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
 
         # load sample indices
         sample_filename = join(data_dir, 'samples', base_name)
@@ -98,26 +97,26 @@ def load_samples(params, data_dir, N, Ni):
     return training_indices
 
 
-def pack_examples(inputs, targets, training_indices):
+def pack_examples(inputs, targets, train_indices):
     ''' Parititions the given function into training and test sets,
         based on the given training indices.'''
     # Parameters
     N = inputs.shape[0]
-    Ns, Ne = training_indices.shape
+    Ns, Ne = train_indices.shape
     # Generate the test indices array, each row should contain all
-    # indices not in the equivalent row of training_indices
+    # indices not in the equivalent row of train_indices
     test_indices = np.zeros(shape=(Ns, N - Ne), dtype=int)
     for s in range(Ns):
-        test_indices[s] = np.setdiff1d(np.arange(N), training_indices[s])
+        test_indices[s] = np.setdiff1d(np.arange(N), train_indices[s])
     # Using numpy's advanced indexing we can get the sets
-    training_inps = inputs[training_indices]
-    training_tgts = targets[training_indices]
+    train_inps = inputs[train_indices]
+    train_tgts = targets[train_indices]
     test_inps = inputs[test_indices]
     test_tgts = targets[test_indices]
 
     # build list of train/test set instances
     instances = [Instance(
-        training_mapping=FileBoolMapping(training_inps[i], training_tgts[i], Ne),
+        training_mapping=FileBoolMapping(train_inps[i], train_tgts[i], Ne),
         test_mapping=FileBoolMapping(test_inps[i], test_tgts[i], N - Ne)
         ) for i in range(Ns)]
 
@@ -167,8 +166,10 @@ def generated_instance(data_settings, sampling_settings):
     # Parameters
     # build list of train/test set instances
     instances = [Instance(
-        training_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No, window_size, op, 0),
-        test_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No, window_size, op, N)
+        training_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No,
+                                             window_size, op, 0),
+        test_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No,
+                                         window_size, op, N)
         ) for i in range(Ns)]
     return instances
 
@@ -189,7 +190,7 @@ def get_config_indices(instances, config_settings):
     if 'indices' in config_settings['sampling']:
         config_indices = config_settings['sampling']['indices']
         if any(i >= len(instances) for i in config_indices):
-            raise ValueError('\"sampling\" -> indices has elements larger than Ns')
+            raise ValueError('sampling indices has elements larger than Ns')
     else:
         config_indices = range(len(instances))
     return config_indices
@@ -207,7 +208,8 @@ def generate_configurations(settings):
     # Build up the task list
     tasks = []
 
-    bar = Bar('Generating configurations', max=len(variable_sets), suffix='%(index)d/%(max)d : %(eta)ds')
+    bar = Bar('Generating configurations', max=len(variable_sets),
+              suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
     for config_no, variables in enumerate(variable_sets):
         # keep each configuration isolated
@@ -226,16 +228,16 @@ def generate_configurations(settings):
         for i in config_indices:
             instance = instances[i]
 
-            iteration_settings = deepcopy(config_settings)
-            iteration_settings['training_mapping'] = instance.training_mapping
-            iteration_settings['test_mapping'] = instance.test_mapping
-            iteration_settings['training_set_number'] = i
-            iteration_settings['learner']['inter_file_base'] += '{}_{}_'.format(config_no, i)
+            task = deepcopy(config_settings)
+            task['training_mapping'] = instance.training_mapping
+            task['test_mapping'] = instance.test_mapping
+            task['training_set_number'] = i
+            task['learner']['inter_file_base'] += '{}_{}_'.format(config_no, i)
 
-            config_schema(iteration_settings)
+            config_schema(task)
 
             # dump the iteration settings out
-            tasks.append(iteration_settings)
+            tasks.append(task)
         bar.next()
     bar.finish()
     return tasks
