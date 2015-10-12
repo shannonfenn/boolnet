@@ -5,7 +5,8 @@ from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.packing import packed_type, pack_bool_matrix
 import boolnet.bintools.operator_iterator as op_it
-from boolnet.bintools.example_generator import OperatorExampleIteratorFactory, PackedExampleGenerator
+from boolnet.bintools.example_generator import (OperatorExampleIteratorFactory,
+                                                PackedExampleGenerator)
 
 
 class TestIterators:
@@ -37,9 +38,11 @@ class TestIterators:
     def index_harness(self, request):
         max_index = request.param
         num_indices = np.random.randint(max_index-1, max_index)
-        in_indices = np.random.choice(max_index, size=num_indices, replace=False)
+        in_indices = np.random.choice(max_index, size=num_indices,
+                                      replace=False)
         in_indices = np.array(np.sort(in_indices), dtype=np.uint64)
-        ex_indices = np.array([i for i in range(max_index) if i not in in_indices])
+        ex_indices = np.array([i for i in range(max_index)
+                               if i not in in_indices])
         return (in_indices, ex_indices, max_index)
 
     def test_include_indices(self, include_iterator, index_harness):
@@ -103,12 +106,12 @@ class TestExampleIteratorFactory:
         upper = 2**Nb
         max_indices = 2**(2*Nb)
         Ne = np.random.randint(min(100, max_indices))
-        # ex_indices = np.sort(np.random.choice(max_indices, Ne, replace=False))
         ex_indices = np.random.choice(max_indices, Ne, replace=False)
         ex_indices = np.array(ex_indices, dtype=np.uint64)
         indices = (i for i in range(max_indices) if i not in ex_indices)
 
-        factory = OperatorExampleIteratorFactory(ex_indices, Nb, binary_op[0], max_indices)
+        factory = OperatorExampleIteratorFactory(ex_indices, Nb, binary_op[0],
+                                                 max_indices)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -139,7 +142,8 @@ class TestExampleIteratorFactory:
         ex_indices = np.array(ex_indices, dtype=np.uint64)
         indices = (i for i in range(max_indices) if i not in ex_indices)
 
-        factory = OperatorExampleIteratorFactory(ex_indices, Nb, unary_op[0], max_indices)
+        factory = OperatorExampleIteratorFactory(ex_indices, Nb, unary_op[0],
+                                                 max_indices)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -152,7 +156,8 @@ class TestExampleGenerator:
     cache = dict()
 
     @fixture(params=['add4.npz', 'add8.npz', 'sub4.npz', 'sub8.npz',
-                     'mul2.npz', 'mul3.npz', 'mul4.npz', 'mul6.npz'])
+                     'mul2.npz', 'mul3.npz', 'mul4.npz', 'mul6.npz',
+                     'mul2f.npz', 'mul3f.npz', 'mul4f.npz', 'mul6f.npz'])
     def file_func_inst(self, request, test_location):
         return test_location, request.param
 
@@ -188,7 +193,8 @@ class TestExampleGenerator:
             indices = [i for i in range(Ne) if i not in indices]
         indices = np.array(indices, dtype=packed_type)
 
-        factory = OperatorExampleIteratorFactory(indices, Ni//2, op, 0 if include else Ne)
+        factory = OperatorExampleIteratorFactory(
+            indices, Ni//2, op, 0 if include else Ne)
 
         gen = PackedExampleGenerator(factory, No)
         return (gen, inp_p, tgt_p)
@@ -198,7 +204,8 @@ class TestExampleGenerator:
         return request.param
 
     def test_packed_generation(self, file_func_inst, include, block_fraction):
-        generator_instance = self.build_generator_instance(file_func_inst, include)
+        generator_instance = self.build_generator_instance(file_func_inst,
+                                                           include)
         generator, expected_inp, expected_tgt = generator_instance
 
         actual_inp = np.zeros_like(expected_inp)
