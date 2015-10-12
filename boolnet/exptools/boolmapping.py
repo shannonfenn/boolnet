@@ -24,5 +24,12 @@ class FileBoolMapping:
         return self.target.shape[0]
 
 
-OperatorBoolMapping = namedtuple('OperatorBoolMapping', [
-    'indices', 'Nb', 'Ni', 'No', 'window_size', 'operator', 'N'])
+OperatorBoolMapping = namedtuple(
+    'OperatorBoolMapping', [
+        'indices',
+        'Nb',
+        'Ni',
+        'No',
+        'window_size',
+        'operator',
+        'N'])
