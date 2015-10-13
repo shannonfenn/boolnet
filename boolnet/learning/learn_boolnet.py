@@ -93,6 +93,11 @@ def build_initial_network(parameters, training_data):
 
         # create the seed network
         node_funcs = parameters['network']['node_funcs']
+        if isinstance(node_funcs, list):
+            if max(node_funcs) > 15 or min(node_funcs) < 0:
+                raise ValueError('Invalid setting for \'node_funcs\': {}'.
+                                 format(node_funcs))
+            gates[:, 2] = np.random.choice(node_funcs, size=Ng)
         if node_funcs == 'random':
             # generate a random set of transfer functions
             gates[:, 2] = np.random.randint(16, size=Ng)
@@ -101,7 +106,7 @@ def build_initial_network(parameters, training_data):
         elif node_funcs == 'NAND':
             gates[:, 2] = 7
         else:
-            raise ValueError('Invalid setting for \'transfer functions\': {}'.
+            raise ValueError('Invalid setting for \'node_funcs\': {}'.
                              format(node_funcs))
 
     return gates

@@ -65,7 +65,7 @@ network_schema_given = Schema({
 network_schema_generated = Schema({
     'method':       'generated',
     'Ng':           All(int, Range(min=1)),
-    'node_funcs':   In(['NAND', 'NOR', 'random'])
+    'node_funcs':   Any(list, In(['NAND', 'NOR', 'random']))
     }, default_keys=Required)
 
 SA_schema = Schema({
