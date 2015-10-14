@@ -98,7 +98,7 @@ def build_initial_network(parameters, training_data):
                 raise ValueError('Invalid setting for \'node_funcs\': {}'.
                                  format(node_funcs))
             gates[:, 2] = np.random.choice(node_funcs, size=Ng)
-        if node_funcs == 'random':
+        elif node_funcs == 'random':
             # generate a random set of transfer functions
             gates[:, 2] = np.random.randint(16, size=Ng)
         elif node_funcs == 'NOR':
