@@ -56,6 +56,65 @@ class LocalSearch:
         return results + (i, )
 
 
+class HC(LocalSearch):
+
+    def initialise(self, parameters):
+        super().initialise(parameters)
+        try:
+            self.max_iterations = parameters['max_iterations']
+        except KeyError:
+            print('Optimiser parameters missing!', file=sys.stderr)
+            raise
+
+    def _optimise(self, state):
+        # Calculate initial error
+        error = self.guiding_function(state)
+        # error = evaluator.function_value(self.guiding_function)
+
+        # set up aspiration criteria
+        best_iteration = 0
+
+        self.reached_stopping_criterion = False
+        # optimisation loop
+        for iteration in range(self.max_iterations):
+            # Stop on user defined condition
+            if self.stopping_criterion(state, error):
+                self.reached_stopping_criterion = True
+                break
+
+            # perform random move
+            self.move(state)
+
+            # calculate error for new state
+            new_error = self.guiding_function(state)
+            # new_error = evaluator.function_value(self.guiding_function)
+
+            # Determine whether to accept the new state
+            if self.accept(new_error, error):
+                error = new_error
+                best_iteration = iteration
+            else:
+                self.undo_move(state)
+
+            # In any case, clear the move history to save memory
+            # and prevent accidentally undoing accepted moves later
+            state.clear_history()
+
+        return (state, best_iteration, iteration)
+
+    def accept(self, new_error, current_error):
+        oldest_error = self.costs.popleft()
+        if new_error <= current_error:
+            self.costs.append(new_error)
+            return True
+        elif new_error < oldest_error:
+            self.costs.append(min(new_error, self.costs[-1]))
+            return True
+        else:
+            self.costs.append(min(oldest_error, self.costs[-1]))
+            return False
+
+
 class LAHC(LocalSearch):
 
     def initialise(self, parameters):

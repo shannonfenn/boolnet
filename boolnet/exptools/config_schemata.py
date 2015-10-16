@@ -1,11 +1,10 @@
 import sys
 import numpy as np
-from good import Schema, Required, In, All, Any, Range, Type, IsDir
-from good import message, Allow, Optional
+from good import (Schema, Required, In, All, Any, Range,
+                  Type, IsDir, message, Optional)
 
 from boolnet.bintools.functions import all_function_names
 from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
-from boolnet.learning.learn_boolnet import OPTIMISERS
 
 
 guiding_functions = all_function_names()
@@ -78,6 +77,13 @@ SA_schema = Schema({
     Optional('max_restarts'):   All(int, Range(min=0))
     }, default_keys=Required)
 
+HC_schema = Schema({
+    'name':                     'HC',
+    'max_iterations':           All(int, Range(min=1)),
+    'guiding_function':         In(guiding_functions),
+    Optional('max_restarts'):   All(int, Range(min=0))
+    }, default_keys=Required)
+
 LAHC_schema = Schema({
     'name':                     'LAHC',
     'cost_list_length':         All(int, Range(min=1)),
@@ -86,9 +92,10 @@ LAHC_schema = Schema({
     Optional('max_restarts'):   All(int, Range(min=0))
     }, default_keys=Required)
 
-learner_schema = Schema({
-    'name':                     In(['basic', 'stratified']),
-    'optimiser':                Any(SA_schema, LAHC_schema),
+
+learner_schema_stratified = Schema({
+    'name':                     'stratified',
+    'optimiser':                Any(SA_schema, HC_schema, LAHC_schema),
     'inter_file_base':          str,
     Optional('kfs'):            bool,
     Optional('one_layer_kfs'):  bool,
@@ -97,8 +104,21 @@ learner_schema = Schema({
     Optional('fabcpp_options'): list,
     })
 
+
+learner_schema_basic = Schema({
+    'name':                     'basic',
+    'optimiser':                Any(SA_schema, HC_schema, LAHC_schema),
+    })
+
+
+learner_schema = Any(learner_schema_stratified,
+                     learner_schema_basic)
+
 network_schema = Schema(Any(network_schema_given,
                             network_schema_generated))
+
+mapping_schema = Any(Type(FileBoolMapping),
+                     Type(OperatorBoolMapping))
 
 config_schema = Schema({
     'name':                     str,
@@ -109,7 +129,7 @@ config_schema = Schema({
     'sampling':                 sampling_schema,
     'configuration_number':     All(int, Range(min=0)),
     'training_set_number':      All(int, Range(min=0)),
-    'training_mapping':         Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
-    'test_mapping':             Any(Type(FileBoolMapping), Type(OperatorBoolMapping)),
+    'training_mapping':         mapping_schema,
+    'test_mapping':             mapping_schema,
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
     }, default_keys=Required)

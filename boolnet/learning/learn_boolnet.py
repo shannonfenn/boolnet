@@ -16,6 +16,7 @@ import os
 OPTIMISERS = {
     'SA': optimisers.SA(),
     'LAHC': optimisers.LAHC(),
+    'HC': optimisers.HC(),
     }
 
 
