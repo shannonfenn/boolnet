@@ -3,11 +3,9 @@ from Cython.Distutils import Extension
 from Cython.Distutils import build_ext
 import numpy as np
 import cython_gsl
-import os
 
 include_dirs = [np.get_include(),
-                cython_gsl.get_cython_include_dir(),
-                os.path.expanduser('~/static/include/')]
+                cython_gsl.get_cython_include_dir()]
 
 
 extensions = [
@@ -17,7 +15,6 @@ extensions = [
     Extension("boolnet.bintools.bitcount",
               ["boolnet/bintools/bitcount.pyx"],
               libraries=['gmp'],
-              library_dirs=[os.path.expanduser('~/static/lib/')],
               include_dirs=include_dirs),
     Extension("boolnet.bintools.functions",
               ["boolnet/bintools/functions.pyx"],
