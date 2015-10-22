@@ -45,7 +45,11 @@ def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
 
     # write abk file
     abk_file(features, target, abk_file_name)
-    # run FABCPP
+
+    # dirty dirty hack
+    if options is None:
+        options = {}
+
     model = options.get('model', 6)
     alpha = options.get('a_min', 1)
     beta = options.get('b_min', 0)
@@ -58,6 +62,7 @@ def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
         cover = options.get('cover', 'alfa')
         cmd_string += ['-y', cover]
 
+    # run fabcpp
     with open(log_file_name, 'w') as log, open(err_file_name, 'w') as err:
         check_call(cmd_string, stdout=log, stderr=err)
 
