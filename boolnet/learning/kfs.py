@@ -24,8 +24,10 @@ def abk_file(features, target, file_name):
 
     abk_data = np.hstack((feature_numbers, features.T))
 
+    sample_names = '\t'.join('s' + str(i) for i in range(n_examples))
+
     header = 'FEATURESINROWS\nTARGETPRESENT\nLAST\n{}\n{}\ndummy\t{}'.format(
-        n_features, n_examples, '\t'.join('s' + str(i) for i in range(n_examples)))
+        n_features, n_examples, sample_names)
 
     target_row = '\t' + '\t'.join(str(x) for x in target) + '\n'
 
@@ -44,21 +46,26 @@ def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
     # write abk file
     abk_file(features, target, abk_file_name)
     # run FABCPP
-    cmd_string = [
-        os.path.expanduser('~/CIBMTools/FABCPP/fabcpp'),
-        '-i', abk_file_name, '-o', file_name_base,
-        '-m', '1', '-A', '1', '-B', '0', '-y', 'alfa',
-        '-O', 'max:feature_degree']
-    if options is not None:
-        cmd_string += options
+    model = options.get('model', 6)
+    alpha = options.get('a_min', 1)
+    beta = options.get('b_min', 0)
+
+    cmd_string = ['fabcpp', '-i', abk_file_name, '-o', file_name_base,
+                  '-m', str(model), '-A', str(alpha), '-B', str(beta),
+                  '-O', 'max:feature_degree']
+
+    if model == 1:
+        cover = options.get('cover', 'alfa')
+        cmd_string += ['-y', cover]
 
     with open(log_file_name, 'w') as log, open(err_file_name, 'w') as err:
         check_call(cmd_string, stdout=log, stderr=err)
 
     # parse output
     with open(out_file_name) as out:
-        # pull out all lines from output file which match the feature name regex
-        k_feature_set = [int(l.strip()) for l in out if FEATURE_RE.match(l.strip())]
+        # pull lines from outfile which match the feature name regex
+        k_feature_set = [int(l.strip()) for l in out
+                         if FEATURE_RE.match(l.strip())]
 
     if not keep_files:
         os.remove(abk_file_name)
@@ -71,24 +78,28 @@ def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
     # TODO: Use model 5 to compute other FSs
 
 
-def minimum_feature_set(features, target, file_name_base, fabcpp_options, keep_files):
-    ''' Takes a featureset matrix and target vector and finds a minimum featureset.
+def minimum_feature_set(features, target, file_name_base,
+                        fabcpp_options, keep_files):
+    ''' Takes a featureset matrix and target vector and finds a minimum FS.
     featureset  - assumed to be a 2D numpy array in example x feature format.
     target      - assumed to be a 1D numpy array of the same number of rows
                   as featureset
-    returns     - a 1D numpy array of feature indices representing a feature set
+    returns     - a 1D numpy array of feature indices representing a FS
                   of minimal cardinality.'''
 
-    return FABCPP_cmd_line(features, target, file_name_base, fabcpp_options, keep_files)
+    return FABCPP_cmd_line(features, target, file_name_base,
+                           fabcpp_options, keep_files)
 
 
-def multi_target_minimum_feature_sets(features, targets, file_name_base, fabcpp_options, keep_files):
-    ''' Takes a featureset matrix and target vector and finds a minimum featureset.
-    features    - assumed to be a 2D numpy array in example x feature format.
-    target      - assumed to be a 2D numpy array of the same number of rows as features
-    returns     - a list of 1D numpy arrays of feature indices representing a feature set
-                  of minimal cardinality for each target.'''
+def multi_target_minimum_feature_sets(features, targets, file_name_base,
+                                      fabcpp_options, keep_files):
+    ''' Takes a featureset matrix and target vector and finds a minimum FS.
+    features    - 2D numpy array-like in example x feature format.
+    target      - 2D numpy array-like of the same number of rows as features
+    returns     - list of 1D numpy array-likes of feature indices representing
+                  a feature set of minimal cardinality for each target.'''
     num_targets = targets.shape[1]
-    feature_sets = [FABCPP_cmd_line(features, targets[:, t], file_name_base, fabcpp_options, keep_files)
+    feature_sets = [FABCPP_cmd_line(features, targets[:, t], file_name_base,
+                                    fabcpp_options, keep_files)
                     for t in range(num_targets)]
     return feature_sets

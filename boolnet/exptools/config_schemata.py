@@ -37,13 +37,13 @@ data_schema_generated = Schema({
     'bits':                     All(int, Range(min=1)),
     Optional('out_width'):      All(int, Range(min=1)),
     Optional('window_size'):    All(int, Range(min=1))
-    }, default_keys=Required)
+    })
 
 data_schema_file = Schema({
     'type':     'file',
     'dir':      IsDir(),
     'filename': str
-    }, default_keys=Required)
+    })
 
 sampling_schema = Schema({
     'method':                   In({'given', 'generated'}),
@@ -51,7 +51,7 @@ sampling_schema = Schema({
     'Ne':                       All(int, Range(min=1)),
     Optional('indices'):        [All(int, Range(min=0))],
     Optional('file_suffix'):    str
-    }, default_keys=Required)
+    })
 
 network_schema_given = Schema({
     'method':           'given',
@@ -59,13 +59,13 @@ network_schema_given = Schema({
     'file':             All(str, lambda v: v.endswith('.json')),
     'index':            All(int, Range(min=0)),
     'initial_gates':    All(Type(np.ndarray), is_2d, is_int_arr),
-    }, default_keys=Required)
+    })
 
 network_schema_generated = Schema({
     'method':       'generated',
     'Ng':           All(int, Range(min=1)),
     'node_funcs':   Any(list, In(['NAND', 'NOR', 'random']))
-    }, default_keys=Required)
+    })
 
 SA_schema = Schema({
     'name':                     'SA',
@@ -75,14 +75,14 @@ SA_schema = Schema({
     'steps_per_temp':           All(int, Range(min=1)),
     'guiding_function':         In(guiding_functions),
     Optional('max_restarts'):   All(int, Range(min=0))
-    }, default_keys=Required)
+    })
 
 HC_schema = Schema({
     'name':                     'HC',
     'max_iterations':           All(int, Range(min=1)),
     'guiding_function':         In(guiding_functions),
     Optional('max_restarts'):   All(int, Range(min=0))
-    }, default_keys=Required)
+    })
 
 LAHC_schema = Schema({
     'name':                     'LAHC',
@@ -90,7 +90,15 @@ LAHC_schema = Schema({
     'max_iterations':           All(int, Range(min=1)),
     'guiding_function':         In(guiding_functions),
     Optional('max_restarts'):   All(int, Range(min=0))
-    }, default_keys=Required)
+    })
+
+
+minFS_option_schema = Schema({
+    'model':            In([1, 6]),
+    'a_min':            All(int, Range(min=1)),
+    'b_min':            All(int, Range(min=0)),
+    Optional('cover'):  In(['alfa', 'beta', 'alfa+beta'])
+    })
 
 
 learner_schema_stratified = Schema({
@@ -101,7 +109,7 @@ learner_schema_stratified = Schema({
     Optional('one_layer_kfs'):  bool,
     Optional('auto_target'):    bool,
     Optional('keep_files'):     bool,
-    Optional('fabcpp_options'): list,
+    Optional('minfs_options'):  minFS_option_schema,
     })
 
 
@@ -132,4 +140,4 @@ config_schema = Schema({
     'training_mapping':         mapping_schema,
     'test_mapping':             mapping_schema,
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
-    }, default_keys=Required)
+    })
