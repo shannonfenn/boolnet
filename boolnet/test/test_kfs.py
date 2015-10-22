@@ -10,7 +10,7 @@ def tmpfilename():
     return '/tmp/shantemp' + random_suffix
 
 
-@fixture(params=[1, 2])
+@fixture(params=[1, 2, 3, 4])
 def instance(request):
     filename_base = 'boolnet/test/kfs_instances/{}'.format(request.param)
     with np.load(filename_base + '.npz') as data:
