@@ -1,5 +1,6 @@
 .cache/
 build/
+*_build.log
 *.c
 *.cpp
 *.so
