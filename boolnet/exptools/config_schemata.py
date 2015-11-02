@@ -115,18 +115,16 @@ learner_schema_stratified = Schema({
 
 learner_schema_basic = Schema({
     'name':                     'basic',
+    'inter_file_base':          str,
     'optimiser':                Any(SA_schema, HC_schema, LAHC_schema),
     })
 
 
-learner_schema = Any(learner_schema_stratified,
-                     learner_schema_basic)
+learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
-network_schema = Schema(Any(network_schema_given,
-                            network_schema_generated))
+network_schema = Schema(Any(network_schema_given, network_schema_generated))
 
-mapping_schema = Any(Type(FileBoolMapping),
-                     Type(OperatorBoolMapping))
+mapping_schema = Any(Type(FileBoolMapping), Type(OperatorBoolMapping))
 
 config_schema = Schema({
     'name':                     str,
