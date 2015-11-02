@@ -75,7 +75,7 @@ def parse_arguments():
     parser.add_argument('experiment',
                         type=argparse.FileType('r'),
                         default='experiment.yaml',
-                        help='experiment config filename (relative to --exp-dir).')
+                        help='experiment config filename.')
     parser.add_argument('--numprocs', '-n', metavar='N', type=int,
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for scoop).')
