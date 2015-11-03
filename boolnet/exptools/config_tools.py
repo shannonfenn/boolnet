@@ -216,6 +216,9 @@ def generate_configurations(settings):
         config_settings = deepcopy(settings)
         # update the settings dict with the values for this configuration
         update_nested(config_settings, variables)
+
+        config_schema(config_settings)
+
         # record the config number for debugging
         config_settings['configuration_number'] = config_no
         # load initial network from file if required
@@ -233,8 +236,6 @@ def generate_configurations(settings):
             task['test_mapping'] = instance.test_mapping
             task['training_set_number'] = i
             task['learner']['inter_file_base'] += '{}_{}_'.format(config_no, i)
-
-            config_schema(task)
 
             # dump the iteration settings out
             tasks.append(task)
