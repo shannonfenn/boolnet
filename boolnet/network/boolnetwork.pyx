@@ -40,8 +40,10 @@ cdef class BoolNetwork:
         return bn
 
     def __str__(self):
-        return 'Ni: {} Ng: {} max node depths: {}\ngates:\n{}'.format(
-            self.Ni, self.Ng, self.max_node_depths(), self.gates)
+        return ('Ni: {} Ng: {} max node depths: {}\ngates:\n{}\n'
+               'sourceable:\n{}\nchangeable:\n{}').format(
+            self.Ni, self.Ng, self.max_node_depths(), np.asarray(self.gates),
+            np.asarray(self.sourceable), np.asarray(self.changeable))
 
     cpdef max_node_depths(self):
         # default to stored value of No
