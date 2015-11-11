@@ -23,7 +23,7 @@ def geometric(a, r, n):
         val *= r
 
 
-class LocalSearch:
+class RestartLocalSearch:
 
     def initialise(self, parameters):
         # unpack options
@@ -50,10 +50,10 @@ class LocalSearch:
         # unpack options
         self.initialise(parameters)
 
-        original_state = state.representation()
+        # original_state = state.representation()
 
         for i in range(self.max_restarts + 1):
-            state.set_representation(original_state)
+            # state.set_representation(original_state)
             state.randomise()
             step_result = self._optimise(state)
             if self.reached_stopping_criterion:
@@ -67,7 +67,7 @@ class LocalSearch:
             restarts=i)
 
 
-class HC(LocalSearch):
+class HC(RestartLocalSearch):
 
     def initialise(self, parameters):
         super().initialise(parameters)
@@ -131,7 +131,7 @@ class HC(LocalSearch):
             return False
 
 
-class LAHC(LocalSearch):
+class LAHC(RestartLocalSearch):
 
     def initialise(self, parameters):
         super().initialise(parameters)
@@ -206,7 +206,7 @@ class LAHC(LocalSearch):
             return False
 
 
-class SA(LocalSearch):
+class SA(RestartLocalSearch):
 
     def accept(self, old_error, new_error, temperature):
         delta = new_error - old_error
