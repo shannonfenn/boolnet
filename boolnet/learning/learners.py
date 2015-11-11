@@ -8,7 +8,7 @@ import boolnet.learning.kfs as kfs
 
 
 LearnerResult = namedtuple('LearnerResult', [
-    'best_states', 'best_iterations', 'final_iterations',
+    'best_states', 'best_errors', 'best_iterations', 'final_iterations',
     'target_order', 'feature_sets', 'restarts'])
 
 
@@ -73,9 +73,14 @@ class BasicLearner:
     def run(self, state, parameters, optimiser):
         self._setup(parameters, state, optimiser)
         self.opt_params['stopping_criterion'] = guiding_error_stop_criterion()
-        best_state, best_it, final_it, restarts = self._optimise(state)
-        return LearnerResult([best_state], [best_it], [final_it],
-                             None, None, [restarts])
+        opt_result = self._optimise(state)
+        return LearnerResult(best_states=[opt_result.state],
+                             best_errors=[opt_result.error],
+                             best_iterations=[opt_result.best_iteration],
+                             final_iterations=[opt_result.iteration],
+                             target_order=None,
+                             feature_sets=None,
+                             restarts=[opt_result.restarts])
 
 
 class StratifiedLearner(BasicLearner):
@@ -244,6 +249,7 @@ class StratifiedLearner(BasicLearner):
         No = state.No
 
         best_states = [None] * No
+        best_errors = [-1] * No
         best_iterations = [-1] * No
         final_iterations = [-1] * No
         restarts = [None] * No
@@ -255,21 +261,23 @@ class StratifiedLearner(BasicLearner):
             optimisation_required = self._apply_mask(state, target)
             # optimise
             if optimisation_required:
-                opt_results = self._learn_target(state, target)
+                opt_result = self._learn_target(state, target)
 
-                state.set_representation(opt_results[0].representation())
+                state.set_representation(opt_result.state.representation())
 
                 # record result
-                best_states[i] = opt_results[0]
-                best_iterations[i] = opt_results[1]
-                final_iterations[i] = opt_results[2]
-                restarts[i] = opt_results[3]
+                best_states[i] = opt_result.state
+                best_errors[i] = opt_result.error
+                best_iterations[i] = opt_result.best_iteration
+                final_iterations[i] = opt_result.iteration
+                restarts[i] = opt_result.restarts
             else:
                 # record result
                 best_states[i] = copy(state)
             self.learned_targets.append(target)
 
         return LearnerResult(best_states=best_states,
+                             best_errors=best_errors,
                              best_iterations=best_iterations,
                              final_iterations=final_iterations,
                              target_order=self.learned_targets,

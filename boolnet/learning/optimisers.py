@@ -2,9 +2,13 @@ from random import random
 from math import exp
 from copy import copy
 from itertools import chain, repeat
-from collections import deque
+from collections import deque, namedtuple
 import sys
 import logging
+
+
+OptimiserResult = namedtuple('OptimiserResult', [
+    'state', 'error', 'best_iteration', 'iteration', 'restarts'])
 
 
 def stepped_exp_decrease(init_temp, rate, num_temps, steps_per_temp):
@@ -47,13 +51,20 @@ class LocalSearch:
         self.initialise(parameters)
 
         original_state = state.representation()
+
         for i in range(self.max_restarts + 1):
             state.set_representation(original_state)
             state.randomise()
-            results = self._optimise(state)
+            step_result = self._optimise(state)
             if self.reached_stopping_criterion:
                 break
-        return results + (i, )
+
+        return OptimiserResult(
+            state=step_result.state,
+            error=step_result.error,
+            best_iteration=step_result.best_iteration,
+            iteration=step_result.iteration,
+            restarts=i)
 
 
 class HC(LocalSearch):
@@ -100,7 +111,12 @@ class HC(LocalSearch):
             # and prevent accidentally undoing accepted moves later
             state.clear_history()
 
-        return (state, best_iteration, iteration)
+        return OptimiserResult(
+            state=state,
+            error=error,
+            best_iteration=best_iteration,
+            iteration=iteration,
+            restarts=None)
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()
@@ -170,7 +186,12 @@ class LAHC(LocalSearch):
             # and prevent accidentally undoing accepted moves later
             state.clear_history()
 
-        return (best_state, best_iteration, iteration)
+        return OptimiserResult(
+            state=best_state,
+            error=best_error,
+            best_iteration=best_iteration,
+            iteration=iteration,
+            restarts=None)
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()
@@ -262,4 +283,9 @@ class SA(LocalSearch):
             # and prevent accidentally undoing accepted moves later
             state.clear_history()
 
-        return (best_state, best_iteration, iteration)
+        return OptimiserResult(
+            state=best_state,
+            error=best_error,
+            best_iteration=best_iteration,
+            iteration=iteration,
+            restarts=None)
