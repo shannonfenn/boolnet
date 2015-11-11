@@ -36,7 +36,7 @@ def create_result_dir(args, exp_name, git_hash):
     ''' Generates a new timestamped directory for the results and copies
         the experiment script, experiment file and git hash into it.'''
     # make directory for the results
-    result_dir = os.path.join(args.results_dir, '{}_{}_'.format(
+    result_dir = os.path.join(args.result_dir, '{}_{}_'.format(
         exp_name, datetime.now().strftime('%y-%m-%d')))
 
     # find the first number i such that 'Results_datetime_i' is not
@@ -67,7 +67,8 @@ def initialise_logging(settings, result_dir):
         log_level = level_dict[settings['logging_level'].lower()]
     except:
         log_level = logging.WARNING
-    logging.basicConfig(filename=os.path.join(result_dir, 'log'), level=log_level)
+    logging.basicConfig(filename=os.path.join(result_dir, 'log'),
+                        level=log_level)
 
 
 def parse_arguments():
@@ -78,14 +79,16 @@ def parse_arguments():
                         help='experiment config filename.')
     parser.add_argument('--numprocs', '-n', metavar='N', type=int,
                         default=8, choices=range(0, 17),
-                        help='how many parallel processes to use (give 0 for scoop).')
+                        help='how many parallel processes to use (give 0 for '
+                             'scoop).')
     parser.add_argument('--keep-temp', action='store_true',
                         help='provide to retain temporary FABCPP files.')
     parser.add_argument('--no-notify', action='store_true',
                         help='disable PushBullet notifications.')
     parser.add_argument('--data-dir', default='experiments/datasets', type=str,
                         help='dataset directory.')
-    parser.add_argument('--results-dir', default='experiments/results', type=str,
+    parser.add_argument('--result-dir', default='experiments/results',
+                        type=str,
                         help='directory to store results in (in own subdir).')
 
     return parser.parse_args()
