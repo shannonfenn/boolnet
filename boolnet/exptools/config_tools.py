@@ -190,10 +190,10 @@ def get_config_indices(instances, config_settings):
 
 
 def generate_configurations(settings):
-    # CAUTION: Will modify the settings parameter!
     # the configurations approach involves essentially having
     # a new settings dict for each configuration and updating
     # it with values in each dict in the configurations list
+    settings = deepcopy(settings)
 
     variable_sets = settings['configurations']
     # no need to keep this sub-dict around
