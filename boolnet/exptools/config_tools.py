@@ -74,26 +74,16 @@ def load_dataset(settings):
 
 
 def load_samples(params, data_dir, N, Ni):
-    if params['method'] == 'given':
-        # load samples from file
-        # prepare filename
-        Ns = params['Ns']
-        Ne = params['Ne']
-        suffix = params.get('file_suffix', '')
-        base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
+    # load samples from file
+    # prepare filename
+    Ns = params['Ns']
+    Ne = params['Ne']
+    suffix = params.get('file_suffix', '')
+    base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
 
-        # load sample indices
-        sample_filename = join(data_dir, 'samples', base_name)
-        training_indices = np.load(sample_filename)
-    elif params['method'] == 'generated':
-        # generate samples
-        Ns = params['Ns']
-        Ne = params['Ne']
-        # generate
-        training_indices = np.random.randint(N, size=(Ns, Ne))
-    else:
-        raise ValueError('Invalid sampling method {}'.format(
-                         params['method']))
+    # load sample indices
+    sample_filename = join(data_dir, 'samples', base_name)
+    training_indices = np.load(sample_filename)
     return training_indices
 
 

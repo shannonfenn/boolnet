@@ -46,7 +46,6 @@ data_schema_file = Schema({
     })
 
 sampling_schema = Schema({
-    'method':                   In({'given', 'generated'}),
     'Ns':                       All(int, Range(min=1)),
     'Ne':                       All(int, Range(min=1)),
     Optional('indices'):        [All(int, Range(min=0))],
