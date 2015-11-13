@@ -32,31 +32,6 @@ def check_git():
         ['git', '-C', cur_file_dir, 'rev-parse', 'HEAD'], universal_newlines=True)
 
 
-def create_result_dir(args, exp_name, git_hash):
-    ''' Generates a new timestamped directory for the results and copies
-        the experiment script, experiment file and git hash into it.'''
-    # make directory for the results
-    result_dir = os.path.join(args.result_dir, '{}_{}_'.format(
-        exp_name, datetime.now().strftime('%y-%m-%d')))
-
-    # find the first number i such that 'Results_datetime_i' is not
-    # already a directory and make that new directory
-    result_dir += next(str(i) for i in itertools.count()
-                       if not os.path.isdir(result_dir + str(i)))
-    os.mkdir(result_dir)
-
-    # copy experiment config and git hash into results directory
-    shutil.copy(args.experiment.name, result_dir)
-    with open(os.path.join(result_dir, 'git_hash'), 'w') as hashfile:
-        hashfile.write(git_hash)
-
-    # create a temp subdir
-    os.mkdir(os.path.join(result_dir, 'temp'))
-
-    # return the directory name for the results to go in
-    return result_dir
-
-
 def initialise_logging(settings, result_dir):
     ''' sets up logging with user defined level. '''
     level_dict = {'warning': logging.WARNING,
@@ -94,10 +69,29 @@ def parse_arguments():
     return parser.parse_args()
 
 
+def create_result_dir(base_dir, exp_name):
+    ''' Generates a new timestamped directory for the results and copies
+        the experiment script, experiment file and git hash into it.'''
+    # make directory for the results
+    result_dir = os.path.join(base_dir, '{}_{}_'.format(
+        exp_name, datetime.now().strftime('%y-%m-%d')))
+
+    # find the first number i such that 'Results_datetime_i' is not
+    # already a directory and make that new directory
+    result_dir += next(str(i) for i in itertools.count()
+                       if not os.path.isdir(result_dir + str(i)))
+    os.mkdir(result_dir)
+
+    # create a temp subdir
+    os.mkdir(os.path.join(result_dir, 'temp'))
+
+    # return the directory name for the results to go in
+    return result_dir
+
+
 def initialise(args):
     ''' This is responsible for setting up the output directory,
-        checking the git repository for cleanliness, setting up
-        logging and compiling the cython code for boolean nets.'''
+        checking the git repo isn't dirty and setting up logging.'''
     # Check version
     if sys.version_info.major != 3:
         sys.exit("Requires python 3.")
@@ -111,7 +105,12 @@ def initialise(args):
     settings['data']['dir'] = os.path.abspath(args.data_dir)
 
     # create result directory
-    result_dir = create_result_dir(args, settings['name'], git_hash)
+    result_dir = create_result_dir(args.result_dir, settings['name'])
+
+    # copy experiment config and git hash into results directory
+    shutil.copy(args.experiment.name, result_dir)
+    with open(os.path.join(result_dir, 'git_hash'), 'w') as hashfile:
+        hashfile.write(git_hash)
 
     # initialise logging
     initialise_logging(settings, result_dir)
@@ -212,12 +211,13 @@ def main():
 
     # generate learning tasks
     configurations = config_tools.generate_configurations(settings)
-
     print('Done: {} configurations generated.'.format(len(configurations)))
+    tasks = config_tools.generate_tasks(configurations)
+    print('Done: {} tasks generated.'.format(len(tasks)))
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # Run the actual learning as a parallel process
-        run_tasks(configurations, args.numprocs, results_stream)
+        run_tasks(tasks, args.numprocs, results_stream)
 
     print('Runs completed.')
 

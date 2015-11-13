@@ -188,8 +188,8 @@ def generate_configurations(settings):
     variable_sets = settings['configurations']
     # no need to keep this sub-dict around
     settings.pop('configurations')
-    # Build up the task list
-    tasks = []
+    # Build up the configuration list
+    configurations = []
 
     bar = Bar('Generating configurations', max=len(variable_sets),
               suffix='%(index)d/%(max)d : %(eta)ds')
@@ -208,17 +208,34 @@ def generate_configurations(settings):
         handle_initial_network(config_settings)
         # load the data for this configuration
         instances = load_dataset(config_settings)
+
+        configurations.append((config_settings, instances))
+        bar.next()
+    bar.finish()
+    return configurations
+
+
+def generate_tasks(configurations):
+    # Build up the task list
+    tasks = []
+
+    bar = Bar('Generating training tasks', max=len(configurations),
+              suffix='%(index)d/%(max)d : %(eta)ds')
+    bar.update()
+    for config, instances in configurations:
         # samples may be optionally sub-indexed
-        config_indices = get_config_indices(instances, config_settings)
+        indices = get_config_indices(instances, config)
+
+        conf_num = config['configuration_number']
         # for each training set
-        for i in config_indices:
+        for i in indices:
             instance = instances[i]
 
-            task = deepcopy(config_settings)
+            task = deepcopy(config)
             task['training_mapping'] = instance.training_mapping
             task['test_mapping'] = instance.test_mapping
             task['training_set_number'] = i
-            task['learner']['inter_file_base'] += '{}_{}_'.format(config_no, i)
+            task['learner']['inter_file_base'] += '{}_{}_'.format(conf_num, i)
 
             # dump the iteration settings out
             tasks.append(task)
