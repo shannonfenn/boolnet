@@ -11,7 +11,8 @@ from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
 from boolnet.exptools.config_schemata import config_schema
 
 
-Instance = namedtuple('Instance', ['training_mapping', 'test_mapping'])
+Instance = namedtuple('Instance', [
+    'training_mapping', 'test_mapping', 'training_indices'])
 
 
 # class ExperimentJSONEncoder(json.JSONEncoder):
@@ -87,27 +88,28 @@ def load_samples(params, data_dir, N, Ni):
     return training_indices
 
 
-def pack_examples(inputs, targets, train_indices):
+def pack_examples(inputs, targets, training_indices):
     ''' Parititions the given function into training and test sets,
         based on the given training indices.'''
     # Parameters
     N = inputs.shape[0]
-    Ns, Ne = train_indices.shape
+    Ns, Ne = training_indices.shape
     # Generate the test indices array, each row should contain all
-    # indices not in the equivalent row of train_indices
+    # indices not in the equivalent row of training_indices
     test_indices = np.zeros(shape=(Ns, N - Ne), dtype=int)
     for s in range(Ns):
-        test_indices[s] = np.setdiff1d(np.arange(N), train_indices[s])
+        test_indices[s] = np.setdiff1d(np.arange(N), training_indices[s])
     # Using numpy's advanced indexing we can get the sets
-    train_inps = inputs[train_indices]
-    train_tgts = targets[train_indices]
+    train_inps = inputs[training_indices]
+    train_tgts = targets[training_indices]
     test_inps = inputs[test_indices]
     test_tgts = targets[test_indices]
 
     # build list of train/test set instances
     instances = [Instance(
         training_mapping=FileBoolMapping(train_inps[i], train_tgts[i], Ne),
-        test_mapping=FileBoolMapping(test_inps[i], test_tgts[i], N - Ne)
+        test_mapping=FileBoolMapping(test_inps[i], test_tgts[i], N - Ne),
+        training_indices=training_indices[i]
         ) for i in range(Ns)]
 
     return instances
@@ -152,7 +154,8 @@ def generated_instance(data_settings, sampling_settings):
         training_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No,
                                              window_size, op, 0),
         test_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No,
-                                         window_size, op, N)
+                                         window_size, op, N),
+        training_indices=training_indices[i]
         ) for i in range(Ns)]
     return instances
 
