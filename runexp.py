@@ -1,5 +1,5 @@
 from datetime import datetime       # for date for result dir
-from multiprocessing import Pool    # non-distributed parallellism      ## REPLACE WITH SCOOP LATER
+from multiprocessing import Pool    # non-distributed parallellism
 from time import time               # timing
 from progress.bar import Bar        # progress indicators
 import os                           # for mkdir
@@ -23,13 +23,15 @@ def check_git():
         run while the repo is dirty.'''
     cur_file_dir = os.path.dirname(os.path.realpath(__file__))
     changed_files = subprocess.check_output(
-        ['git', '-C', cur_file_dir, 'diff', '--name-only'], universal_newlines=True).splitlines()
+        ['git', '-C', cur_file_dir, 'diff', '--name-only'],
+        universal_newlines=True).splitlines()
     if changed_files:
         print(('Warning, the following files in git repo '
                'have changes:\n\t{}').format('\n\t'.join(changed_files)))
 
     return subprocess.check_output(
-        ['git', '-C', cur_file_dir, 'rev-parse', 'HEAD'], universal_newlines=True)
+        ['git', '-C', cur_file_dir, 'rev-parse', 'HEAD'],
+        universal_newlines=True)
 
 
 def initialise_logging(settings, result_dir):
@@ -133,7 +135,8 @@ def run_tasks(tasks, num_processes, out_stream):
 def run_parallel(tasks, num_processes, out_stream):
     ''' runs the given configurations '''
     with Pool(processes=num_processes) as pool:
-        bar = Bar('Parallelised ({})'.format(num_processes), max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
+        bar = Bar('Parallelised ({})'.format(num_processes),
+                  max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
         bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
@@ -159,8 +162,8 @@ def run_scooped(tasks, out_stream):
     bar = Bar('Scooped', max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
     # uses unordered map to ensure results are dumped as soon as available
-    # for i, result in enumerate(scoop.futures.map_as_completed(learn_bool_net, tasks)):
-    for i, result in enumerate(scoop.futures.map_as_completed(scoop_worker_wrapper, tasks)):
+    for i, result in enumerate(scoop.futures.map_as_completed(
+            scoop_worker_wrapper, tasks)):
         config_tools.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
@@ -168,7 +171,8 @@ def run_scooped(tasks, out_stream):
 
 def run_sequential(tasks, out_stream):
     ''' runs the given configurations '''
-    bar = Bar('Sequential', max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
+    bar = Bar('Sequential', max=len(tasks),
+              suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
@@ -179,11 +183,12 @@ def run_sequential(tasks, out_stream):
 
 def notify(pb_handle, exp_name, result_dirname, time):
     result_dirname = str(result_dirname)
-    print('Experiment completed in {} seconds. Results in \"{}\"'.format(time, result_dirname))
+    print('Experiment completed in {} seconds. Results in \"{}\"'.
+          format(time, result_dirname))
     if pb_handle:
         pb_handle.push_note(
-            'Experiment complete.', 'name: {} time: {} results: {}'.format(
-                exp_name, time, result_dirname))
+            'Experiment complete.', 'name: {} time: {} results: {}'.
+            format(exp_name, time, result_dirname))
 
 
 # ############################## MAIN ####################################### #
@@ -197,17 +202,18 @@ def main():
             from pushbullet import PushBullet, PushbulletError
             pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
         except ImportError:
-            print('Failed to import PushBullet - notifications will not be sent.')
+            print('Failed to import PushBullet.')
             pb = None
         except PushbulletError:
-            print('Failed to generate PushBullet interface - notifications will not be sent.')
+            print('Failed to generate PushBullet interface.')
             pb = None
 
     settings, result_dir = initialise(args)
 
     print('Directories initialised. Results in: ' + result_dir)
 
-    settings['learner']['inter_file_base'] = os.path.join(result_dir, 'temp', 'inter_')
+    settings['learner']['inter_file_base'] = os.path.join(
+        result_dir, 'temp', 'inter_')
 
     # generate learning tasks
     configurations = config_tools.generate_configurations(settings)
