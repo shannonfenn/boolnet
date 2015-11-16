@@ -154,6 +154,9 @@ def learn_bool_net(parameters):
 
     end_time = time.monotonic()
 
+    if parameters.get('record_initial_net', False):
+        results['initial_network'] = gates
+
     # add timing results
     results['setup_time'] = setup_end_time - start_time
     results['learning_time'] = learning_end_time - setup_end_time
@@ -192,9 +195,16 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         'training_accuracy':        trg_state.function_value(ACCURACY),
         'test_error_simple':        test_state.function_value(E1),
         'test_accuracy':            test_state.function_value(ACCURACY),
-        'final_network':            np.array(final_network.gates),
         'Ne':                       trg_state.Ne
         }
+
+    if parameters.get('record_final_net', True):
+        results['final_network'] = np.array(final_network.gates)
+
+    if parameters.get('record_intermediate_nets', False):
+        for i in range(len(learner_result.best_states) - 1):
+            key = 'intermediate_network_{}'.format(i)
+            results[key] = learner_result.best_states[i]
 
     # add ' kfs' on the end of the learner name in the result dict if required
     if learner_parameters.get('kfs'):

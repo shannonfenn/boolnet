@@ -132,5 +132,8 @@ config_schema = Schema({
     'logging':                  In(['none', 'warning', 'info', 'debug']),
     'learner':                  learner_schema,
     'sampling':                 sampling_schema,
+    Optional('record_initial_net'):         bool,
+    Optional('record_final_net'):           bool,
+    Optional('record_intermediate_nets'):   bool,
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
     })
