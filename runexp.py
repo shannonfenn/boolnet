@@ -62,10 +62,13 @@ def parse_arguments():
                         help='provide to retain temporary FABCPP files.')
     parser.add_argument('--no-notify', action='store_true',
                         help='disable PushBullet notifications.')
-    parser.add_argument('--data-dir', default='experiments/datasets', type=str,
+    parser.add_argument('--data-dir', type=str,
+                        default=os.path.expanduser(
+                            '~/HMRI/experiments/datasets'),
                         help='dataset directory.')
-    parser.add_argument('--result-dir', default='experiments/results',
-                        type=str,
+    parser.add_argument('--result-dir', type=str,
+                        default=os.path.expanduser(
+                            '~/HMRI/experiments/results'),
                         help='directory to store results in (in own subdir).')
 
     return parser.parse_args()
