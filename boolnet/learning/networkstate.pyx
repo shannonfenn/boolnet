@@ -66,8 +66,8 @@ cdef class NetworkState(BoolNetwork):
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
         if 2**Ni < Ne:
-            raise ValueError('More examples ({}) than #inputs ({}) '
-                             'can represent.'.format(Ne, Ni))
+            print('WARNING: More examples ({}) than #inputs ({}) '
+                  'can represent.'.format(Ne, Ni))
 
         super().__init__(gates, Ni, No)
 

@@ -189,6 +189,8 @@ class StratifiedLearner(BasicLearner):
         else:
             fs = None
 
+        # the output node corresponding to the TARGET is considered next
+        # not the one corresponding to the STRATA
         sourceable, changeable = build_mask(state, lower_bound,
                                             upper_bound, target, fs)
 
@@ -231,6 +233,9 @@ class StratifiedLearner(BasicLearner):
             state.apply_move(move)
 
     def _learn_target(self, state, target):
+        # the output node corresponding to the TARGET is considered next
+        # not the one corresponding to the STRATA
+
         # build new guiding function for only next target if required
         if self.guiding_func_id == PER_OUTPUT:
             guiding_func = (
