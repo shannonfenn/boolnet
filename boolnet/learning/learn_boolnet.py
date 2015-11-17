@@ -206,7 +206,7 @@ def build_result_map(parameters, learner_result, training_data, test_data):
     if parameters.get('record_intermediate_nets', False):
         for i in range(len(learner_result.best_states) - 1):
             key = 'intermediate_network_{}'.format(i)
-            results[key] = learner_result.best_states[i]
+            results[key] = np.array(learner_result.best_states[i].gates)
 
     # add ' kfs' on the end of the learner name in the result dict if required
     if learner_parameters.get('kfs'):
