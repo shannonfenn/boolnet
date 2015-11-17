@@ -63,10 +63,10 @@ def parse_arguments():
     parser.add_argument('--no-notify', action='store_true',
                         help='disable PushBullet notifications.')
     parser.add_argument('--data-dir', type=str,
-                        default='HMRI/experiments/datasets',
+                        default='experiments/datasets',
                         help='dataset directory.')
     parser.add_argument('--result-dir', type=str,
-                        default='HMRI/experiments/results',
+                        default='experiments/results',
                         help='directory to store results in (in own subdir).')
 
     return parser.parse_args()
