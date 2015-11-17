@@ -187,7 +187,6 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         'learner':                  learner_parameters['name'],
         'configuration_number':     parameters['configuration_number'],
         'training_set_number':      parameters['training_set_number'],
-        'training_indices':         parameters['training_indices'],
         'transfer_functions':       parameters['network']['node_funcs'],
         'iteration_for_best':       learner_result.best_iterations,
         'total_iterations':         learner_result.final_iterations,
@@ -197,6 +196,9 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         'test_accuracy':            test_state.function_value(ACCURACY),
         'Ne':                       trg_state.Ne
         }
+
+    if parameters.get('record_training_indices', True):
+        results['training_indices'] = parameters['training_indices']
 
     if parameters.get('record_final_net', True):
         results['final_network'] = np.array(final_network.gates)

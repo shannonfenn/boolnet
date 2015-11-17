@@ -237,6 +237,7 @@ def generate_tasks(configurations):
             task = deepcopy(config)
             task['training_mapping'] = instance.training_mapping
             task['test_mapping'] = instance.test_mapping
+            task['training_indices'] = instance.training_indices
             task['training_set_number'] = i
             task['learner']['inter_file_base'] += '{}_{}_'.format(conf_num, i)
 

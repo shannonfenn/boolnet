@@ -135,5 +135,6 @@ config_schema = Schema({
     Optional('record_initial_net'):         bool,
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
+    Optional('record_training_indices'):    bool,
     Optional('seed'):           All(int, Range(0, sys.maxsize)),
     })
