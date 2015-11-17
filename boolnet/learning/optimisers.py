@@ -54,10 +54,11 @@ class RestartLocalSearch:
 
         for i in range(self.max_restarts + 1):
             # state.set_representation(original_state)
-            state.randomise()
             step_result = self._optimise(state)
             if self.reached_stopping_criterion:
                 break
+            elif i < self.max_restarts:
+                state.randomise()
 
         return OptimiserResult(
             state=step_result.state,
