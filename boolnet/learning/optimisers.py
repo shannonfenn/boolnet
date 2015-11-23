@@ -146,7 +146,6 @@ class LAHC(RestartLocalSearch):
     def _optimise(self, state):
         # Calculate initial error
         error = self.guiding_function(state)
-        # error = evaluator.function_value(self.guiding_function)
 
         # set up aspiration criteria
         best_error = error
@@ -156,25 +155,25 @@ class LAHC(RestartLocalSearch):
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
-        self.reached_stopping_criterion = False
+        if self.stopping_criterion(state, best_error):
+            self.reached_stopping_criterion = True
+            return OptimiserResult(
+                state=best_state, error=best_error,
+                best_iteration=0, iteration=0, restarts=None)
+        else:
+            self.reached_stopping_criterion = False
+
         # optimisation loop
         for iteration in range(self.max_iterations):
-            # Stop on user defined condition
-            if self.stopping_criterion(state, best_error):
-                self.reached_stopping_criterion = True
-                break
-
             # perform random move
             self.move(state)
-
             # calculate error for new state
             new_error = self.guiding_function(state)
-            # new_error = evaluator.function_value(self.guiding_function)
 
             # Keep best state seen
             if new_error < best_error:
-                best_state = copy(state)
                 best_error = new_error
+                best_state = copy(state)
                 best_iteration = iteration
 
             # Determine whether to accept the new state
@@ -183,9 +182,14 @@ class LAHC(RestartLocalSearch):
             else:
                 self.undo_move(state)
 
-            # In any case, clear the move history to save memory
-            # and prevent accidentally undoing accepted moves later
+            # Clear the move history to save memory and prevent accidentally
+            # undoing accepted moves later
             state.clear_history()
+
+            # Stop on user defined condition
+            if self.stopping_criterion(state, best_error):
+                self.reached_stopping_criterion = True
+                break
 
         return OptimiserResult(
             state=best_state,
