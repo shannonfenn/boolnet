@@ -36,7 +36,7 @@ def build_mask(state, lower_bound, upper_bound, target, feature_set=None):
     changeable[lower_bound:upper_bound] = 1
     changeable[Ng - No + target] = 1
 
-    # and a list of inputs (including gates) which those gates can be connected to
+    # and a list of inputs (inc gates) which they can source from
     if feature_set is None:
         # all modifiable and previous connections
         sourceable[:upper_bound+Ni] = 1
