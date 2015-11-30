@@ -11,13 +11,13 @@ def print_details(sleeptime):
     time.sleep(sleeptime)
 
     return {
-        'socket.gethostname()': socket.gethostname(),
-        '$HOST': os.environ.get("HOST"),
-        '$HOSTNAME': os.environ.get("HOSTNAME"),
-        '$CIBM_HOME': os.environ.get("CIBM_HOME"),
-        'py ver': sys.version_info,
-        'py loc': sys.executable,
-        'environ': os.environ}
+        'socket.gethostname()': str(socket.gethostname()),
+        '$HOST': str(os.environ.get("HOST")),
+        '$HOSTNAME': str(os.environ.get("HOSTNAME")),
+        '$CIBM_HOME': str(os.environ.get("CIBM_HOME")),
+        'py ver': str(sys.version_info),
+        'py loc': str(sys.executable),
+        'environ': str(os.environ)}
 
 
 def main():
