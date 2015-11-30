@@ -7,6 +7,7 @@ from scoop.futures import map_as_completed
 def print_details(idx):
     # Check version
     s = 'idx: {}'.format(idx)
+    s += '\nenviron: {}'.format(os.environ)
     s += '\nHOSTNAME: {}'.format(os.environ.get("HOSTNAME"))
     s += '\nCIBM_HOME: {}'.format(os.environ.get("CIBM_HOME"))
     s += '\npy ver: {}'.format(sys.version_info)
