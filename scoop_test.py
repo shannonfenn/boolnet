@@ -6,21 +6,18 @@ import socket
 from scoop.futures import map_as_completed
 
 
-def print_details(verbose):
+def print_details(sleeptime):
     # Check version
-    s = ('socket.gethostname(): {}\n$HOST: {}\n$HOSTNAME: {}\n$CIBM_HOME: {}\n'
-         'py ver: {}\npy loc: {}\n').format(
-        socket.gethostname(),
-        os.environ.get("HOST"),
-        os.environ.get("HOSTNAME"),
-        os.environ.get("CIBM_HOME"),
-        sys.version_info,
-        sys.executable)
+    time.sleep(sleeptime)
 
-    if verbose:
-        s += 'environ: {}\n'.format(os.environ)
-    time.sleep(3)
-    return s
+    return {
+        'socket.gethostname()': socket.gethostname(),
+        '$HOST': os.environ.get("HOST"),
+        '$HOSTNAME': os.environ.get("HOSTNAME"),
+        '$CIBM_HOME': os.environ.get("CIBM_HOME"),
+        'py ver': sys.version_info,
+        'py loc': sys.executable,
+        'environ': os.environ}
 
 
 def main():
@@ -28,14 +25,18 @@ def main():
     parser.add_argument('--verbose', '-v', action='store_true')
     args = parser.parse_args()
 
+    sleeptime = 3
+
     num_servers = 14 + 6
     # num_servers = 3
     # uses unordered map to ensure results are dumped as soon as available
     results = list(map_as_completed(
-        print_details, [args.verbose]*(num_servers + 1)))
+        print_details, [sleeptime]*(num_servers + 1)))
 
     with open('log.txt', 'w') as f:
         for r in results:
+            if not args.verbose:
+                r.pop('environ')
             f.write(r + '\n')
 
 if __name__ == '__main__':
