@@ -2,19 +2,23 @@ import time
 import os
 import sys
 import argparse
+import socket
 from scoop.futures import map_as_completed
 
 
 def print_details(verbose):
     # Check version
-    s = '$HOST: {}'.format(os.environ.get("HOST"))
-    s += '\n$HOSTNAME: {}'.format(os.environ.get("HOSTNAME"))
-    s += '\n$CIBM_HOME: {}'.format(os.environ.get("CIBM_HOME"))
-    s += '\npy ver: {}'.format(sys.version_info)
-    s += '\npy loc: {}'.format(sys.executable)
+    s = ('socket.gethostname(): {}\n$HOST: {}\n$HOSTNAME: {}\n$CIBM_HOME: {}\n'
+         'py ver: {}\npy loc: {}\n').format(
+        socket.gethostname(),
+        os.environ.get("HOST"),
+        os.environ.get("HOSTNAME"),
+        os.environ.get("CIBM_HOME"),
+        sys.version_info,
+        sys.executable)
+
     if verbose:
-        s += '\nenviron: {}'.format(os.environ)
-    s += '\n'
+        s += 'environ: {}\n'.format(os.environ)
     time.sleep(3)
     return s
 
