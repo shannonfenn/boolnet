@@ -25,7 +25,7 @@ def main():
     parser.add_argument('--verbose', '-v', action='store_true')
     args = parser.parse_args()
 
-    sleeptime = 3
+    sleeptime = 1
 
     num_servers = 14 + 6
     # num_servers = 3
@@ -37,7 +37,10 @@ def main():
         for r in results:
             if not args.verbose:
                 r.pop('environ')
-            f.write(r + '\n')
+            for k, v in r.items():
+                f.write('{}: {}'.format(k, v))
+                f.write('\n')
+            f.write('\n')
 
 if __name__ == '__main__':
     main()
