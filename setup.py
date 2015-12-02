@@ -1,6 +1,8 @@
-from distutils.core import setup
-from Cython.Distutils import Extension
-from Cython.Distutils import build_ext
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+from Cython.Distutils import Extension, build_ext
 import numpy as np
 import cython_gsl
 
