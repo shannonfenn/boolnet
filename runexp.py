@@ -136,7 +136,7 @@ def run_parallel(tasks, num_processes, out_stream):
     ''' runs the given configurations '''
     with Pool(processes=num_processes) as pool:
         bar = Bar('Parallelised ({})'.format(num_processes),
-                  max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
+                  max=len(tasks), suffix='%(index)d/%(max)d : %(elapsed)ds')
         bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
@@ -159,7 +159,7 @@ def scoop_worker_wrapper(*args, **kwargs):
 
 def run_scooped(tasks, out_stream):
     ''' runs the given configurations '''
-    bar = Bar('Scooped', max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
+    bar = Bar('Scooped', max=len(tasks), suffix='%(index)d/%(max)d : %(elapsed)ds')
     bar.update()
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
@@ -172,7 +172,7 @@ def run_scooped(tasks, out_stream):
 def run_sequential(tasks, out_stream):
     ''' runs the given configurations '''
     bar = Bar('Sequential', max=len(tasks),
-              suffix='%(index)d/%(max)d : %(eta)ds')
+              suffix='%(index)d/%(max)d : %(elapsed)ds')
     bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
