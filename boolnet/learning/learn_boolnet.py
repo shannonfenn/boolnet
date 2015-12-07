@@ -243,6 +243,9 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         key = 'max_depth_tgt_{}'.format(bit)
         results[key] = v
     for k, v in optimiser_parameters.items():
-        results['opt_' + k] = v
+        if k == 'guiding_function':
+            results[k] = v
+        else:
+            results['opt_' + k] = v
 
     return results
