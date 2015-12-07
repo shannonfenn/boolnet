@@ -132,6 +132,7 @@ config_schema = Schema({
     'logging':                  In(['none', 'warning', 'info', 'debug']),
     'learner':                  learner_schema,
     'sampling':                 sampling_schema,
+    Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_initial_net'):         bool,
     Optional('record_final_net'):           bool,

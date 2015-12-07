@@ -198,6 +198,12 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         'Ne':           trg_state.Ne
         }
 
+    if parameters.get('verbose_errors'):
+        results['trg_err_gf'] = trg_state.function_value(guiding_function)
+        results['trg_err_per'] = trg_state.function_value(PER_OUTPUT)
+        results['test_err_gf'] = test_state.function_value(guiding_function)
+        results['test_err_per'] = test_state.function_value(PER_OUTPUT)
+
     if parameters.get('record_training_indices', True):
         results['trg_indices'] = parameters['training_indices']
 
