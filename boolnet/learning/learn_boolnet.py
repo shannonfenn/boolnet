@@ -158,10 +158,11 @@ def learn_bool_net(parameters):
         results['initial_network'] = gates
 
     # add timing results
-    results['setup_time'] = setup_end_time - start_time
+    if parameters.get('verbose_timing'):
+        results['setup_time'] = setup_end_time - start_time
+        results['result_time'] = end_time - learning_end_time
+        results['total_time'] = end_time - start_time
     results['learning_time'] = learning_end_time - setup_end_time
-    results['result_time'] = end_time - learning_end_time
-    results['time'] = end_time - start_time
 
     return results
 
