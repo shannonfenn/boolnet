@@ -15,6 +15,7 @@ echo -e "building on ${GRN}shannon${NC}"
 	ssh -T shannon << EOF
   source scoop_setup.sh
   cd /home/cibm01/shannon/HMRI/code_sf/boolnet
+  git pull
   git clean -xdf
   python setup.py build_ext --inplace
 EOF
@@ -26,6 +27,7 @@ echo -e "building on ${GRN}darwin15${NC}"
 ssh -T darwin15 << EOF
   source scoop_setup.sh
   cd /home/cibm01/shannon/HMRI/code_dar/boolnet
+  git pull
   git clean -xdf
   scl enable devtoolset-3 "python setup.py build_ext --inplace"
 EOF
@@ -34,5 +36,4 @@ tail -n 1 darwin15_build.log
 
 echo "distributing ${MAG}runexp.py${NC}"
 scp runexp.py shannon:HMRI/scripts/
-scp runexp.py darwin15:HMRI/scripts/
 cp -f runexp.py ~/HMRI/scripts/
