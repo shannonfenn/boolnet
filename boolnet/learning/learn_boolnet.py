@@ -224,7 +224,7 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         results['target_order'] = learner_result.target_order
 
     if learner_result.restarts is not None:
-        results['optimiser_restarts'] = learner_result.restarts
+        results['opt_restarts'] = learner_result.restarts
 
     for bit, v in enumerate(trg_state.function_value(PER_OUTPUT)):
         key = 'train_err_tgt_{}'.format(bit)
@@ -236,6 +236,6 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         key = 'max_depth_tgt_{}'.format(bit)
         results[key] = v
     for k, v in optimiser_parameters.items():
-        results['optimiser_' + k] = v
+        results['opt_' + k] = v
 
     return results
