@@ -2,30 +2,24 @@ import yaml
 import glob
 import networkx as nx
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_array_less
 from numpy.random import randint
 from copy import copy
 from itertools import chain
 from pytest import fixture, raises
 from pytest import mark
-from boolnet.network.boolnetwork import BoolNetwork
+from boolnet.network.boolnet import BoolNet
 
 
 # ############# Global helpers ################# #
-def load_field_from_yaml(filename, fieldname):
-    with open(filename) as f:
-        d = yaml.safe_load(f)
-    return d[fieldname]
-
-
 def harness_to_fixture(stream):
-    test = yaml.safe_load(stream)
-    Ni = test['Ni']
-    No = test['No']
-    gates = np.array(test['gates'], np.uint32)
-    # add network to test
-    test['net'] = BoolNetwork(gates, Ni, No)
-    return test
+    harness = yaml.safe_load(stream)
+    Ni = harness['Ni']
+    No = harness['No']
+    gates = np.array(harness['gates'], np.uint32)
+    # add network to harness
+    harness['net'] = BoolNet(gates, Ni, No)
+    return harness
 
 
 # #################### Global fixtures #################### #
@@ -34,28 +28,6 @@ def adder2():
     with open('boolnet/test/networks/adder2.yaml') as f:
         net = harness_to_fixture(f)
     return net['net']
-
-
-@fixture(
-    scope='module',
-    params=load_field_from_yaml('boolnet/test/networks/adder2.yaml',
-                                'valid_masks'))
-def adder2_valid_mask(request):
-    harness = request.param
-    harness[0] = np.array(harness[0], dtype=np.uint8)
-    harness[1] = np.array(harness[1], dtype=np.uint8)
-    return harness
-
-
-@fixture(
-    scope='module',
-    params=load_field_from_yaml('boolnet/test/networks/adder2.yaml',
-                                'invalid_masks'))
-def adder2_invalid_mask(request):
-    harness = request.param
-    harness[0] = np.array(harness[0], dtype=np.uint8)
-    harness[1] = np.array(harness[1], dtype=np.uint8)
-    return harness
 
 
 @fixture(
@@ -71,7 +43,7 @@ class TestExceptions:
 
     @fixture
     def network(self):
-        return BoolNetwork([(0, 1, 0)], 2, 1)
+        return BoolNet([(0, 1, 0)], 2, 1)
 
     @fixture(params=[
         ([], 0, 0),             # all invalid
@@ -95,11 +67,7 @@ class TestExceptions:
     # ############## Tests ##################### #
     def test_construction_exceptions(self, invalid_construction):
         with raises(ValueError):
-            BoolNetwork(*invalid_construction)
-
-    def test_set_mask_exceptions(self, adder2, adder2_invalid_mask):
-        with raises(ValueError):
-            adder2.set_mask(*adder2_invalid_mask)
+            BoolNet(*invalid_construction)
 
     def test_initial_revert_move_exception(self, network):
         with raises(RuntimeError):
@@ -178,7 +146,7 @@ class TestFunctionality:
         gates = [(randint(g+Ni), randint(g+Ni), randint(16))
                  for g in range(Ng)]
         # create the seed network
-        return BoolNetwork(gates, Ni, No)
+        return BoolNet(gates, Ni, No)
 
     # ############## Tests ##################### #
     def test_acyclic(self, random_network):
@@ -247,54 +215,25 @@ class TestFunctionality:
         gate = net.random_move()['gate']
         assert connected[gate] == 1
 
-    def test_set_mask(self, adder2, adder2_valid_mask):
-        net = copy(adder2)
-        sourceable, changeable = adder2_valid_mask
-        # get a random restricted move
-        net.set_mask(sourceable, changeable)
-
-        assert_array_equal(sourceable, net.sourceable)
-        assert_array_equal(changeable, net.changeable)
-
-    @mark.parametrize('repeats', range(10))
-    def test_masked_random_move(self, repeats, adder2, adder2_valid_mask):
-        net = copy(adder2)
-        sourceable, changeable = adder2_valid_mask
-        connected = self.connected_ground_truth(net)[net.Ni:]
-        # get a random restricted move
-        net.set_mask(sourceable, changeable)
-        move = net.random_move()
-        gate, terminal, new_source = move['gate'], move['terminal'], move['new_source']
-        # check the move is changing a valid gate
-        assert changeable[gate] == 1
-        assert connected[gate] == 1
-        # check the move is connecting to a valid source
-        assert sourceable[new_source] == 1
-        # check the move has changed the original connection
-        assert new_source != net.gates[gate, terminal]
-
-    @mark.parametrize('repeats', range(10))
-    def test_randomise(self, repeats, adder2, adder2_valid_mask):
-        net = copy(adder2)
-        sourceable, changeable = adder2_valid_mask
-        # check the changeable range all connect to sourceable nodes
-        valid = sourceable | np.hstack((np.zeros(net.Ni, dtype=np.uint8), changeable))
-
-        net.set_mask(sourceable, changeable)
-        net.randomise()
-
-        for g in range(net.Ng):
-            if changeable[g]:
-                assert valid[net.gates[g, 0]] == 1
-                assert valid[net.gates[g, 1]] == 1
-
-    @mark.parametrize('repeats', range(10))
-    def test_feedforward_after_randomise(self, repeats, adder2, adder2_valid_mask):
-        net = copy(adder2)
-        sourceable, changeable = adder2_valid_mask
-        net.set_mask(sourceable, changeable)
+    @mark.parametrize('repeats', range(3))
+    def test_feedforward_after_randomise(self, repeats, any_network):
+        net = copy(any_network['net'])
         net.randomise()
         self.assert_feedforward(net)
+
+    @mark.parametrize('repeats', range(3))
+    def test_shape_after_randomise(self, repeats, any_network):
+        net = copy(any_network['net'])
+        expected = net.gates.shape
+        net.randomise()
+        assert net.gates.shape == expected
+
+    @mark.parametrize('repeats', range(3))
+    def test_different_after_randomise(self, repeats, any_network):
+        net = copy(any_network['net'])
+        old_gates = np.array(net.gates)
+        net.randomise()
+        assert not np.array_equal(old_gates, net.gates)
 
     def test_max_depth(self, any_network):
         net = copy(any_network['net'])
@@ -302,10 +241,8 @@ class TestFunctionality:
         actual = net.max_node_depths()
         assert_array_equal(actual, expected)
 
-    def test_copy(self, adder2, adder2_valid_mask):
-        net1 = copy(adder2)
-        sourceable, changeable = adder2_valid_mask
-        net1.set_mask(sourceable, changeable)
+    def test_copy(self, any_network):
+        net1 = copy(any_network['net'])
         net1.move_to_random_neighbour()
 
         net2 = copy(net1)
@@ -318,7 +255,12 @@ class TestFunctionality:
         assert net2.history_empty()
         assert not net1.history_empty()
 
-        assert_array_equal(net2.changeable, net1.changeable)
-        assert_array_equal(net2.sourceable, net1.sourceable)
         assert_array_equal(net2.connected_gates(), net1.connected_gates())
         assert_array_equal(net2.connected_sources(), net1.connected_sources())
+
+    def test_set_gates_copies(self, any_network):
+        net = copy(any_network['net'])
+        gates = np.array(net.gates)
+        net.set_gates(gates)
+        gates += 1
+        assert_array_less(net.gates, gates)

@@ -268,7 +268,7 @@ class StratifiedLearner(BasicLearner):
             if optimisation_required:
                 opt_result = self._learn_target(state, target)
 
-                state.set_representation(opt_result.state.representation())
+                state.set_gates(opt_result.state.gates)
 
                 # record result
                 best_states[i] = opt_result.state

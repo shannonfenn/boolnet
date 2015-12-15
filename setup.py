@@ -44,8 +44,8 @@ extensions = [
               ["boolnet/network/algorithms.pyx"],
               language='c++',
               include_dirs=include_dirs),
-    Extension("boolnet.network.boolnetwork",
-              ["boolnet/network/boolnetwork.pyx"],
+    Extension("boolnet.network.boolnet",
+              ["boolnet/network/boolnet.pyx"],
               language='c++',
               include_dirs=include_dirs),
 

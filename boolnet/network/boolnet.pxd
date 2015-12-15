@@ -12,20 +12,14 @@ cdef struct Move:
     size_t new_source
 
 
-cdef class BoolNetwork:
+cdef class BoolNet:
     cdef:
         public np.uint32_t[:, :] gates
-        public np.uint8_t[:] transfer_functions
-        public np.uint8_t[:] changeable, sourceable
-
         readonly size_t Ng, Ni, No
-        readonly bint masked
-
         np.uint8_t[:] connected
         deque[Move] inverse_moves
 
-    cpdef representation(self)
-    cpdef set_representation(self, np.uint32_t[:, :] gates)
+    cpdef set_gates(self, np.uint32_t[:, :] gates)
 
     # properties
     cpdef connected_gates(self)
@@ -33,10 +27,7 @@ cdef class BoolNetwork:
     cpdef max_node_depths(self)
 
     # mask modification
-    cdef _check_mask(self)
     cpdef _update_connected(self)
-    cpdef set_mask(self, np.uint8_t[:] sourceable, np.uint8_t[:] changeable)
-    cpdef remove_mask(self)
     cpdef randomise(self)
 
     # Move handling
