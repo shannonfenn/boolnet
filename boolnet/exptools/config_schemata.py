@@ -52,19 +52,21 @@ sampling_schema = Schema({
     Optional('file_suffix'):    str
     })
 
-network_schema_given = Schema({
-    'method':           'given',
-    'node_funcs':       'NAND',
-    'file':             All(str, lambda v: v.endswith('.json')),
-    'index':            All(int, Range(min=0)),
-    'initial_gates':    All(Type(np.ndarray), is_2d, is_int_arr),
-    })
+
+# network_schema_given = Schema({
+#     'method':           'given',
+#     'initial_gates':    All(Type(np.ndarray), is_2d, is_int_arr),
+#     })
 
 network_schema_generated = Schema({
     'method':       'generated',
     'Ng':           All(int, Range(min=1)),
-    'node_funcs':   Any(list, In(['NAND', 'NOR', 'random']))
+    'node_funcs':   list
     })
+
+# network_schema = Schema(Any(network_schema_given, network_schema_generated))
+network_schema = network_schema_generated
+
 
 SA_schema = Schema({
     'name':                     'SA',
@@ -103,6 +105,7 @@ minFS_option_schema = Schema({
 learner_schema_stratified = Schema({
     'name':                         'stratified',
     'optimiser':                    Any(SA_schema, HC_schema, LAHC_schema),
+    'network':                      network_schema,
     Optional('inter_file_base'):    str,
     Optional('kfs'):                bool,
     Optional('one_layer_kfs'):      bool,
@@ -121,14 +124,11 @@ learner_schema_basic = Schema({
 
 learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
-network_schema = Schema(Any(network_schema_given, network_schema_generated))
-
 mapping_schema = Any(Type(FileBoolMapping), Type(OperatorBoolMapping))
 
 config_schema = Schema({
     'name':                     str,
     'data':                     Any(data_schema_file, data_schema_generated),
-    'network':                  network_schema,
     'logging':                  In(['none', 'warning', 'info', 'debug']),
     'learner':                  learner_schema,
     'sampling':                 sampling_schema,
