@@ -17,20 +17,19 @@ from boolnet.learning.learn_boolnet import learn_bool_net
 import boolnet.exptools.config_tools as config_tools
 
 
-def check_git():
+def check_git(git_dir):
     ''' Checks the git directory for uncommitted source modifications.
         Since the experiment is tagged with a git hash it should not be
         run while the repo is dirty.'''
-    cur_file_dir = os.path.dirname(os.path.realpath(__file__))
     changed_files = subprocess.check_output(
-        ['git', '-C', cur_file_dir, 'diff', '--name-only'],
+        ['git', '-C', git_dir, 'diff', '--name-only'],
         universal_newlines=True).splitlines()
     if changed_files:
         print(('Warning, the following files in git repo '
                'have changes:\n\t{}').format('\n\t'.join(changed_files)))
 
     return subprocess.check_output(
-        ['git', '-C', cur_file_dir, 'rev-parse', 'HEAD'],
+        ['git', '-C', git_dir, 'rev-parse', 'HEAD'],
         universal_newlines=True)
 
 
@@ -99,7 +98,7 @@ def initialise(args):
     if sys.version_info.major != 3:
         sys.exit("Requires python 3.")
 
-    git_hash = check_git()
+    git_hash = check_git(os.path.expanduser('~/HMRI/code/boolnet/'))
 
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
@@ -137,7 +136,7 @@ def run_parallel(tasks, num_processes, out_stream):
     ''' runs the given configurations '''
     with Pool(processes=num_processes) as pool:
         bar = Bar('Parallelised ({})'.format(num_processes),
-                  max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
+                  max=len(tasks), suffix='%(index)d/%(max)d : %(elapsed)ds')
         bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
@@ -160,7 +159,7 @@ def scoop_worker_wrapper(*args, **kwargs):
 
 def run_scooped(tasks, out_stream):
     ''' runs the given configurations '''
-    bar = Bar('Scooped', max=len(tasks), suffix='%(index)d/%(max)d : %(eta)ds')
+    bar = Bar('Scooped', max=len(tasks), suffix='%(index)d/%(max)d : %(elapsed)ds')
     bar.update()
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
@@ -173,7 +172,7 @@ def run_scooped(tasks, out_stream):
 def run_sequential(tasks, out_stream):
     ''' runs the given configurations '''
     bar = Bar('Sequential', max=len(tasks),
-              suffix='%(index)d/%(max)d : %(eta)ds')
+              suffix='%(index)d/%(max)d : %(elapsed)ds')
     bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):

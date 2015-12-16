@@ -158,10 +158,11 @@ def learn_bool_net(parameters):
         results['initial_network'] = gates
 
     # add timing results
-    results['setup_time'] = setup_end_time - start_time
+    if parameters.get('verbose_timing'):
+        results['setup_time'] = setup_end_time - start_time
+        results['result_time'] = end_time - learning_end_time
+        results['total_time'] = end_time - start_time
     results['learning_time'] = learning_end_time - setup_end_time
-    results['result_time'] = end_time - learning_end_time
-    results['time'] = end_time - start_time
 
     return results
 
@@ -181,31 +182,37 @@ def build_result_map(parameters, learner_result, training_data, test_data):
     test_state = build_test_state(final_network.gates, test_data, funcs)
 
     results = {
-        'Ni':                       final_network.Ni,
-        'No':                       final_network.No,
-        'Ng':                       final_network.Ng,
-        'learner':                  learner_parameters['name'],
-        'configuration_number':     parameters['configuration_number'],
-        'training_set_number':      parameters['training_set_number'],
-        'transfer_functions':       parameters['network']['node_funcs'],
-        'iteration_for_best':       learner_result.best_iterations,
-        'total_iterations':         learner_result.final_iterations,
-        'training_error_simple':    trg_state.function_value(E1),
-        'training_accuracy':        trg_state.function_value(ACCURACY),
-        'test_error_simple':        test_state.function_value(E1),
-        'test_accuracy':            test_state.function_value(ACCURACY),
-        'Ne':                       trg_state.Ne
+        'Ni':           final_network.Ni,
+        'No':           final_network.No,
+        'Ng':           final_network.Ng,
+        'learner':      learner_parameters['name'],
+        'config_num':   parameters['configuration_number'],
+        'trg_set_num':  parameters['training_set_number'],
+        'tfs':          parameters['network']['node_funcs'],
+        'best_step':    learner_result.best_iterations,
+        'steps':        learner_result.final_iterations,
+        'trg_error':    trg_state.function_value(E1),
+        'trg_acc':      trg_state.function_value(ACCURACY),
+        'test_error':   test_state.function_value(E1),
+        'test_acc':     test_state.function_value(ACCURACY),
+        'Ne':           trg_state.Ne
         }
 
+    if parameters.get('verbose_errors'):
+        results['trg_err_gf'] = trg_state.function_value(guiding_function)
+        results['trg_err_per'] = trg_state.function_value(PER_OUTPUT)
+        results['test_err_gf'] = test_state.function_value(guiding_function)
+        results['test_err_per'] = test_state.function_value(PER_OUTPUT)
+
     if parameters.get('record_training_indices', True):
-        results['training_indices'] = parameters['training_indices']
+        results['trg_indices'] = parameters['training_indices']
 
     if parameters.get('record_final_net', True):
-        results['final_network'] = np.array(final_network.gates)
+        results['final_net'] = np.array(final_network.gates)
 
     if parameters.get('record_intermediate_nets', False):
         for i in range(len(learner_result.best_states) - 1):
-            key = 'intermediate_network_{}'.format(i)
+            key = 'net_{}'.format(i)
             results[key] = np.array(learner_result.best_states[i].gates)
 
     # add ' kfs' on the end of the learner name in the result dict if required
@@ -217,17 +224,17 @@ def build_result_map(parameters, learner_result, training_data, test_data):
             for target, v in enumerate(strata_f_sets):
                 # only record FSes if they exist
                 if v is not None:
-                    key = 'fs_strata_{}_tgt_{}'.format(strata, target)
+                    key = 'fs_s{}_t{}'.format(strata, target)
                     results[key] = v
 
     if learner_result.target_order is not None:
-        results['target_order'] = learner_result.target_order
+        results['tgt_order'] = learner_result.target_order
 
     if learner_result.restarts is not None:
-        results['optimiser_restarts'] = learner_result.restarts
+        results['restarts'] = learner_result.restarts
 
     for bit, v in enumerate(trg_state.function_value(PER_OUTPUT)):
-        key = 'train_err_tgt_{}'.format(bit)
+        key = 'trg_err_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(test_state.function_value(PER_OUTPUT)):
         key = 'test_err_tgt_{}'.format(bit)
@@ -236,6 +243,9 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         key = 'max_depth_tgt_{}'.format(bit)
         results[key] = v
     for k, v in optimiser_parameters.items():
-        results['optimiser_' + k] = v
+        if k == 'guiding_function':
+            results[k] = v
+        else:
+            results['opt_' + k] = v
 
     return results

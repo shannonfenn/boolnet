@@ -1,6 +1,8 @@
-from distutils.core import setup
-from Cython.Distutils import Extension
-from Cython.Distutils import build_ext
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+from Cython.Distutils import Extension, build_ext
 import numpy as np
 import cython_gsl
 
@@ -42,8 +44,8 @@ extensions = [
               ["boolnet/network/algorithms.pyx"],
               language='c++',
               include_dirs=include_dirs),
-    Extension("boolnet.network.boolnetwork",
-              ["boolnet/network/boolnetwork.pyx"],
+    Extension("boolnet.network.boolnet",
+              ["boolnet/network/boolnet.pyx"],
               language='c++',
               include_dirs=include_dirs),
 

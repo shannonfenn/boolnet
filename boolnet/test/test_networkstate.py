@@ -14,7 +14,7 @@ from boolnet.bintools.operator_iterator import (
 from boolnet.bintools.example_generator import (
     OperatorExampleIteratorFactory, PackedExampleGenerator)
 from boolnet.learning.networkstate import (
-    StandardNetworkState, ChainedNetworkState,
+    StandardBNState, ChainedBNState,
     standard_from_operator, chained_from_operator)
 
 
@@ -120,18 +120,18 @@ def standard_harness_to_fixture(test):
 
     # add states to test
     test['state'] = {
-        'sample': StandardNetworkState(gates,
-                                       pack_bool_matrix(inputs_s),
-                                       pack_bool_matrix(target_s),
-                                       Ne_s),
-        'full': StandardNetworkState(gates,
-                                     pack_bool_matrix(inputs),
-                                     pack_bool_matrix(target),
-                                     Ne),
-        'test': StandardNetworkState(gates,
-                                     pack_bool_matrix(inputs_t),
-                                     pack_bool_matrix(target_t),
-                                     Ne_t)
+        'sample': StandardBNState(gates,
+                                  pack_bool_matrix(inputs_s),
+                                  pack_bool_matrix(target_s),
+                                  Ne_s),
+        'full': StandardBNState(gates,
+                                pack_bool_matrix(inputs),
+                                pack_bool_matrix(target),
+                                Ne),
+        'test': StandardBNState(gates,
+                                pack_bool_matrix(inputs_t),
+                                pack_bool_matrix(target_t),
+                                Ne_t)
     }
 
     return test
@@ -171,9 +171,9 @@ def chained_harness_to_fixture(test):
 
     # add states to test
     test['state'] = {
-        'sample': ChainedNetworkState(gates, generator_s, window_size_s),
-        'full': ChainedNetworkState(gates, generator_f, window_size_f),
-        'test': ChainedNetworkState(gates, generator_t, window_size_t),
+        'sample': ChainedBNState(gates, generator_s, window_size_s),
+        'full': ChainedBNState(gates, generator_f, window_size_f),
+        'test': ChainedBNState(gates, generator_t, window_size_t),
     }
 
     return test
@@ -262,12 +262,11 @@ class TestStandard:
         state = instance_dict['state'][sample_type]
         Ne = instance_dict['Ne'][sample_type]
         expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
-        eval_func = lambda mat: unpack_bool_matrix(mat, Ne)
-        return state, expected, eval_func
+        return state, expected, lambda mat: unpack_bool_matrix(mat, Ne)
 
     def output_different_helper(self, instance):
-        state, _, eval_func = self.build_instance(instance, 'full',
-                                                      'error matrix')
+        state, _, eval_func = self.build_instance(
+            instance, 'full', 'error matrix')
         for k in range(10):
             old_error = eval_func(state.error_matrix)
             state.move_to_random_neighbour()
@@ -313,7 +312,7 @@ class TestStandard:
         print(inp.shape)
         print(tgt.shape)
         with raises(ValueError):
-            StandardNetworkState([(0, 1, 3)], inp, tgt, Ne)
+            StandardBNState([(0, 1, 3)], inp, tgt, Ne)
 
     # ################### Functionality Testing ################### #
     def test_input_matrix(self, standard_state, sample_type):
@@ -392,10 +391,8 @@ class TestStandard:
             state.revert_move()
 
     def test_pre_evaluated_network(self, standard_state):
-        state_s, expected_s, eval_func_s = self.build_instance(
+        state_s, expected, eval_func_s = self.build_instance(
             standard_state, 'sample', 'activation matrix')
-        state_f, expected_f, eval_func_f = self.build_instance(
-            standard_state, 'full', 'activation matrix')
 
         for i in range(10):
             state_s.move_to_random_neighbour()
@@ -404,12 +401,15 @@ class TestStandard:
 
         # check sample state is still giving original results
         actual = eval_func_s(state_s.activation_matrix)
-        np.testing.assert_array_equal(expected_s, actual)
+        np.testing.assert_array_equal(expected, actual)
+
+        state_f, expected, eval_func_f = self.build_instance(
+            standard_state, 'full', 'activation matrix')
 
         # check full state is still giving original results
-        state_f.set_representation(state_s.representation())
+        state_f.set_gates(state_s.gates)
         actual = eval_func_f(state_f.activation_matrix)
-        np.testing.assert_array_equal(expected_f, actual)
+        np.testing.assert_array_equal(expected, actual)
 
 
 class TestBoth:
@@ -427,8 +427,7 @@ class TestBoth:
             return chained_from_operator(
                 gates=params['gates'],
                 indices=params['indices'][sample_type],
-                Nb=params['Nb'],
-                No=params['No'],
+                Nb=params['Nb'], No=params['No'],
                 operator=params['operator'],
                 window_size=params['window_size'][sample_type],
                 N=params['N'][sample_type]

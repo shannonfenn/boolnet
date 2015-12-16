@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from good import (Schema, Required, In, All, Any, Range,
+from good import (Schema, In, All, Any, Range,
                   Type, IsDir, message, Optional)
 
 from boolnet.bintools.functions import all_function_names
@@ -132,6 +132,8 @@ config_schema = Schema({
     'logging':                  In(['none', 'warning', 'info', 'debug']),
     'learner':                  learner_schema,
     'sampling':                 sampling_schema,
+    Optional('verbose_errors'):             bool,
+    Optional('verbose_timing'):             bool,
     Optional('record_initial_net'):         bool,
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
