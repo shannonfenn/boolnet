@@ -77,38 +77,28 @@ def seed_rng(value):
     fastrand.seed(seed)
 
 
-def build_initial_network(parameters, training_data):
-    Ni = training_data.Ni
+# def build_initial_network(parameters):
+#     gates = np.asarray(parameters['network']['initial_gates'],
+#                        dtype=np.int32)
+#     if gates.shape[1] != 3 or max(gates[2, :]) > 15 or min(gates[2, :]) < 0:
+#         raise ValueError('Invalid initial gates: {}'.format(gates))
 
-    # Create the initial connection matrix
-    if 'initial_gates' in parameters['network']:
-        gates = np.asarray(parameters['network']['initial_gates'],
-                           dtype=np.int32)
-    else:
-        Ng = parameters['network']['Ng']
-        # generate random feedforward network
-        gates = np.empty(shape=(Ng, 3), dtype=np.int32)
-        for g in range(Ng):
-            gates[g, 0] = np.random.randint(g + Ni)
-            gates[g, 1] = np.random.randint(g + Ni)
 
-        # create the seed network
-        node_funcs = parameters['network']['node_funcs']
-        if isinstance(node_funcs, list):
-            if max(node_funcs) > 15 or min(node_funcs) < 0:
-                raise ValueError('Invalid setting for \'node_funcs\': {}'.
-                                 format(node_funcs))
-            gates[:, 2] = np.random.choice(node_funcs, size=Ng)
-        elif node_funcs == 'random':
-            # generate a random set of transfer functions
-            gates[:, 2] = np.random.randint(16, size=Ng)
-        elif node_funcs == 'NOR':
-            gates[:, 2] = 1
-        elif node_funcs == 'NAND':
-            gates[:, 2] = 7
-        else:
-            raise ValueError('Invalid setting for \'node_funcs\': {}'.
-                             format(node_funcs))
+def build_random_network(Ng, Ni, node_funcs):
+    # generate random feedforward network
+    gates = np.empty(shape=(Ng, 3), dtype=np.int32)
+    for g in range(Ng):
+        gates[g, 0] = np.random.randint(g + Ni)
+        gates[g, 1] = np.random.randint(g + Ni)
+
+    if not isinstance(node_funcs, list):
+        raise ValueError('\'node_funcs\' must be a list, type recieved: {}'.
+                         format(type(node_funcs)))
+    if max(node_funcs) > 15 or min(node_funcs) < 0:
+        raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
+                         format(node_funcs))
+
+    gates[:, 2] = np.random.choice(node_funcs, size=Ng)
 
     return gates
 
