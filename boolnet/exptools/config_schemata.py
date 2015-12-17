@@ -108,7 +108,6 @@ learner_schema_stratified = Schema({
     'network':                      network_schema,
     Optional('inter_file_base'):    str,
     Optional('kfs'):                bool,
-    Optional('one_layer_kfs'):      bool,
     Optional('auto_target'):        bool,
     Optional('keep_files'):         bool,
     Optional('minfs_options'):      minFS_option_schema,
