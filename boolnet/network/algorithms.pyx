@@ -31,7 +31,7 @@ cdef size_t sample_bool(np.uint8_t[:] M, size_t end=0):
                 return i
             r += M[i]
     # occurs only when M.size = 0 or total = 0
-    return -1
+    return M.size
 
 
 #@cython.boundscheck(False)
