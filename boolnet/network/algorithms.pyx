@@ -8,77 +8,51 @@ import cython
 @cython.wraparound(False)
 @cython.nonecheck(False)
 @cython.cdivision(True)
-cdef size_t sample_bool(np.uint8_t[:] M, size_t max_index=0):
+cdef size_t sample_bool(np.uint8_t[:] M, size_t end=0):
     cdef size_t i, r, random_index, total
     total = 0
-    if max_index == 0:
-        max_index = M.size
-    for i in range(max_index):
+    
+    if end == 0:
+        end = M.size
+
+    # count ones
+    for i in range(end):
         total += M[i]
+    
+    # pick random position
     random_index = random_uniform_int(total)
+    
+    # find the '1' that is random_index positions from the start
     r = 0
-    for i in range(max_index):
+    for i in range(end):
+        # only check if this position is '1'
         if M[i]:
             if r == random_index:
                 return i
             r += M[i]
-    return M.size
+    # occurs only when M.size = 0 or total = 0
+    return -1
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.nonecheck(False)
-@cython.cdivision(True)
-cdef size_t sample_masked_bool(np.uint8_t[:] M, np.uint8_t[:] mask, size_t max_index=0):
-    cdef size_t i, r, random_index, total
-    total = 0
-    if max_index == 0:
-        max_index = min(M.size, mask.size)
-    for i in range(max_index):
-        total += M[i] & mask[i]
-    random_index = random_uniform_int(total)
-    r = 0
-    for i in range(max_index):
-        if M[i] & mask[i]:
-            if r == random_index:
-                return i
-            r += M[i] & mask[i]
-    return M.size
-
-
-# @cython.boundscheck(False)
-# @cython.wraparound(False)
-# @cython.nonecheck(False)
-# @cython.cdivision(True)
-# def random_move(np.uint32_t[:, :] gates, np.uint8_t[:] changeable, 
-#                 np.uint8_t[:] sourceable, size_t Ni):
-#     cdef:
-#         size_t g, gate, terminal, shift
-#         size_t cur_source, new_source
-#         np.uint8_t temp 
-
-#     # pick a random gate to move
-#     gate = sample_mask(changeable)
-#     # pick single random input connection to move
-#     terminal = random_uniform_int(2)
-#     # pick new source for connection randomly
-#     # can only come from earlier node to maintain feedforwardness
-#     cur_source = gates[gate][terminal]
-#     g = gate + Ni
-#     if sourceable is None:
-#         # decide how much to shift the input
-#         # (gate can only connect to previous gate or input)
-#         shift = random_uniform_int(gate + Ni - 1) + 1
-#         # Get shifted connection
-#         new_source = (cur_source + shift) % (gate + Ni)
-#     else:
-#          # so that can undo the modification which will reflect through the view
-#         temp = sourceable[cur_source]
-#         sourceable[cur_source] = 0
-#         new_source = sample_mask(sourceable, gate + Ni)
-#         sourceable[cur_source] = temp
-
-#     return (gate, terminal, new_source)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
+#@cython.nonecheck(False)
+#@cython.cdivision(True)
+#cdef size_t sample_masked_bool(np.uint8_t[:] M, np.uint8_t[:] mask, size_t end=0):
+#    cdef size_t i, r, random_index, total
+#    total = 0
+#    if end == 0:
+#        end = min(M.size, mask.size)
+#    for i in range(end):
+#        total += M[i] & mask[i]
+#    random_index = random_uniform_int(total)
+#    r = 0
+#    for i in range(end):
+#        if M[i] & mask[i]:
+#            if r == random_index:
+#                return i
+#            r += M[i] & mask[i]
+#    return M.size
 
 
 @cython.boundscheck(False)
@@ -109,13 +83,3 @@ cpdef connected_sources(np.uint32_t[:, :] gates, np.uint8_t[:] connected,
         if connected[g + Ni]:
             connected[gates[g, 0]] = 1
             connected[gates[g, 1]] = 1
-
-    # find and return non-zero indices
-
-# def percolate_connected_gates(self):
-#     ''' This detects which gates are disconnected from the
-#         output and moves them to the end, returning the index
-#         marking where these gates begin. '''
-#     connected = self.connected_gates()
-
-# def inputTree(self, )
