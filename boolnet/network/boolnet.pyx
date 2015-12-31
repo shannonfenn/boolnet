@@ -11,8 +11,6 @@ cdef class BoolNet:
     def __init__(self, gates, size_t Ni, size_t No):
         # copy gate array
         self.gates = np.array(gates, dtype=np.uint32, copy=True)
-        if self.gates.size == 0:
-            raise ValueError('Empty initial gates list')
 
         # Store size values
         self.Ng = self.gates.shape[0]
@@ -32,8 +30,8 @@ cdef class BoolNet:
         return bn
 
     def __str__(self):
-        return ('Ni: {} Ng: {} max node depths: {}\ngates:\n{}\n').format(
-            self.Ni, self.Ng, self.max_node_depths(), np.asarray(self.gates))
+        return ('Ni: {} Ng: {} gates:\n{}\n').format(
+            self.Ni, self.Ng, np.asarray(self.gates))
 
     cpdef max_node_depths(self):
         # default to stored value of No
@@ -139,12 +137,12 @@ cdef class BoolNet:
         return self.inverse_moves.empty()
 
     cdef _check_network_invariants(self):
-        if self.Ng == 0:
-            raise ValueError('Empty initial gates list')
+        #if self.Ng == 0:
+        #    raise ValueError('Empty initial gates list')
         if self.Ni <= 0:
             raise ValueError('Invalid Ni ({})'.format(self.Ni))
-        if self.No <= 0:
-            raise ValueError('Invalid No ({})'.format(self.No))
+        #if self.No <= 0:
+        #    raise ValueError('Invalid No ({})'.format(self.No))
         if self.No > self.Ng:
             raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
         if self.gates.ndim != 2:
@@ -152,6 +150,6 @@ cdef class BoolNet:
         if self.gates.shape[0] != self.Ng and self.gates.shape[1] != 3:
             raise ValueError('Wrong shape ({}, {}) for gate matrix, Ng={}.'.
                 format(self.gates.shape[0], self.gates.shape[1], self.Ng))
-        if max(self.gates[:, 2]) > 15:
+        if self.Ng > 0 and max(self.gates[:, 2]) > 15:
             raise ValueError('Invalid transfer functions: {}'.format(
                 max(self.gates[:, 2])))
