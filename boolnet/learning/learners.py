@@ -4,6 +4,7 @@ import logging
 import numpy as np
 from boolnet.bintools.functions import PER_OUTPUT, function_from_name
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
+from boolnet.learning.networkstate import StandardNetworkState
 import boolnet.learning.kfs as mfs
 
 
@@ -12,11 +13,11 @@ LearnerResult = namedtuple('LearnerResult', [
     'target_order', 'feature_sets', 'restarts'])
 
 
-def per_target_error_stop_criterion(bit):
+def per_tgt_err_stop_criterion(bit):
     return lambda ev, _: ev.function_value(PER_OUTPUT)[bit] <= 0
 
 
-def guiding_function_stop_criterion():
+def guiding_func_stop_criterion():
     return lambda _, error: error <= 0
 
 
@@ -72,7 +73,7 @@ class BasicLearner:
 
     def run(self, state, parameters, optimiser):
         self._setup(parameters, state, optimiser)
-        self.opt_params['stopping_criterion'] = guiding_function_stop_criterion()
+        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion()
         opt_result = self._optimise(state)
         return LearnerResult(best_states=[opt_result.state],
                              best_errors=[opt_result.error],
@@ -92,7 +93,7 @@ class StratifiedLearner(BasicLearner):
         self.remaining_budget = parameters['network']['Ng']
         # Optional
         self.auto_target = parameters.get('auto_target', False)
-        self.use_kfs_masking = parameters.get('kfs', False)
+        self.use_mfs_selection = parameters.get('kfs', False)
         self.fabcpp_opts = parameters.get('fabcpp_options', False)
         self.keep_files = parameters.get('keep_files', False)
         # Instance
@@ -114,17 +115,18 @@ class StratifiedLearner(BasicLearner):
                              .format(function_name))
 
     def _determine_next_target(self, strata, inputs):
+        all_targets = set(range(self.num_targets))
+        not_learned = list(all_targets.difference(self.learned_targets))
         if self.auto_target:
-            all_targets = set(range(self.num_targets))
-            not_learned = list(all_targets.difference(self.learned_targets))
+            # find minFS for all unlearned targets
             self._record_feature_sets(inputs, not_learned)
             feature_sets_sizes = [len(l) for l in
                                   self.feature_sets[strata][not_learned]]
             indirect_simplest_target = np.argmin(feature_sets_sizes)
             return not_learned[indirect_simplest_target]
-        elif self.use_kfs_masking:
+        elif self.use_mfs_selection:
             target = min(not_learned)
-            # find a set of min feature sets for the next target
+            # find minFS for just the next target
             self._record_feature_sets(inputs, [target])
             return target
         else:
@@ -189,7 +191,7 @@ class StratifiedLearner(BasicLearner):
         size = self.remaining_budget // (self.No - strata)
         self.remaining_budget -= size
 
-        if self.use_kfs_masking:
+        if self.use_mfs_selection:
             fs = self.feature_sets[strata, target_index]
             # check for 1-FS, if we have a 1FS we have already learnt the
             # target, or its inverse, so simply map this feature to the output
@@ -209,18 +211,40 @@ class StratifiedLearner(BasicLearner):
 
         return StandardNetworkState(gates, inputs, target_index, self.Ne)
 
-    def insert_network(self, old, new):
-        if self.use_kfs_masking:
-            pass
+    def insert_network(self, base, new):
+
+        # simple: build up a map for all sources, for sources after the original
+        # minfs input
+        # just have them as + Ni_offset (whatever that is, might including old.Ng)
+        # and for the former ones use the fs mapping
+
+        sources_map = [-1] * (new.Ng + new.Ni)
+
+        if self.use_mfs_selection:
             # ####### XXXXXXXXXXXXXXXXXXX ####### #
-            # harder: have to use the fs indices to reconnect the gates
-            # plus those that are interconnected will have the wrong
-            # offset, something like adding (expected_Ni - fs_size)
-            # will be needed.
+            # harder: have to use the fs indices to reconnect the gates plus
+            # those that are interconnected will have the wrong offset,
+            # something like adding (expected_Ni - fs_size) will be needed.
+            pass
         else:
-            pass
             # ####### XXXXXXXXXXXXXXXXXXX ####### #
-            # easy: just add the gates in and move the output
+            new_gates = np.vstack((base.gates[:-base.No, :],
+                                   new.gates[:-new.No, :],
+                                   base.gates[-base.No:, :],
+                                   new.gates[-new.No:, :]))
+            new_target = np.vstack((base.target_matrix, new.target_matrix))
+            return StandardNetworkState(new_gates, self.input_matrix,
+                                        new_target)
+
+    def reorder_network(self, state):
+        # all non-output gates are left alone, and the output gates are
+        # reordered by the inverse permutation of "learned_targets"
+        new_gate_order = np.concatenate((
+            np.arange(state.Ng - state.No),
+            np.argsort(self.learned_targets).tolist()))
+        new_gates = state.gates[new_gate_order]
+        return StandardNetworkState(new_gates, self.input_matrix,
+                                    self.target_matrix)
 
     def run(self, state, parameters, optimiser):
 
@@ -240,36 +264,49 @@ class StratifiedLearner(BasicLearner):
         final_iterations = [-1] * No
         restarts = [None] * No
 
+        inputs = np.array(self.input_matrix)
+
+        # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
+        accumulated_network = StandardNetworkState(
+            np.empty((0, 3)), inputs, np.empty((0, inputs.shape[1])), self.Ne)
+
         for i in range(No):
             # determine target
             target_index = self._determine_next_target(state)
 
-            if i == 0:
-                inputs = np.array(self.input_matrix)
+            state, needs_optimisation = self.construct_partial_state(
+                i, target_index, inputs)
+
+            if needs_optimisation:
+                # generate an end condition based on the current target
+                criterion = guiding_func_stop_criterion(target_index)
+                self.opt_params['stopping_criterion'] = criterion
+
+                # optimise
+                opt_result = self._optimise(state)
+
+                # record result
+                best_states[i] = opt_result.state
+                best_errors[i] = opt_result.error
+                best_iterations[i] = opt_result.best_iteration
+                final_iterations[i] = opt_result.iteration
+                restarts[i] = opt_result.restarts
             else:
-                inputs = np.array(best_states[i-1].activation_matrix)
+                best_states[i] = copy(state)
 
-            state = self.construct_partial_state(i, target_index, inputs)
+            # build up final network by inserting this partial result
+            accumulated_network = self.insert_network(accumulated_network,
+                                                      opt_result.state)
 
-            # generate an end condition based on the current target
-            criterion = guiding_function_stop_criterion(target_index)
-            self.opt_params['stopping_criterion'] = criterion
-
-            # optimise
-            opt_result = self._optimise(state)
-
-            # reconnect in network
-
-            # ####### XXXXXXXXXXXXXXXXXXX ####### #
-
-            # record result
-            best_states[i] = opt_result.state
-            best_errors[i] = opt_result.error
-            best_iterations[i] = opt_result.best_iteration
-            final_iterations[i] = opt_result.iteration
-            restarts[i] = opt_result.restarts
+            # don't include output gates as possible inputs
+            # new Ni = Ng - No + Ni
+            inputs = np.array(accumulated_network.activation_matrix[:-i, :])
 
             self.learned_targets.append(target_index)
+
+        # reorder the outputs to match the supplied target order
+        # NOTE: This is why output gates are not included as possible inputs
+        best_states[-1] = self.reorder_network(best_states[-1])
 
         return LearnerResult(best_states=best_states,
                              best_errors=best_errors,
@@ -278,4 +315,3 @@ class StratifiedLearner(BasicLearner):
                              target_order=self.learned_targets,
                              feature_sets=self.feature_sets,
                              restarts=restarts)
-
