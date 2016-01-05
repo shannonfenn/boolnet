@@ -147,7 +147,7 @@ cdef class BoolNet:
             raise ValueError('No > Ng ({}, {})'.format(self.No, self.Ng))
         if self.gates.ndim != 2:
             raise ValueError('gates must be 2D')
-        if self.gates.shape[0] != self.Ng and self.gates.shape[1] != 3:
+        if self.gates.shape[0] != self.Ng or self.gates.shape[1] != 3:
             raise ValueError('Wrong shape ({}, {}) for gate matrix, Ng={}.'.
                 format(self.gates.shape[0], self.gates.shape[1], self.Ng))
         if self.Ng > 0 and max(self.gates[:, 2]) > 15:
