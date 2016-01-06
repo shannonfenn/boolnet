@@ -45,3 +45,10 @@ class OperatorBoolMapping:
             self.packed_repr = packed_from_operator(
                 self.indices, self.Nb, self.No, self.operator, self.N)
         return self.packed_repr[1]
+
+    @property
+    def Ne(self):
+        if self.packed_repr is None:
+            self.packed_repr = packed_from_operator(
+                self.indices, self.Nb, self.No, self.operator, self.N)
+        return self.packed_repr[2]
