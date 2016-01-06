@@ -26,24 +26,10 @@ from boolnet.bintools.example_generator cimport PackedExampleGenerator, Operator
 #                                       mapping.operator, mapping.N)
 
 
-cpdef standard_from_operator(gates, indices, Nb, No, operator, N=0):
-    cdef packed_type_t[:, :] inp, tgt
-    ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
-    packed_factory = PackedExampleGenerator(ex_factory, No)
-
-    Ni = packed_factory.Ni
-    Ne = packed_factory.Ne
-
-    chunks = Ne // PACKED_SIZE
-    if packed_factory.Ne % PACKED_SIZE > 0:
-        chunks += 1
-
-    inp = np.empty((Ni, chunks), dtype=packed_type)
-    tgt = np.empty((No, chunks), dtype=packed_type)
-
-    packed_factory.reset()
-    packed_factory.next_examples(inp, tgt)
-    return StandardBNState(gates, inp, tgt, Ne)
+#cpdef standard_from_operator(gates, indices, Nb, No, operator, N=0):
+#    cdef packed_type_t[:, :] inp, tgt
+#    inp, tgt = packed_from_operator(indices, Nb, No, operator, N)
+#    return StandardBNState(gates, inp, tgt, Ne)
 
 
 cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, N=0):
