@@ -43,15 +43,6 @@ def check_data(training_mapping, test_mapping):
             training_mapping.No, test_mapping.No))
 
 
-def build_training_state(gates, mapping):
-    if isinstance(mapping, FileBoolMapping):
-        return StandardNetworkState(gates, mapping.inputs,
-                                    mapping.target, mapping.Ne)
-    elif isinstance(mapping, OperatorBoolMapping):
-        return standard_from_operator(gates, mapping.indices, mapping.Nb,
-                                      mapping.No, mapping.operator, mapping.N)
-
-
 def build_test_state(gates, mapping, guiding_funcs):
     if isinstance(mapping, FileBoolMapping):
         evaluator = StandardNetworkState(gates, mapping.inputs,
@@ -91,9 +82,6 @@ def build_random_network(Ng, Ni, node_funcs):
         gates[g, 0] = np.random.randint(g + Ni)
         gates[g, 1] = np.random.randint(g + Ni)
 
-    if not isinstance(node_funcs, list):
-        raise ValueError('\'node_funcs\' must be a list, type recieved: {}'.
-                         format(type(node_funcs)))
     if max(node_funcs) > 15 or min(node_funcs) < 0:
         raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                          format(node_funcs))
@@ -123,10 +111,18 @@ def learn_bool_net(parameters):
     test_data = parameters['test_mapping']
     check_data(training_data, test_data)
 
-    gates = build_initial_network(parameters, training_data)
+    learner_parameters['gate_generator'] = build_random_network
+    learner_parameters['mapping'] = training_data
 
-    # make evaluators for the training and test sets
-    training_state = build_training_state(gates, training_data)
+    # TODO: if mapping is OperatorBoolMapping - need to build a standard mapping
+    # needs to provide: Ne, packed_input and packed_targets members
+# def build_training_state(gates, mapping):
+#     if isinstance(mapping, FileBoolMapping):
+#         return StandardNetworkState(gates, mapping.inputs,
+#                                     mapping.target, mapping.Ne)
+#     elif isinstance(mapping, OperatorBoolMapping):
+#         return standard_from_operator(gates, mapping.indices, mapping.Nb,
+#                                       mapping.No, mapping.operator, mapping.N)
 
     learner = LEARNERS[learner_parameters['name']]
     optimiser = OPTIMISERS[optimiser_parameters['name']]
