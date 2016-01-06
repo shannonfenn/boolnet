@@ -5,6 +5,27 @@ from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
 from boolnet.bintools.packing import packed_type
 from boolnet.bintools.operator_iterator cimport *
 
+
+cpdef packed_from_operator(indices, Nb, No, operator, N=0):
+    cdef packed_type_t[:, :] inp, tgt
+    ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
+    packed_factory = PackedExampleGenerator(ex_factory, No)
+
+    Ni = packed_factory.Ni
+    Ne = packed_factory.Ne
+
+    chunks = Ne // PACKED_SIZE
+    if Ne % PACKED_SIZE > 0:
+        chunks += 1
+
+    inp = np.empty((Ni, chunks), dtype=packed_type)
+    tgt = np.empty((No, chunks), dtype=packed_type)
+
+    packed_factory.reset()
+    packed_factory.next_examples(inp, tgt)
+    return inp, tgt
+
+
 cdef class PackedExampleGenerator:
     ''' presently feature sizes greater than 64 are not handled.'''
     # Ni_p = Ni // 64 if Ni % 64 == 0 else Ni // 64 + 1

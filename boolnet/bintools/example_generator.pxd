@@ -4,6 +4,9 @@ from boolnet.bintools.packing cimport packed_type_t
 from boolnet.bintools.operator_iterator cimport Operator
 
 
+cpdef packed_from_operator(indices, Nb, No, operator, N=0)
+
+
 cdef class PackedExampleGenerator:
     ''' presently feature sizes greater than 64 are not handled.'''
     cdef:
