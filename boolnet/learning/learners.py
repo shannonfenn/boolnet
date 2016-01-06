@@ -91,6 +91,8 @@ class StratifiedLearner(BasicLearner):
         # Required
         self.mfs_fname = parameters['inter_file_base']
         self.remaining_budget = parameters['network']['Ng']
+        self.node_funcs = parameters['network']['node_funcs']
+        self.gate_generator = parameters['gate_generator']
         # Optional
         self.auto_target = parameters.get('auto_target', False)
         self.use_mfs_selection = parameters.get('kfs', False)
@@ -136,10 +138,10 @@ class StratifiedLearner(BasicLearner):
         # keep a log of the feature sets found at each iteration
         strata = len(self.learned_targets)
         for t in targets:
-            fs = self._get_single_fs(inputs, t)
+            fs = self._get_fs(inputs, t)
             self.feature_sets[strata, t] = fs
 
-    def _get_single_fs(self, inputs, target_index, strata):
+    def _get_fs(self, inputs, target_index, strata):
         # input to minFS solver
         mfs_matrix = unpack_bool_matrix(inputs, self.Ne)
         # target feature
@@ -160,81 +162,69 @@ class StratifiedLearner(BasicLearner):
                 self.fabcpp_opts, self.keep_files)
             return minfs
 
-    def _handle_single_FS(self, feature, state, target):
-        # When we have a 1FS we have already learned the target,
-        # ot its inverse, simply map this feature to the output
-        strata = len(self.learned_targets)
-        useable_gate = self.gate_boundaries[strata]
-
-        activation_matrix = state.activation_matrix
-        tgt_gate = state.Ng - state.No + target
-        if activation_matrix[feature][0] == self.target_matrix[target][0]:
-            # we have the target perfectly, in this case place a double
-            # inverter chain (if it was a gate we could just take the inputs
-            # but in the event the feature is an input this is not possible)
-            useable_src = useable_gate + state.Ni
-            moves = [
-                {'gate': useable_gate, 'terminal': 0, 'new_source': feature},
-                {'gate': useable_gate, 'terminal': 1, 'new_source': feature},
-                {'gate': tgt_gate, 'terminal': 0, 'new_source': useable_src},
-                {'gate': tgt_gate, 'terminal': 1, 'new_source': useable_src}]
-        else:
-            # we have the target's inverse, since a NAND gate can act as an
-            # inverter we can connect the output gate directly to the feature
-            moves = [{'gate': tgt_gate, 'terminal': 0, 'new_source': feature},
-                     {'gate': tgt_gate, 'terminal': 1, 'new_source': feature}]
-        for move in moves:
-            state.apply_move(move)
-
     def construct_partial_state(self, strata, target_index, inputs):
         # determine next budget
         size = self.remaining_budget // (self.No - strata)
-        self.remaining_budget -= size
+        target = self.target_matrix[target_index]
 
         if self.use_mfs_selection:
+            # subsample the inputs for below
             fs = self.feature_sets[strata, target_index]
+            inputs = inputs[fs]
             # check for 1-FS, if we have a 1FS we have already learnt the
             # target, or its inverse, so simply map this feature to the output
-            if fs.size == 1:
+            # NOTE: does not working with generic node function list since it
+            #       relies on the presence of the NAND gate
+            # if fs.size == 1:
+            #     # have the below function build a network with 1 or 2
+            #     # gates and return it
+            #     gates = self.handle_single_FS(inputs[0], target)
+            #     self.remaining_budget -= gates.shape[0]
+            #     return StandardNetworkState(gates, inputs, target, self.Ne)
 
-                # ####### XXXXXXXXXXXXXXXXXXX ####### #
+        gates = self.gate_generator(size, inputs.shape[0], self.node_funcs)
+        self.remaining_budget -= size
+        return StandardNetworkState(gates, inputs, target, self.Ne)
 
-                # have the below function build a network with 1 or 2
-                # gates and return it
-                self._handle_single_FS(fs[0], inputs, target_index)
-                return False
-
-            # ####### XXXXXXXXXXXXXXXXXXX ####### #
-            # subsample the inputs for below
-        else:
-            gates = generate_gates(size, inputs.shape[0])
-
-        return StandardNetworkState(gates, inputs, target_index, self.Ne)
-
-    def insert_network(self, base, new):
-
-        # simple: build up a map for all sources, for sources after the original
-        # minfs input
-        # just have them as + Ni_offset (whatever that is, might including old.Ng)
-        # and for the former ones use the fs mapping
-
-        sources_map = [-1] * (new.Ng + new.Ni)
+    def insert_network(self, base, new, strata, target_index):
+        # simple: build up a map for all sources, for sources after the
+        # original minfs input just have them as + Ni_offset (whatever that is,
+        # might including old.Ng) and for the former ones use the fs mapping
 
         if self.use_mfs_selection:
-            # ####### XXXXXXXXXXXXXXXXXXX ####### #
-            # harder: have to use the fs indices to reconnect the gates plus
-            # those that are interconnected will have the wrong offset,
-            # something like adding (expected_Ni - fs_size) will be needed.
-            pass
+            # build a map for replacing sources
+            new_input_map = self.feature_sets[strata][target_index]
+            offset = base.Ni + base.Ng - base.No - new.Ni
+            new_gate_map = list(range(offset,
+                                      offset + new.Ng - new.No))
+            new_output_map = list(range(offset + new.Ng + base.No - new.No,
+                                        offset + new.Ng + base.No))
+            sources_map = new_input_map + new_gate_map + new_output_map
+
+            # vectorised function for applying the map
+            def mapper(entry):
+                return sources_map[entry]
+            mapper = np.vectorize(mapper)
+
+            # apply to all but the last column (it is for the transfer
+            # functions) and the last No rows (since they ) of the gate matrix
+            remapped_new_gates = np.hstack(mapper(new.gates[:-new.No, :-1]),
+                                           new.gates[:, -1])
+
+            accumulated_gates = np.vstack((base.gates[:-base.No, :],
+                                           remapped_new_gates[:-new.No, :],
+                                           base.gates[-base.No:, :],
+                                           remapped_new_gates[-new.No:, :]))
         else:
-            # ####### XXXXXXXXXXXXXXXXXXX ####### #
-            new_gates = np.vstack((base.gates[:-base.No, :],
-                                   new.gates[:-new.No, :],
-                                   base.gates[-base.No:, :],
-                                   new.gates[-new.No:, :]))
-            new_target = np.vstack((base.target_matrix, new.target_matrix))
-            return StandardNetworkState(new_gates, self.input_matrix,
-                                        new_target)
+            # The gates can be tacked on since new.Ni = base.Ni + base.Ng
+            accumulated_gates = np.vstack((base.gates[:-base.No, :],
+                                           new.gates[:-new.No, :],
+                                           base.gates[-base.No:, :],
+                                           new.gates[-new.No:, :]))
+
+        new_target = np.vstack((base.target_matrix, new.target_matrix))
+        return StandardNetworkState(accumulated_gates, self.input_matrix,
+                                    new_target)
 
     def reorder_network(self, state):
         # all non-output gates are left alone, and the output gates are
@@ -248,21 +238,17 @@ class StratifiedLearner(BasicLearner):
 
     def run(self, state, parameters, optimiser):
 
-        # setup result network
-
-        # loop
+        # setup accumulated network
+        # loop:
         #   make partial network
         #   optimise it
-        #   hook into result network
+        #   hook into accumulated network
+        # reorganise outputs
 
         self._setup(parameters, optimiser)
         No = state.No
 
-        best_states = [None] * No
-        best_errors = [-1] * No
-        best_iterations = [-1] * No
-        final_iterations = [-1] * No
-        restarts = [None] * No
+        opt_results = []
 
         inputs = np.array(self.input_matrix)
 
@@ -274,29 +260,20 @@ class StratifiedLearner(BasicLearner):
             # determine target
             target_index = self._determine_next_target(state)
 
-            state, needs_optimisation = self.construct_partial_state(
-                i, target_index, inputs)
+            state = self.construct_partial_state(i, target_index, inputs)
 
-            if needs_optimisation:
-                # generate an end condition based on the current target
-                criterion = guiding_func_stop_criterion(target_index)
-                self.opt_params['stopping_criterion'] = criterion
+            # generate an end condition based on the current target
+            criterion = guiding_func_stop_criterion(target_index)
+            self.opt_params['stopping_criterion'] = criterion
 
-                # optimise
-                opt_result = self._optimise(state)
-
-                # record result
-                best_states[i] = opt_result.state
-                best_errors[i] = opt_result.error
-                best_iterations[i] = opt_result.best_iteration
-                final_iterations[i] = opt_result.iteration
-                restarts[i] = opt_result.restarts
-            else:
-                best_states[i] = copy(state)
+            # optimise
+            partial_result = self._optimise(state)
+            # record result
+            opt_results.append(partial_result)
 
             # build up final network by inserting this partial result
-            accumulated_network = self.insert_network(accumulated_network,
-                                                      opt_result.state)
+            accumulated_network = self.insert_network(
+                accumulated_network, partial_result.state, i, target_index)
 
             # don't include output gates as possible inputs
             # new Ni = Ng - No + Ni
@@ -306,12 +283,30 @@ class StratifiedLearner(BasicLearner):
 
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs
-        best_states[-1] = self.reorder_network(best_states[-1])
+        opt_results[-1].state = self.reorder_network(opt_results[-1].state)
 
-        return LearnerResult(best_states=best_states,
-                             best_errors=best_errors,
-                             best_iterations=best_iterations,
-                             final_iterations=final_iterations,
-                             target_order=self.learned_targets,
-                             feature_sets=self.feature_sets,
-                             restarts=restarts)
+        return LearnerResult(
+            best_states=[r.state for r in opt_results],
+            best_errors=[r.error for r in opt_results],
+            best_iterations=[r.best_iteration for r in opt_results],
+            final_iterations=[r.iteration for r in opt_results],
+            target_order=self.learned_targets,
+            feature_sets=self.feature_sets,
+            restarts=[r.restarts for r in opt_results])
+
+    # def handle_single_FS(self, feature, target):
+    #     # When we have a 1FS we have already learned the target,
+    #     # ot its inverse, simply map this feature to the output
+    #     match = np.logical_and(feature, target)
+    #     if np.all(match):
+    #         # we have the target perfectly, in this case place a double
+    #         # inverter chain (since the output must be a NAND which negates)
+    #         return np.array([[0, 0, 7], [1, 1, 7]])
+    #     elif not np.any(match):
+    #         # we have the target's inverse, since a NAND gate can act as an
+    #         # inverter we can connect the output gate directly to the feature
+    #         return np.array([[0, 0, 7]])
+    #     else:
+    #         raise ValueError('1FS handling triggered with invalid feature:\n'
+    #                          'feature:\n{}\ntarget:\n{}'
+    #                          .format(feature, target))
