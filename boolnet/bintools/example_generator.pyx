@@ -23,7 +23,7 @@ cpdef packed_from_operator(indices, Nb, No, operator, N=0):
 
     packed_factory.reset()
     packed_factory.next_examples(inp, tgt)
-    return inp, tgt
+    return inp, tgt, Ne
 
 
 cdef class PackedExampleGenerator:
