@@ -133,7 +133,6 @@ config_schema = Schema({
     'sampling':                 sampling_schema,
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
-    Optional('record_initial_net'):         bool,
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
     Optional('record_training_indices'):    bool,
