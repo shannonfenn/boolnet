@@ -43,7 +43,7 @@ def check_data(training_mapping, test_mapping):
             training_mapping.No, test_mapping.No))
 
 
-def build_test_state(gates, mapping, guiding_funcs):
+def build_state(gates, mapping, guiding_funcs):
     if isinstance(mapping, FileBoolMapping):
         evaluator = StandardNetworkState(gates, mapping.inputs,
                                          mapping.target, mapping.Ne)
@@ -68,14 +68,7 @@ def seed_rng(value):
     fastrand.seed(seed)
 
 
-# def build_initial_network(parameters):
-#     gates = np.asarray(parameters['network']['initial_gates'],
-#                        dtype=np.int32)
-#     if gates.shape[1] != 3 or max(gates[2, :]) > 15 or min(gates[2, :]) < 0:
-#         raise ValueError('Invalid initial gates: {}'.format(gates))
-
-
-def build_random_network(Ng, Ni, node_funcs):
+def random_network(Ng, Ni, node_funcs):
     # generate random feedforward network
     gates = np.empty(shape=(Ng, 3), dtype=np.int32)
     for g in range(Ng):
@@ -105,18 +98,8 @@ def learn_bool_net(parameters):
     test_data = parameters['test_mapping']
     check_data(training_data, test_data)
 
-    learner_parameters['gate_generator'] = build_random_network
+    learner_parameters['gate_generator'] = random_network
     learner_parameters['mapping'] = training_data
-
-    # TODO: if mapping is OperatorBoolMapping - need to build a standard mapping
-    # needs to provide: Ne, packed_input and packed_targets members
-# def build_training_state(gates, mapping):
-#     if isinstance(mapping, FileBoolMapping):
-#         return StandardNetworkState(gates, mapping.inputs,
-#                                     mapping.target, mapping.Ne)
-#     elif isinstance(mapping, OperatorBoolMapping):
-#         return standard_from_operator(gates, mapping.indices, mapping.Nb,
-#                                       mapping.No, mapping.operator, mapping.N)
 
     learner = LEARNERS[learner_parameters['name']]
     optimiser = OPTIMISERS[optimiser_parameters['name']]
@@ -124,8 +107,7 @@ def learn_bool_net(parameters):
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner.run(training_state, learner_parameters,
-                                 optimiser)
+    learner_result = learner.run(learner_parameters, optimiser)
 
     learning_end_time = time.monotonic()
 
@@ -153,10 +135,9 @@ def build_result_map(parameters, learner_result, training_data, test_data):
 
     final_network = learner_result.best_states[-1]
 
-    trg_state = build_training_state(final_network.gates, training_data)
-
     funcs = [guiding_function, E1, ACCURACY, PER_OUTPUT]
-    test_state = build_test_state(final_network.gates, test_data, funcs)
+    train_state = build_state(final_network.gates, training_data)
+    test_state = build_state(final_network.gates, test_data, funcs)
 
     results = {
         'Ni':           final_network.Ni,
@@ -168,16 +149,16 @@ def build_result_map(parameters, learner_result, training_data, test_data):
         'tfs':          parameters['network']['node_funcs'],
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
-        'trg_error':    trg_state.function_value(E1),
-        'trg_acc':      trg_state.function_value(ACCURACY),
+        'trg_error':    train_state.function_value(E1),
+        'trg_acc':      train_state.function_value(ACCURACY),
         'test_error':   test_state.function_value(E1),
         'test_acc':     test_state.function_value(ACCURACY),
-        'Ne':           trg_state.Ne
+        'Ne':           train_state.Ne
         }
 
     if parameters.get('verbose_errors'):
-        results['trg_err_gf'] = trg_state.function_value(guiding_function)
-        results['trg_err_per'] = trg_state.function_value(PER_OUTPUT)
+        results['trg_err_gf'] = train_state.function_value(guiding_function)
+        results['trg_err_per'] = train_state.function_value(PER_OUTPUT)
         results['test_err_gf'] = test_state.function_value(guiding_function)
         results['test_err_per'] = test_state.function_value(PER_OUTPUT)
 
@@ -210,7 +191,7 @@ def build_result_map(parameters, learner_result, training_data, test_data):
     if learner_result.restarts is not None:
         results['restarts'] = learner_result.restarts
 
-    for bit, v in enumerate(trg_state.function_value(PER_OUTPUT)):
+    for bit, v in enumerate(train_state.function_value(PER_OUTPUT)):
         key = 'trg_err_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(test_state.function_value(PER_OUTPUT)):
