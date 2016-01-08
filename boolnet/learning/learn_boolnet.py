@@ -134,9 +134,6 @@ def learn_bool_net(parameters):
 
     end_time = time.monotonic()
 
-    if parameters.get('record_initial_net', False):
-        results['initial_network'] = gates
-
     # add timing results
     if parameters.get('verbose_timing'):
         results['setup_time'] = setup_end_time - start_time
