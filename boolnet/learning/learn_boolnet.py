@@ -81,13 +81,7 @@ def build_random_network(Ng, Ni, node_funcs):
     for g in range(Ng):
         gates[g, 0] = np.random.randint(g + Ni)
         gates[g, 1] = np.random.randint(g + Ni)
-
-    if max(node_funcs) > 15 or min(node_funcs) < 0:
-        raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
-                         format(node_funcs))
-
     gates[:, 2] = np.random.choice(node_funcs, size=Ng)
-
     return gates
 
 

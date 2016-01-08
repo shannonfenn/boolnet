@@ -115,6 +115,9 @@ class StratifiedLearner(BasicLearner):
         if function_name in problem_funcs:
             raise ValueError('Invalid guiding function: {}.'
                              .format(function_name))
+        if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
+            raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
+                             format(self.node_funcs))
 
     def _determine_next_target(self, strata, inputs):
         all_targets = set(range(self.num_targets))
