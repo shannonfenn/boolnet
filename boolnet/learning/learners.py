@@ -103,6 +103,7 @@ class StratifiedLearner(BasicLearner):
         self.Ne = mapping.Ne()
         self.input_matrix = mapping.packed_input()
         self.target_matrix = mapping.packed_targets()
+        self.No, _ = self.target_matrix.shape
 
         self.num_targets = self.target_matrix.shape[0]
         self.learned_targets = []
@@ -239,8 +240,7 @@ class StratifiedLearner(BasicLearner):
         return StandardNetworkState(new_gates, self.input_matrix,
                                     self.target_matrix)
 
-    def run(self, state, parameters, optimiser):
-
+    def run(self, parameters, optimiser):
         # setup accumulated network
         # loop:
         #   make partial network
@@ -249,7 +249,6 @@ class StratifiedLearner(BasicLearner):
         # reorganise outputs
 
         self._setup(parameters, optimiser)
-        No = state.No
 
         opt_results = []
 
@@ -259,18 +258,19 @@ class StratifiedLearner(BasicLearner):
         accumulated_network = StandardNetworkState(
             np.empty((0, 3)), inputs, np.empty((0, inputs.shape[1])), self.Ne)
 
-        for i in range(No):
+        for i in range(self.No):
             # determine target
-            target_index = self._determine_next_target(state)
+            target_index = self._determine_next_target(i, inputs)
 
-            state = self.construct_partial_state(i, target_index, inputs)
+            partial_state = self.construct_partial_state(
+                i, target_index, inputs)
 
             # generate an end condition based on the current target
             criterion = guiding_func_stop_criterion(target_index)
             self.opt_params['stopping_criterion'] = criterion
 
             # optimise
-            partial_result = self._optimise(state)
+            partial_result = self._optimise(partial_state)
             # record result
             opt_results.append(partial_result)
 
@@ -289,7 +289,7 @@ class StratifiedLearner(BasicLearner):
         opt_results[-1].state = self.reorder_network(opt_results[-1].state)
 
         return LearnerResult(
-            best_states=[r.state for r in opt_results],
+            best_states=[r.state.gates for r in opt_results],
             best_errors=[r.error for r in opt_results],
             best_iterations=[r.best_iteration for r in opt_results],
             final_iterations=[r.iteration for r in opt_results],
