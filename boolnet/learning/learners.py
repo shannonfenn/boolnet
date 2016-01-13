@@ -21,60 +21,42 @@ def guiding_func_stop_criterion():
     return lambda _, error: error <= 0
 
 
-def build_mask(state, lower_bound, upper_bound, target, feature_set=None):
-    # IDEA: May later use entropy or something similar. For now
-    #       this uses the union of all minimal feature sets the
-    #       connection encoded (+Ni) values for the changeable
-    #       gates - or else we could only have single layer
-    #       networks at each stage!
-    Ni = state.Ni
-    Ng = state.Ng
-    No = state.No
-    # give list of gates which can have their inputs reconnected
-    changeable = np.zeros(Ng, dtype=np.uint8)
-    sourceable = np.zeros(Ng+Ni, dtype=np.uint8)
-
-    changeable[lower_bound:upper_bound] = 1
-    changeable[Ng - No + target] = 1
-
-    # and a list of inputs (inc gates) which they can source from
-    if feature_set is None:
-        # all modifiable and previous connections
-        sourceable[:upper_bound+Ni] = 1
-    else:
-        sourceable[feature_set] = 1
-        # and the range of modifiable gates (with Ni added)
-        sourceable[lower_bound+Ni:upper_bound+Ni] = 1
-
-    # include all previous final outputs
-    # first_output = Ng-No+Ni
-    # sourceable[first_output:first_output+target] = 1
-
-    return sourceable, changeable
-
-
 class BasicLearner:
 
     def _check_parameters(self, parameters):
         pass
 
-    def _setup(self, parameters, optimiser):
+    def _setup(self, optimiser, parameters):
         self._check_parameters(parameters)
+        # Gate generation
+        self.gate_generator = parameters['gate_generator']
+        self.node_funcs = parameters['network']['node_funcs']
+        self.budget = parameters['network']['Ng']
+        # Instance
+        mapping = parameters['mapping']
+        self.input_matrix = mapping.packed_input()
+        self.target_matrix = mapping.packed_targets()
+        self.Ne = mapping.Ne()
+        # Optimiser
+        self.optimiser = optimiser
         self.opt_params = copy(parameters['optimiser'])
-        guiding_func_name = self.opt_params['guiding_function']
-        self.guiding_func_id = function_from_name(guiding_func_name)
+        gf_name = self.opt_params['guiding_function']
+        self.guiding_func_id = function_from_name(gf_name)
         self.opt_params['guiding_function'] = (
             lambda x: x.function_value(self.guiding_func_id))
-        self.optimiser = optimiser
 
-    def _optimise(self, state):
-        ''' Just learns by using the given optimiser and guiding function.'''
-        return self.optimiser.run(state, self.opt_params)
+    def run(self, optimiser, parameters):
+        self._setup(optimiser, parameters)
 
-    def run(self, state, parameters, optimiser):
-        self._setup(parameters, state, optimiser)
+        gates = self.gate_generator(self.budget, self.input_matrix.shape[0],
+                                    self.node_funcs)
+        state = StandardNetworkState(gates, self.input_matrix,
+                                     self.target_matrix, self.Ne)
+
         self.opt_params['stopping_criterion'] = guiding_func_stop_criterion()
-        opt_result = self._optimise(state)
+
+        opt_result = self.optimiser.run(state, self.opt_params)
+
         return LearnerResult(best_states=[opt_result.state],
                              best_errors=[opt_result.error],
                              best_iterations=[opt_result.best_iteration],
@@ -86,28 +68,20 @@ class BasicLearner:
 
 class StratifiedLearner(BasicLearner):
 
-    def _setup(self, parameters, optimiser):
-        super()._setup(parameters, optimiser)
+    def _setup(self, optimiser, parameters):
+        super()._setup(optimiser, parameters)
         # Required
         self.mfs_fname = parameters['inter_file_base']
-        self.remaining_budget = parameters['network']['Ng']
-        self.node_funcs = parameters['network']['node_funcs']
-        self.gate_generator = parameters['gate_generator']
         # Optional
         self.auto_target = parameters.get('auto_target', False)
         self.use_mfs_selection = parameters.get('kfs', False)
         self.fabcpp_opts = parameters.get('fabcpp_options', False)
         self.keep_files = parameters.get('keep_files', False)
-        # Instance
-        mapping = parameters['mapping']
-        self.Ne = mapping.Ne()
-        self.input_matrix = mapping.packed_input()
-        self.target_matrix = mapping.packed_targets()
+        # Initialise
         self.No, _ = self.target_matrix.shape
-
-        self.num_targets = self.target_matrix.shape[0]
+        self.remaining_budget = self.budget
         self.learned_targets = []
-        self.feature_sets = np.empty((self.num_targets, self.num_targets),
+        self.feature_sets = np.empty((self.No, self.No),
                                      dtype=list)
 
     def _check_parameters(self, parameters):
@@ -121,7 +95,7 @@ class StratifiedLearner(BasicLearner):
                              format(self.node_funcs))
 
     def _determine_next_target(self, strata, inputs):
-        all_targets = set(range(self.num_targets))
+        all_targets = set(range(self.No))
         not_learned = list(all_targets.difference(self.learned_targets))
         if self.auto_target:
             # find minFS for all unlearned targets
@@ -240,7 +214,7 @@ class StratifiedLearner(BasicLearner):
         return StandardNetworkState(new_gates, self.input_matrix,
                                     self.target_matrix)
 
-    def run(self, parameters, optimiser):
+    def run(self, optimiser, parameters):
         # setup accumulated network
         # loop:
         #   make partial network
@@ -248,7 +222,7 @@ class StratifiedLearner(BasicLearner):
         #   hook into accumulated network
         # reorganise outputs
 
-        self._setup(parameters, optimiser)
+        self._setup(optimiser, parameters)
 
         opt_results = []
 
@@ -270,7 +244,7 @@ class StratifiedLearner(BasicLearner):
             self.opt_params['stopping_criterion'] = criterion
 
             # optimise
-            partial_result = self._optimise(partial_state)
+            partial_result = self.optimiser.run(partial_state, self.opt_params)
             # record result
             opt_results.append(partial_result)
 
