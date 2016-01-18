@@ -12,47 +12,56 @@ cpdef enum Operator:
     MUL,
 
 
-cdef class OperatorIterator:
+cdef class OpExampleIterFactory:
+    cdef:
+        size_t Ne, Nb, Ni, max_elements
+        size_t[:] indices
+        bint inc
+        Operator op
+    cdef __check_operator(self, Operator op)
+
+
+cdef class OpIterator:
     cdef size_t divisor, remaining
 
 
-cdef class OperatorIncludeIterator(OperatorIterator):
+cdef class OpIncIterator(OpIterator):
     cdef object include_iter
 
 
-cdef class ZeroIncludeIterator(OperatorIncludeIterator):
+cdef class ZeroIncIterator(OpIncIterator):
     pass
 
 
-cdef class UnaryANDIncludeIterator(OperatorIncludeIterator):
+cdef class UnaryANDIncIterator(OpIncIterator):
     cdef size_t all_ones
 
 
-cdef class UnaryORIncludeIterator(OperatorIncludeIterator):
+cdef class UnaryORIncIterator(OpIncIterator):
     pass
 
 
-cdef class ANDIncludeIterator(OperatorIncludeIterator):
+cdef class ANDIncIterator(OpIncIterator):
     pass
 
 
-cdef class ORIncludeIterator(OperatorIncludeIterator):
+cdef class ORIncIterator(OpIncIterator):
     pass
 
 
-cdef class AddIncludeIterator(OperatorIncludeIterator):
+cdef class AddIncIterator(OpIncIterator):
     pass
 
 
-cdef class SubIncludeIterator(OperatorIncludeIterator):
+cdef class SubIncIterator(OpIncIterator):
     pass
 
 
-cdef class MulIncludeIterator(OperatorIncludeIterator):
+cdef class MulIncIterator(OpIncIterator):
     pass
 
 
-cdef class OperatorExcludeIterator(OperatorIterator):    
+cdef class OpExcIterator(OpIterator):    
     cdef:
         size_t index, ex_index, total_elements
         object ex_iter
@@ -60,33 +69,33 @@ cdef class OperatorExcludeIterator(OperatorIterator):
     cdef void _sync(self)
 
 
-cdef class ZeroExcludeIterator(OperatorExcludeIterator):
+cdef class ZeroExcIterator(OpExcIterator):
     pass
 
 
-cdef class UnaryANDExcludeIterator(OperatorExcludeIterator):
+cdef class UnaryANDExcIterator(OpExcIterator):
     cdef size_t all_ones
 
 
-cdef class UnaryORExcludeIterator(OperatorExcludeIterator):
+cdef class UnaryORExcIterator(OpExcIterator):
     pass
 
 
-cdef class ANDExcludeIterator(OperatorExcludeIterator):
+cdef class ANDExcIterator(OpExcIterator):
     pass
 
 
-cdef class ORExcludeIterator(OperatorExcludeIterator):
+cdef class ORExcIterator(OpExcIterator):
     pass
 
 
-cdef class AddExcludeIterator(OperatorExcludeIterator):
+cdef class AddExcIterator(OpExcIterator):
     pass
 
 
-cdef class SubExcludeIterator(OperatorExcludeIterator):
+cdef class SubExcIterator(OpExcIterator):
     pass
 
 
-cdef class MulExcludeIterator(OperatorExcludeIterator):
+cdef class MulExcIterator(OpExcIterator):
     pass

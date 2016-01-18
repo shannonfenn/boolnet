@@ -3,12 +3,20 @@
 import numpy as np
 from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
 from boolnet.bintools.packing import packed_type
-from boolnet.bintools.operator_iterator cimport *
+from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
+from boolnet.bintools.operator_iterator import num_operands
 
 
-cpdef packed_from_operator(indices, Nb, No, operator, N=0):
+cpdef packed_from_operator(indices, Nb, No, operator, exclude=False):
     cdef packed_type_t[:, :] inp, tgt
-    ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
+
+    if exclude:
+        max_index = (num_operands(operator) * Nb) ** 2
+        ex_factory = OpExampleIterFactory(
+            indices, Nb, operator, max_index)
+    else:
+        ex_factory = OpExampleIterFactory(indices, Nb, operator)
+
     packed_factory = PackedExampleGenerator(ex_factory, No)
 
     Ni = packed_factory.Ni
@@ -32,7 +40,7 @@ cdef class PackedExampleGenerator:
     # No_p = No // 64 if No % 64 == 0 else No // 64 + 1
     # self.inp_block = np.zeros((PACKED_SIZE, Ni_p), dtype=np.uint64)
     # self.tgt_block = np.zeros((PACKED_SIZE, No_p), dtype=np.uint64)
-    def __init__(self, OperatorExampleIteratorFactory iterator_factory, size_t No):
+    def __init__(self, OpExampleIterFactory iterator_factory, size_t No):
         self.No = No
         self.Ne = iterator_factory.Ne
         self.Ni = iterator_factory.Ni
@@ -85,76 +93,3 @@ cdef class PackedExampleGenerator:
     cdef void __check_invariants(self):
         if self.Ni > 64 or self.No > 64:
             raise ValueError('Ni or No greater than 64 not supported.')
-
-
-cdef class OperatorExampleIteratorFactory:
-    def __init__(self, indices, size_t Nb, Operator operator, size_t max_elements=0):
-        self.__check_operator(operator)
-        self.indices = np.array(indices, dtype=np.uintp)
-        self.op = operator
-        self.max_elements = max_elements
-        self.inc = (max_elements == 0)
-        if self.inc:
-            self.Ne = self.indices.size
-        else:
-            if max_elements < self.indices.size:
-                raise ValueError('Exclude list larger than max_elements.')
-            self.Ne = max_elements - self.indices.size
-            # sort the indices so that the operator does not return incorrect examples
-            self.indices = np.sort(self.indices)
-        self.Nb = Nb
-        if operator in [UNARY_AND, UNARY_OR]:
-            self.Ni = Nb
-        else:
-            self.Ni = 2*Nb
-
-    def __iter__(self):
-        if self.inc:
-            if self.op == ZERO:
-                return ZeroIncludeIterator(self.indices, self.Nb)
-            elif self.op == UNARY_AND:
-                return UnaryANDIncludeIterator(self.indices, self.Nb)
-            elif self.op == UNARY_OR:
-                return UnaryORIncludeIterator(self.indices, self.Nb)
-            elif self.op == AND:
-                return ANDIncludeIterator(self.indices, self.Nb)
-            elif self.op == OR:
-                return ORIncludeIterator(self.indices, self.Nb)
-            elif self.op == ADD:
-                return AddIncludeIterator(self.indices, self.Nb)
-            elif self.op == SUB:
-                return SubIncludeIterator(self.indices, self.Nb)
-            elif self.op == MUL:
-                return MulIncludeIterator(self.indices, self.Nb)
-            elif self.op == AND:
-                return UnaryANDIncludeIterator(self.indices, self.Nb)
-            elif self.op == OR:
-                return UnaryORIncludeIterator(self.indices, self.Nb)
-        else:
-            if self.op == ZERO:
-                return ZeroExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == UNARY_AND:
-                return UnaryANDExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == UNARY_OR:
-                return UnaryORExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == AND:
-                return ANDExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == OR:
-                return ORExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == ADD:
-                return AddExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == SUB:
-                return SubExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == MUL:
-                return MulExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == AND:
-                return UnaryANDExcludeIterator(self.indices, self.Nb, self.max_elements)
-            elif self.op == OR:
-                return UnaryORExcludeIterator(self.indices, self.Nb, self.max_elements)
-
-    def __len__(self):
-        return self.Ne
-
-    cdef __check_operator(self, Operator op):
-        if op not in [ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL]:
-            raise ValueError('Invalid operator value ({})'.format(op))
