@@ -2,7 +2,7 @@ from boolnet.bintools.packing import pack_bool_matrix
 from boolnet.bintools.example_generator import packed_from_operator
 
 
-class FileBoolMapping:
+class BoolMapping:
     def __init__(self, inputs, target, Ne):
         if inputs.shape[0] != target.shape[0] != Ne:
             raise ValueError('Input ({}), target ({}), Ne ({}) should match.'

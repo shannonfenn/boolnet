@@ -4,7 +4,7 @@ from good import (Schema, In, All, Any, Range,
                   Type, IsDir, message, Optional)
 
 from boolnet.bintools.functions import all_function_names
-from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
+from boolnet.exptools.boolmapping import BoolMapping, OperatorBoolMapping
 
 
 guiding_functions = all_function_names()
@@ -123,7 +123,7 @@ learner_schema_basic = Schema({
 
 learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
-mapping_schema = Any(Type(FileBoolMapping), Type(OperatorBoolMapping))
+mapping_schema = Any(Type(BoolMapping), Type(OperatorBoolMapping))
 
 config_schema = Schema({
     'name':                     str,

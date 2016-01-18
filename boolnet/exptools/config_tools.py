@@ -7,7 +7,7 @@ import numpy as np
 import json
 
 from boolnet.bintools.operator_iterator import operator_from_name, num_operands
-from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
+from boolnet.exptools.boolmapping import BoolMapping, OperatorBoolMapping
 from boolnet.exptools.config_schemata import config_schema
 
 
@@ -107,8 +107,8 @@ def pack_examples(inputs, targets, training_indices):
 
     # build list of train/test set instances
     instances = [Instance(
-        training_mapping=FileBoolMapping(train_inps[i], train_tgts[i], Ne),
-        test_mapping=FileBoolMapping(test_inps[i], test_tgts[i], N - Ne),
+        training_mapping=BoolMapping(train_inps[i], train_tgts[i], Ne),
+        test_mapping=BoolMapping(test_inps[i], test_tgts[i], N - Ne),
         training_indices=training_indices[i]
         ) for i in range(Ns)]
 
