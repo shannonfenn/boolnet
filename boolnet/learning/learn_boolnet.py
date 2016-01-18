@@ -2,7 +2,7 @@ import time
 import random
 from boolnet.bintools.functions import (
     E1, ACCURACY, PER_OUTPUT, function_from_name)
-from boolnet.exptools.boolmapping import FileBoolMapping, OperatorBoolMapping
+from boolnet.exptools.boolmapping import BoolMapping, OperatorBoolMapping
 from boolnet.learning.networkstate import (
     StandardNetworkState, standard_from_operator, chained_from_operator)
 import boolnet.learning.learners as learners
@@ -44,7 +44,7 @@ def check_data(training_mapping, test_mapping):
 
 
 def build_state(gates, mapping, guiding_funcs):
-    if isinstance(mapping, FileBoolMapping):
+    if isinstance(mapping, BoolMapping):
         evaluator = StandardNetworkState(gates, mapping.inputs,
                                          mapping.target, mapping.Ne)
     elif isinstance(mapping, OperatorBoolMapping):

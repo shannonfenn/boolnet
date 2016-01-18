@@ -34,8 +34,8 @@ class BasicLearner:
         self.budget = parameters['network']['Ng']
         # Instance
         mapping = parameters['mapping']
-        self.input_matrix = mapping.packed_input()
-        self.target_matrix = mapping.packed_targets()
+        self.input_matrix = mapping.inputs()
+        self.target_matrix = mapping.targets()
         self.Ne = mapping.Ne()
         # Optimiser
         self.optimiser = optimiser
