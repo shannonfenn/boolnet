@@ -18,7 +18,7 @@ from boolnet.bintools.example_generator cimport PackedExampleGenerator, Operator
 
 
 # cpdef standard_from_mapping(network, mapping):
-#     if isinstance(mapping, FileBoolMapping):
+#     if isinstance(mapping, BoolMapping):
 #         return StandardBNState(network, mapping.inputs, mapping.target, mapping.Ne)
 #     elif isinstance(mapping, OperatorBoolMapping):
 #         return standard_from_operator(network, mapping.indices,
