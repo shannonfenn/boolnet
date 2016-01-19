@@ -11,25 +11,7 @@ from boolnet.exptools.boolmapping import BoolMapping, OperatorBoolMapping
 from boolnet.exptools.config_schemata import config_schema
 
 
-Instance = namedtuple('Instance', [
-    'training_mapping', 'test_mapping', 'training_indices'])
-
-
-# class ExperimentJSONEncoder(json.JSONEncoder):
-#     def default(self, obj):
-#         if isinstance(obj, np.ndarray):
-#             return obj.tolist()
-#         if isinstance(obj, BoolMapping):
-#             return obj.toDict()
-#         return json.JSONEncoder.default(self, obj)
-
-
-# def dump_configurations(configurations, stream):
-#     first = True
-#     for conf in configurations:
-#         stream.write('[' if first else ', ')
-#         json.dump(conf[0], stream, cls=ExperimentJSONEncoder)
-#     stream.write(']')
+Instance = namedtuple('Instance', ['mapping', 'training_indices'])
 
 
 class ExperimentJSONEncoder(json.JSONEncoder):
@@ -88,11 +70,11 @@ def load_samples(params, data_dir, N, Ni):
     return training_indices
 
 
-def pack_examples(inputs, targets, training_indices):
+def pack_examples(data, training_indices):
     ''' Parititions the given function into training and test sets,
         based on the given training indices.'''
     # Parameters
-    N = inputs.shape[0]
+    N, Ni = data.shape[0]
     Ns, Ne = training_indices.shape
     # Generate the test indices array, each row should contain all
     # indices not in the equivalent row of training_indices
@@ -107,6 +89,10 @@ def pack_examples(inputs, targets, training_indices):
 
     # build list of train/test set instances
     instances = [Instance(
+        mapping=data,
+        Ni=Ni,
+        training_indices=training_indices[i]
+
         training_mapping=BoolMapping(train_inps[i], train_tgts[i], Ne),
         test_mapping=BoolMapping(test_inps[i], test_tgts[i], N - Ne),
         training_indices=training_indices[i]
@@ -122,10 +108,10 @@ def file_instance(data_settings, sampling_settings):
     if splitext(dataset_filename)[-1] == '':
         dataset_filename += '.npz'
     with np.load(dataset_filename) as dataset:
-        inputs = dataset['input_matrix']
-        targets = dataset['target_matrix']
+        data = dataset['matrix']
+        Ni = dataset['Ni']
 
-    N, Ni = inputs.shape
+    N, Ni = data.shape
     training_indices = load_samples(sampling_settings, data_dir, N, Ni)
     # partition the sets based on loaded indices
     return pack_examples(inputs, targets, training_indices)
@@ -135,9 +121,8 @@ def generated_instance(data_settings, sampling_settings):
     data_dir = data_settings['dir']
     Nb = data_settings['bits']
     op = operator_from_name(data_settings['operator'])
-    N_operands = num_operands(op)
 
-    Ni = (N_operands * Nb)
+    Ni = num_operands(op) * Nb
     N = 2**Ni
 
     # by default the output width is the operand width
@@ -151,10 +136,10 @@ def generated_instance(data_settings, sampling_settings):
     # Parameters
     # build list of train/test set instances
     instances = [Instance(
-        training_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No,
-                                             window_size, op, 0),
-        test_mapping=OperatorBoolMapping(training_indices[i], Nb, Ni, No,
-                                         window_size, op, N),
+        training_mapping=OperatorBoolMapping(
+            training_indices[i], Nb, Ni, No, window_size, op, 0),
+        test_mapping=OperatorBoolMapping(
+            training_indices[i], Nb, Ni, No, window_size, op, N),
         training_indices=training_indices[i]
         ) for i in range(Ns)]
     return instances
