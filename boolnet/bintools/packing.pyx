@@ -11,6 +11,23 @@ PACKED_HIGH_BIT_SET = 0x8000000000000000
 packed_type = np.uint64
 
 
+class BitPackedArray(np.ndarray):
+
+    def __new__(cls, input_array, N):
+        # Input array is an already formed ndarray instance
+        # We first cast to be our class type
+        obj = np.asarray(input_array).view(cls)
+        # add the new attribute to the created instance
+        obj.N = N
+        # Finally, we must return the newly created object:
+        return obj
+
+    def __array_finalize__(self, obj):
+        if obj is None:
+            return
+        self.N = getattr(obj, 'N', None)
+
+
 cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column):
     ''' This method assumed mat.shape[0] >= 64.'''
     cdef:
