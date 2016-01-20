@@ -2,9 +2,10 @@ import time
 import random
 from boolnet.bintools.functions import (
     E1, ACCURACY, PER_OUTPUT, function_from_name)
-from boolnet.exptools.boolmapping import BoolMapping, OperatorBoolMapping
+from boolnet.bintools.packing import partition_packed, sample_packed
+from boolnet.bintools.example_generator import packed_from_operator
 from boolnet.learning.networkstate import (
-    StandardNetworkState, standard_from_operator, chained_from_operator)
+    StandardBNState, chained_from_operator)
 import boolnet.learning.learners as learners
 import boolnet.learning.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
@@ -24,37 +25,6 @@ LEARNERS = {
     'basic': learners.BasicLearner(),
     'stratified': learners.StratifiedLearner(),
     }
-
-
-def check_data(training_mapping, test_mapping):
-    if not training_mapping.Ni:
-        raise ValueError('Training inputs empty!')
-    if not training_mapping.No:
-        raise ValueError('Training target empty!')
-    if not test_mapping.Ni:
-        raise ValueError('Test inputs empty!')
-    if not test_mapping.No:
-        raise ValueError('Test target empty!')
-    if training_mapping.Ni != test_mapping.Ni:
-        raise ValueError('Training ({}) and Test ({}) Ni do not match.'.format(
-            training_mapping.Ni, test_mapping.Ni))
-    if training_mapping.No != test_mapping.No:
-        raise ValueError('Training ({}) and Test ({}) No do not match.'.format(
-            training_mapping.No, test_mapping.No))
-
-
-def build_state(gates, mapping, guiding_funcs):
-    if isinstance(mapping, BoolMapping):
-        evaluator = StandardNetworkState(gates, mapping.inputs,
-                                         mapping.target, mapping.Ne)
-    elif isinstance(mapping, OperatorBoolMapping):
-        evaluator = chained_from_operator(
-            gates, mapping.indices, mapping.Nb, mapping.No,
-            mapping.operator, mapping.window_size, mapping.N)
-        # pre-add functions to avoid redundant network evaluations
-        for f in guiding_funcs:
-            evaluator.add_function(f)
-    return evaluator
 
 
 def seed_rng(value):
@@ -85,34 +55,40 @@ def setup_local_dirs(parameters):
     os.makedirs(os.path.dirname(inter_file_base), exist_ok=True)
 
 
+def build_training_set(mapping):
+    if mapping['type'] == 'raw':
+        return sample_packed(mapping['matrix'], mapping['training_indices'])
+    elif mapping['type'] == 'operator':
+        indices = mapping['training_indices']
+        operator = mapping['operator']
+        Nb = mapping['Nb']
+        No = mapping['No']
+        return packed_from_operator(indices, Nb, No, operator)
+
+
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
     setup_local_dirs(parameters)
     seed_rng(parameters.get('seed'))
 
-    learner_parameters = parameters['learner']
-    optimiser_parameters = parameters['learner']['optimiser']
+    learner_params = parameters['learner']
+    optimiser_params = parameters['learner']['optimiser']
 
-    training_data = parameters['training_mapping']
-    test_data = parameters['test_mapping']
-    check_data(training_data, test_data)
+    learner_params['training_set'] = build_training_set(parameters['mapping'])
+    learner_params['gate_generator'] = random_network
 
-    learner_parameters['gate_generator'] = random_network
-    learner_parameters['mapping'] = training_data
-
-    learner = LEARNERS[learner_parameters['name']]
-    optimiser = OPTIMISERS[optimiser_parameters['name']]
+    learner = LEARNERS[learner_params['name']]
+    optimiser = OPTIMISERS[optimiser_params['name']]
 
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner.run(learner_parameters, optimiser)
+    learner_result = learner.run(learner_params, optimiser)
 
     learning_end_time = time.monotonic()
 
-    results = build_result_map(parameters, learner_result,
-                               training_data, test_data)
+    results = build_result_map(parameters, learner_result)
 
     end_time = time.monotonic()
 
@@ -126,18 +102,50 @@ def learn_bool_net(parameters):
     return results
 
 
-def build_result_map(parameters, learner_result, training_data, test_data):
+def build_states(gates, mapping, guiding_funcs):
+    if mapping['type'] == 'raw':
+        M = mapping['matrix']
+        indices = mapping['training_indices']
+        M_trg, M_test = partition_packed(M, indices)
+
+        I_trg, T_trg = np.split(M_trg, [M.Ni])
+        I_test, T_test = np.split(M_test, [M.Ni])
+
+        S_trg = StandardBNState(gates, I_trg, T_trg, M.Ne)
+        S_test = StandardBNState(gates, I_test, T_test, M.Ne)
+
+    elif mapping['type'] == 'operator':
+        indices = mapping['training_indices']
+        operator = mapping['operator']
+        Nb = mapping['Nb']
+        No = mapping['No']
+        window_size = mapping['window_size']
+
+        S_trg = chained_from_operator(
+            gates, indices, Nb, No, operator, window_size, exclude=False)
+        S_test = chained_from_operator(
+            gates, indices, Nb, No, operator, window_size, exclude=True)
+        # pre-add functions to avoid redundant network evaluations
+        for f in guiding_funcs:
+            S_trg.add_function(f)
+            S_test.add_function(f)
+
+    return S_trg, S_test
+
+
+def build_result_map(parameters, learner_result):
     learner_parameters = parameters['learner']
-    optimiser_parameters = parameters['learner']['optimiser']
+    optimiser_params = parameters['learner']['optimiser']
 
     guiding_function = function_from_name(
-        optimiser_parameters['guiding_function'])
+        optimiser_params['guiding_function'])
 
     final_network = learner_result.best_states[-1]
+    gates = final_network.gates
 
+    # build evaluators for training and test data
     funcs = [guiding_function, E1, ACCURACY, PER_OUTPUT]
-    train_state = build_state(final_network.gates, training_data)
-    test_state = build_state(final_network.gates, test_data, funcs)
+    train_state, test_state = build_states(parameters['mapping'], gates, funcs)
 
     results = {
         'Ni':           final_network.Ni,
@@ -200,7 +208,7 @@ def build_result_map(parameters, learner_result, training_data, test_data):
     for bit, v in enumerate(final_network.max_node_depths()):
         key = 'max_depth_tgt_{}'.format(bit)
         results[key] = v
-    for k, v in optimiser_parameters.items():
+    for k, v in optimiser_params.items():
         if k == 'guiding_function':
             results[k] = v
         else:
