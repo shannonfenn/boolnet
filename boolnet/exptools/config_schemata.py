@@ -63,7 +63,7 @@ network_schema_generated = Schema({
     'node_funcs':   list
     })
 
-# network_schema = Schema(Any(network_schema_given, network_schema_generated))
+# network_schema = Any(network_schema_given, network_schema_generated)
 network_schema = network_schema_generated
 
 
@@ -93,6 +93,9 @@ LAHC_schema = Schema({
     })
 
 
+optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
+
+
 minFS_option_schema = Schema({
     'model':            In([1, 6]),
     'a_min':            All(int, Range(min=1)),
@@ -103,7 +106,7 @@ minFS_option_schema = Schema({
 
 learner_schema_stratified = Schema({
     'name':                         'stratified',
-    'optimiser':                    Any(SA_schema, HC_schema, LAHC_schema),
+    'optimiser':                    optimiser_schema,
     'network':                      network_schema,
     Optional('inter_file_base'):    str,
     Optional('kfs'):                bool,
@@ -114,9 +117,10 @@ learner_schema_stratified = Schema({
 
 
 learner_schema_basic = Schema({
-    'name':                     'basic',
-    'inter_file_base':          str,
-    'optimiser':                Any(SA_schema, HC_schema, LAHC_schema),
+    'name':                         'basic',
+    'network':                      network_schema,
+    'optimiser':                    optimiser_schema,
+    Optional('inter_file_base'):    str,
     })
 
 

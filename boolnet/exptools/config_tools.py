@@ -74,7 +74,7 @@ def file_instance(data_settings, sampling_settings):
     if splitext(dataset_filename)[-1] == '':
         dataset_filename += '.npz'
     with np.load(dataset_filename) as dataset:
-        data = dataset['matrix']
+        data = dataset['Matrix']
         Ne = dataset['Ne']
         Ni = dataset['Ni']
 
@@ -119,15 +119,16 @@ def generated_instance(data_settings, sampling_settings):
     return instances
 
 
-def handle_initial_network(settings):
-    net_method = settings['network']['method']
-    if net_method == 'given':
-        data_dir = settings['data']['dir']
-        filename = settings['network']['file']
-        index = settings['network']['index']
-        with open(join(data_dir, filename)) as f:
-            gates = np.array(json.load(f)[index], dtype=np.uint32)
-            settings['network']['initial_gates'] = gates
+# def handle_initial_network(settings):
+#     net_settings = settings['learner']['network']
+#     net_method = net_settings['method']
+#     if net_method == 'given':
+#         data_dir = settings['data']['dir']
+#         filename = net_settings['file']
+#         index = net_settings['index']
+#         with open(join(data_dir, filename)) as f:
+#             gates = np.array(json.load(f)[index], dtype=np.uint32)
+#             net_settings['initial_gates'] = gates
 
 
 def get_config_indices(instances, config_settings):
@@ -166,8 +167,8 @@ def generate_configurations(settings):
 
         # record the config number for debugging
         config_settings['configuration_number'] = config_no
-        # load initial network from file if required
-        handle_initial_network(config_settings)
+        # !!REMOVED!! load initial network from file if required
+        # handle_initial_network(config_settings)
         # load the data for this configuration
         instances = load_dataset(config_settings)
 
