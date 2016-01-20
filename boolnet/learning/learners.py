@@ -4,7 +4,7 @@ import logging
 import numpy as np
 from boolnet.bintools.functions import PER_OUTPUT, function_from_name
 from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
-from boolnet.learning.networkstate import StandardNetworkState
+from boolnet.learning.networkstate import StandardBNState
 import boolnet.learning.kfs as mfs
 
 
@@ -50,7 +50,7 @@ class BasicLearner:
 
         gates = self.gate_generator(self.budget, self.input_matrix.shape[0],
                                     self.node_funcs)
-        state = StandardNetworkState(gates, self.input_matrix,
+        state = StandardBNState(gates, self.input_matrix,
                                      self.target_matrix, self.Ne)
 
         self.opt_params['stopping_criterion'] = guiding_func_stop_criterion()
@@ -158,11 +158,11 @@ class StratifiedLearner(BasicLearner):
             #     # gates and return it
             #     gates = self.handle_single_FS(inputs[0], target)
             #     self.remaining_budget -= gates.shape[0]
-            #     return StandardNetworkState(gates, inputs, target, self.Ne)
+            #     return StandardBNState(gates, inputs, target, self.Ne)
 
         gates = self.gate_generator(size, inputs.shape[0], self.node_funcs)
         self.remaining_budget -= size
-        return StandardNetworkState(gates, inputs, target, self.Ne)
+        return StandardBNState(gates, inputs, target, self.Ne)
 
     def insert_network(self, base, new, strata, target_index):
         # simple: build up a map for all sources, for sources after the
@@ -201,7 +201,7 @@ class StratifiedLearner(BasicLearner):
                                            new.gates[-new.No:, :]))
 
         new_target = np.vstack((base.target_matrix, new.target_matrix))
-        return StandardNetworkState(accumulated_gates, self.input_matrix,
+        return StandardBNState(accumulated_gates, self.input_matrix,
                                     new_target)
 
     def reorder_network(self, state):
@@ -211,7 +211,7 @@ class StratifiedLearner(BasicLearner):
             np.arange(state.Ng - state.No),
             np.argsort(self.learned_targets).tolist()))
         new_gates = state.gates[new_gate_order]
-        return StandardNetworkState(new_gates, self.input_matrix,
+        return StandardBNState(new_gates, self.input_matrix,
                                     self.target_matrix)
 
     def run(self, optimiser, parameters):
@@ -229,7 +229,7 @@ class StratifiedLearner(BasicLearner):
         inputs = np.array(self.input_matrix)
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
-        accumulated_network = StandardNetworkState(
+        accumulated_network = StandardBNState(
             np.empty((0, 3)), inputs, np.empty((0, inputs.shape[1])), self.Ne)
 
         for i in range(self.No):
