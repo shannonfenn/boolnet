@@ -18,6 +18,8 @@ cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne)
 
 cpdef packed_type_t generate_end_mask(Ne)
 
+cpdef sample_packed(D, indices, invert=*)
+
 ctypedef packed_type_t (*f_type)(packed_type_t, packed_type_t)
 
 cdef f_type* function_list

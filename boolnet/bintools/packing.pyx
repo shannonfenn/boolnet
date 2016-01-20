@@ -28,6 +28,20 @@ class BitPackedMatrix(np.ndarray):
         self.Ne = getattr(obj, 'Ne', None)
         self.Ni = getattr(obj, 'Ni', None)
 
+    def __reduce__(self):
+        # Get the parent's __reduce__ tuple
+        pickled_state = super(BitPackedMatrix, self).__reduce__()
+        # Create our own tuple to pass to __setstate__
+        new_state = pickled_state[2] + (self.Ne, self.Ni)
+        # Return a tuple that replaces the parent's __setstate__ tuple with our own
+        return (pickled_state[0], pickled_state[1], new_state)
+
+    def __setstate__(self, state):
+        self.Ne = state[-2]  # Set the info attribute
+        self.Ni = state[-1]  # Set the info attribute
+        # Call the parent's __setstate__ with the other tuple elements.
+        super(BitPackedMatrix, self).__setstate__(state[0:-2])
+
 
 cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column):
     ''' This method assumed mat.shape[0] >= 64.'''
@@ -140,10 +154,10 @@ def partition_packed(D, indices):
     Nw_trg = int(np.ceil(Ne / word_size))
     Nw_test = int(np.ceil((D.Ne - Ne) / word_size))
 
-    D_trg = BitPackedArray(np.zeros((Nf, Nw_trg), dtype=D.dtype))
-    D_trg.Ne = Ne
-    D_test = BitPackedArray(np.zeros((Nf, Nw_test), dtype=D.dtype))
-    D_test.Ne = D.Ne - Ne
+    D_trg = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=D.dtype),
+                            Ne, D.Ni)
+    D_test = BitPackedMatrix(np.zeros((Nf, Nw_test), dtype=D.dtype),
+                             D.Ne - Ne, D.Ni)
 
     for f in range(Nf):
         i_trg = i_test = 0
@@ -166,20 +180,28 @@ def partition_packed(D, indices):
     return D_trg, D_test
 
 
-def sample_packed(D, indices, invert=False):
+cpdef sample_packed(D, indices, invert=False):
+    cdef:
+        packed_type_t mask
+        size_t word_size, Nf, Nw, Ne, f, w, b, sw, sb
+
+    print(type(mask))
+    print(type(Nf))
+
     word_size = D.dtype.itemsize * 8
     Nf, Nw = D.shape
     Ne = indices.shape[0]
 
     if invert:
         cols = int(np.ceil((D.Ne - Ne) / word_size))
-        sample = BitPackedArray(np.zeros((Nf, cols), dtype=D.dtype))
+        sample = BitPackedMatrix(np.zeros((Nf, cols), dtype=D.dtype),
+                                 D.Ne - Ne, D.Ni)
         sample.Ne = D.Ne - Ne
         for f in range(Nf):
             sb = sw = 0
             for w in range(Nw):
                 for i in range(word_size):
-                    bit = (D[w] & (1 << i)) >> i
+                    bit = (D[f, w] & (1 << i)) >> i
                     if i + w * word_size not in sample:
                         sample[sw] += bit << sb
                         # increment word and bit indices
@@ -187,16 +209,25 @@ def sample_packed(D, indices, invert=False):
                         sw += (sb == 0)
     else:
         Nw_trg = int(np.ceil(Ne / word_size))
-        sample = BitPackedArray(np.zeros((Nf, Nw_trg), dtype=D.dtype))
+        sample = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=D.dtype),
+                                 Ne, D.Ni)
         sample.Ne = Ne
         for f in range(Nf):
-            sb = sw = 0
+            sw = sb = 0
             for index in indices:
                 w = index // word_size
                 b = index % word_size
-                bit = (D[w] & (1 << b)) >> b
+
+                mask = 1
+                mask <<= b
+
+                print('D[f, w]', type(D[f, w]), D[f, w])
+                print('mask', type(mask), mask)
+
+                bit = (D[f, w] & mask) >> b
                 sample[sw] += (bit << sb)
                 # increment word and bit indices
+
                 sb = (sb + 1) % word_size
                 sw += (sb == 0)
     return sample
