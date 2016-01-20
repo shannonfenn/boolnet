@@ -14,7 +14,8 @@ from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.biterror_chained cimport ChainedEvaluator
 from boolnet.bintools.packing cimport packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE
 from boolnet.bintools.packing import packed_type
-from boolnet.bintools.example_generator cimport PackedExampleGenerator, OperatorExampleIteratorFactory
+from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
+from boolnet.bintools.example_generator cimport PackedExampleGenerator
 
 
 # cpdef standard_from_mapping(network, mapping):
@@ -33,7 +34,7 @@ from boolnet.bintools.example_generator cimport PackedExampleGenerator, Operator
 
 
 cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, N=0):
-    ex_factory = OperatorExampleIteratorFactory(indices, Nb, operator, N)
+    ex_factory = OpExampleIterFactory(indices, Nb, operator, N)
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
     return ChainedBNState(gates, packed_ex_factory, window_size)
 
