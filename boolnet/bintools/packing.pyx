@@ -11,21 +11,22 @@ PACKED_HIGH_BIT_SET = 0x8000000000000000
 packed_type = np.uint64
 
 
-class BitPackedArray(np.ndarray):
-
-    def __new__(cls, input_array, N):
+class BitPackedMatrix(np.ndarray):
+    def __new__(cls, input_array, Ne, Ni=0):
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
         obj = np.asarray(input_array).view(cls)
         # add the new attribute to the created instance
-        obj.N = N
+        obj.Ne = Ne
+        obj.Ni = Ni
         # Finally, we must return the newly created object:
         return obj
 
     def __array_finalize__(self, obj):
         if obj is None:
             return
-        self.N = getattr(obj, 'N', None)
+        self.Ne = getattr(obj, 'Ne', None)
+        self.Ni = getattr(obj, 'Ni', None)
 
 
 cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column):
@@ -130,6 +131,76 @@ cpdef packed_type_t generate_end_mask(Ne):
             end_mask &= ~shift
             shift >>= 1
     return end_mask
+
+
+def partition_packed(D, indices):
+    word_size = D.dtype.itemsize * 8
+    Ne = indices.shape[0]
+    Nf, Nw = D.shape
+    Nw_trg = int(np.ceil(Ne / word_size))
+    Nw_test = int(np.ceil((D.Ne - Ne) / word_size))
+
+    D_trg = BitPackedArray(np.zeros((Nf, Nw_trg), dtype=D.dtype))
+    D_trg.Ne = Ne
+    D_test = BitPackedArray(np.zeros((Nf, Nw_test), dtype=D.dtype))
+    D_test.Ne = D.Ne - Ne
+
+    for f in range(Nf):
+        i_trg = i_test = 0
+        w_trg = w_test = 0
+        for w in range(Nw):
+            for i in range(word_size):
+                bit = (D & (1 << i)) >> i
+                if i + w * word_size in indices:
+                    D_trg[w_trg] += bit << i_trg
+                    i_trg += 1
+                    if i_trg == word_size:
+                        i_trg = 0
+                        w_trg += 1
+                else:
+                    D_test[w_test] += bit << i_test
+                    i_test += 1
+                    if i_test == word_size:
+                        i_test = 0
+                        w_test += 1
+    return D_trg, D_test
+
+
+def sample_packed(D, indices, invert=False):
+    word_size = D.dtype.itemsize * 8
+    Nf, Nw = D.shape
+    Ne = indices.shape[0]
+
+    if invert:
+        cols = int(np.ceil((D.Ne - Ne) / word_size))
+        sample = BitPackedArray(np.zeros((Nf, cols), dtype=D.dtype))
+        sample.Ne = D.Ne - Ne
+        for f in range(Nf):
+            sb = sw = 0
+            for w in range(Nw):
+                for i in range(word_size):
+                    bit = (D[w] & (1 << i)) >> i
+                    if i + w * word_size not in sample:
+                        sample[sw] += bit << sb
+                        # increment word and bit indices
+                        sb = (sb + 1) % word_size
+                        sw += (sb == 0)
+    else:
+        Nw_trg = int(np.ceil(Ne / word_size))
+        sample = BitPackedArray(np.zeros((Nf, Nw_trg), dtype=D.dtype))
+        sample.Ne = Ne
+        for f in range(Nf):
+            sb = sw = 0
+            for index in indices:
+                w = index // word_size
+                b = index % word_size
+                bit = (D[w] & (1 << b)) >> b
+                sample[sw] += (bit << sb)
+                # increment word and bit indices
+                sb = (sb + 1) % word_size
+                sw += (sb == 0)
+    return sample
+
 
 function_list = [__f0, __f1, __f2, __f3, __f4, __f5, __f6, __f7,
                  __f8, __f9, __f10, __f11, __f12, __f13, __f14, __f15,]
