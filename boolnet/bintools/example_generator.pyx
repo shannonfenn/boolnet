@@ -2,7 +2,7 @@
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 import numpy as np
 from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
-from boolnet.bintools.packing import packed_type
+from boolnet.bintools.packing import packed_type, BitPackedMatrix
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
 from boolnet.bintools.operator_iterator import num_operands
 
@@ -26,12 +26,12 @@ cpdef packed_from_operator(indices, Nb, No, operator, exclude=False):
     if Ne % PACKED_SIZE > 0:
         chunks += 1
 
-    inp = np.empty((Ni, chunks), dtype=packed_type)
-    tgt = np.empty((No, chunks), dtype=packed_type)
-
+    M = BitPackedMatrix(np.empty((Ni+No, chunks), dtype=packed_type), Ne, Ni)
+    
+    I, T = np.split(M, [Ni])
     packed_factory.reset()
-    packed_factory.next_examples(inp, tgt)
-    return inp, tgt, Ne
+    packed_factory.next_examples(I, T)
+    return M
 
 
 cdef class PackedExampleGenerator:
