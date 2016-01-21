@@ -12,10 +12,12 @@ from boolnet.bintools.biterror import STANDARD_EVALUATORS
 from boolnet.bintools.biterror cimport StandardEvaluator
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.biterror_chained cimport ChainedEvaluator
-from boolnet.bintools.packing cimport packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE
 from boolnet.bintools.packing import packed_type
+from boolnet.bintools.packing cimport (
+    packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE)
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
-from boolnet.bintools.example_generator cimport PackedExampleGenerator
+from boolnet.bintools.example_generator cimport (
+    PackedExampleGenerator, packed_from_operator)
 
 
 # cpdef standard_from_mapping(network, mapping):
@@ -27,14 +29,13 @@ from boolnet.bintools.example_generator cimport PackedExampleGenerator
 #                                       mapping.operator, mapping.N)
 
 
-#cpdef standard_from_operator(gates, indices, Nb, No, operator, N=0):
-#    cdef packed_type_t[:, :] inp, tgt
-#    inp, tgt = packed_from_operator(indices, Nb, No, operator, N)
-#    return StandardBNState(gates, inp, tgt, Ne)
+cpdef standard_from_operator(gates, indices, Nb, No, operator, exclude=False):
+    M = packed_from_operator(indices, Nb, No, operator, exclude)
+    return StandardBNState(gates, M)
 
 
-cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, N=0):
-    ex_factory = OpExampleIterFactory(indices, Nb, operator, N)
+cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, exclude=False):
+    ex_factory = OpExampleIterFactory(indices, Nb, operator, exclude)
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
     return ChainedBNState(gates, packed_ex_factory, window_size)
 
@@ -234,15 +235,14 @@ cdef class BNState:
 
 cdef class StandardBNState(BNState):
 
-    def __init__(self, gates, packed_type_t[:, :] inputs,
-                 packed_type_t[:, :] target, size_t Ne):
-        if inputs.shape[1] != target.shape[1]:
-            raise ValueError('Input ({}) and target ({}) widths do not match'.
-                             format(inputs.shape[1], target.shape[1]))
-        super().__init__(gates, inputs.shape[0], target.shape[0],
-                         Ne, inputs.shape[1])
-        self.inputs[...] = inputs
-        self.target[...] = target
+    def __init__(self, gates, problem_matrix):
+        Ni = problem_matrix.Ni
+        No = problem_matrix.shape[0] - problem_matrix.No
+        Ne = problem_matrix.Ne
+        cols = problem_matrix.shape[1]
+        super().__init__(gates, Ni, No, Ne, cols)
+        self.inputs[...] = problem_matrix[:Ni, :]
+        self.target[...] = problem_matrix[Ni:, :]
 
     property input_matrix:
         def __get__(self):

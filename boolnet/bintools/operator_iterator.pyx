@@ -32,20 +32,21 @@ def num_operands(Operator op):
 
 
 cdef class OpExampleIterFactory:
-    def __init__(self, indices, size_t Nb, Operator operator, size_t max_elements=0):
+    def __init__(self, indices, size_t Nb, Operator operator, bint exclude=False):
         self.__check_operator(operator)
         self.indices = np.array(indices, dtype=np.uintp)
         self.op = operator
-        self.max_elements = max_elements
-        self.inc = (max_elements == 0)
-        if self.inc:
-            self.Ne = self.indices.size
-        else:
-            if max_elements < self.indices.size:
+        self.exclude = exclude
+        if self.exclude:
+            self.max_elements = 2 ** (num_operands(operator) * Nb)
+            if self.max_elements < self.indices.size:
                 raise ValueError('Exclude list larger than max_elements.')
-            self.Ne = max_elements - self.indices.size
+            self.Ne = self.max_elements - self.indices.size
             # sort the indices so that the operator does not return incorrect examples
             self.indices = np.sort(self.indices)
+        else:
+            self.max_elements = 0
+            self.Ne = self.indices.size
         self.Nb = Nb
         if operator in [UNARY_AND, UNARY_OR]:
             self.Ni = Nb
@@ -53,28 +54,7 @@ cdef class OpExampleIterFactory:
             self.Ni = 2*Nb
 
     def __iter__(self):
-        if self.inc:
-            if self.op == ZERO:
-                return ZeroIncIterator(self.indices, self.Nb)
-            elif self.op == UNARY_AND:
-                return UnaryANDIncIterator(self.indices, self.Nb)
-            elif self.op == UNARY_OR:
-                return UnaryORIncIterator(self.indices, self.Nb)
-            elif self.op == AND:
-                return ANDIncIterator(self.indices, self.Nb)
-            elif self.op == OR:
-                return ORIncIterator(self.indices, self.Nb)
-            elif self.op == ADD:
-                return AddIncIterator(self.indices, self.Nb)
-            elif self.op == SUB:
-                return SubIncIterator(self.indices, self.Nb)
-            elif self.op == MUL:
-                return MulIncIterator(self.indices, self.Nb)
-            elif self.op == AND:
-                return UnaryANDIncIterator(self.indices, self.Nb)
-            elif self.op == OR:
-                return UnaryORIncIterator(self.indices, self.Nb)
-        else:
+        if self.exclude:
             if self.op == ZERO:
                 return ZeroExcIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == UNARY_AND:
@@ -95,7 +75,28 @@ cdef class OpExampleIterFactory:
                 return UnaryANDExcIterator(self.indices, self.Nb, self.max_elements)
             elif self.op == OR:
                 return UnaryORExcIterator(self.indices, self.Nb, self.max_elements)
-
+        else:
+            if self.op == ZERO:
+                return ZeroIncIterator(self.indices, self.Nb)
+            elif self.op == UNARY_AND:
+                return UnaryANDIncIterator(self.indices, self.Nb)
+            elif self.op == UNARY_OR:
+                return UnaryORIncIterator(self.indices, self.Nb)
+            elif self.op == AND:
+                return ANDIncIterator(self.indices, self.Nb)
+            elif self.op == OR:
+                return ORIncIterator(self.indices, self.Nb)
+            elif self.op == ADD:
+                return AddIncIterator(self.indices, self.Nb)
+            elif self.op == SUB:
+                return SubIncIterator(self.indices, self.Nb)
+            elif self.op == MUL:
+                return MulIncIterator(self.indices, self.Nb)
+            elif self.op == AND:
+                return UnaryANDIncIterator(self.indices, self.Nb)
+            elif self.op == OR:
+                return UnaryORIncIterator(self.indices, self.Nb)
+            
     def __len__(self):
         return self.Ne
 
