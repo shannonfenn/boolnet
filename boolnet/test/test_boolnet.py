@@ -46,13 +46,9 @@ class TestExceptions:
         return BoolNet([(0, 1, 0)], 2, 1)
 
     @fixture(params=[
-        ([], 0, 0),             # all invalid
-        ([], 0, 1),             # gates and Ni invalid, No > Ng
-        ([], 1, 0),             # gates and No invalid
-        ([], 1, 1),             # gates invalid, No > Ng
+        ([], 0, 0),             # Ni = 0 with empty gates
+        ([], 1, 1),             # No > 0 with empty gates
         ([[0, 0, 16]], 1, 1),         # tf > 15
-        ([[0, 0, 1]], 0, 0),       # Ni and No invalid
-        ([[0, 0, 1]], 1, 0),       # No invalid
         ([[0, 0, 1]], 0, 1),       # Ni invalid
         ([[0, 0, 1]], 1, 2),       # No > Ng
         ([0, 0, 1], 1, 1),         # gates not 2D
