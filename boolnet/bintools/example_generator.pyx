@@ -11,7 +11,7 @@ cpdef packed_from_operator(indices, Nb, No, operator, exclude=False):
     cdef packed_type_t[:, :] inp, tgt
 
     if exclude:
-        max_index = (num_operands(operator) * Nb) ** 2
+        max_index = 2 ** (num_operands(operator) * Nb)
         ex_factory = OpExampleIterFactory(
             indices, Nb, operator, max_index)
     else:
