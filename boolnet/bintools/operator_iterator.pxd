@@ -16,7 +16,7 @@ cdef class OpExampleIterFactory:
     cdef:
         size_t Ne, Nb, Ni, max_elements
         size_t[:] indices
-        bint inc
+        bint exclude
         Operator op
     cdef __check_operator(self, Operator op)
 
