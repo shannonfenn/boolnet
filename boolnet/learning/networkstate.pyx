@@ -237,12 +237,16 @@ cdef class StandardBNState(BNState):
 
     def __init__(self, gates, problem_matrix):
         Ni = problem_matrix.Ni
-        No = problem_matrix.shape[0] - problem_matrix.No
+        No = problem_matrix.shape[0] - Ni
         Ne = problem_matrix.Ne
         cols = problem_matrix.shape[1]
         super().__init__(gates, Ni, No, Ne, cols)
-        self.inputs[...] = problem_matrix[:Ni, :]
-        self.target[...] = problem_matrix[Ni:, :]
+
+        # buffer view for copying
+        cdef packed_type_t[:, :] P = problem_matrix
+
+        self.inputs[...] = P[:Ni, :]
+        self.target[...] = P[Ni:, :]
 
     property input_matrix:
         def __get__(self):
