@@ -152,6 +152,9 @@ cdef class BNState:
         self.evaluated = False
         self.invalid_start = 0
 
+    cpdef clear_history(self):
+        self.network.clear_history()
+
     ############################### Evaluation methods ###############################
     cdef void _evaluate(self):
         ''' Evaluate the activation and error matrices for the network
