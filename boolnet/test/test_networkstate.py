@@ -10,9 +10,10 @@ from boolnet.bintools.packing import (
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
 from boolnet.bintools.functions import function_name, all_functions
 from boolnet.bintools.operator_iterator import (
-    ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL)
+    ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL,
+    OpExampleIterFactory)
 from boolnet.bintools.example_generator import (
-    OperatorExampleIteratorFactory, PackedExampleGenerator)
+    packed_from_operator, PackedExampleGenerator)
 from boolnet.learning.networkstate import (
     StandardBNState, ChainedBNState,
     standard_from_operator, chained_from_operator)
@@ -156,10 +157,9 @@ def chained_harness_to_fixture(test):
     else:
         Nb = Ni // 2
 
-    iterator_factory_s = OperatorExampleIteratorFactory(indices_s, Nb, op)
-    iterator_factory_f = OperatorExampleIteratorFactory(indices_f, Nb, op)
-    iterator_factory_t = OperatorExampleIteratorFactory(indices_s, Nb, op,
-                                                        Ne_f)
+    iterator_factory_s = OpExampleIterFactory(indices_s, Nb, op)
+    iterator_factory_f = OpExampleIterFactory(indices_f, Nb, op)
+    iterator_factory_t = OpExampleIterFactory(indices_s, Nb, op, Ne_f)
 
     generator_s = PackedExampleGenerator(iterator_factory_s, No)
     generator_f = PackedExampleGenerator(iterator_factory_f, No)
@@ -217,7 +217,7 @@ def state_params(request):
     Ne_s = indices_s.size
     Ne_t = Ne_f - Ne_s
     test['Ne'] = {'full': Ne_f, 'sample': Ne_s, 'test': Ne_t}
-    test['N'] = {'full': 0, 'sample': 0, 'test': Ne_f}
+    test['exclude'] = {'full': False, 'sample': False, 'test': True}
 
     test['operator'] = operator_map[test['target function']]
 
@@ -421,7 +421,7 @@ class TestBoth:
                 indices=params['indices'][sample_type],
                 Nb=params['Nb'], No=params['No'],
                 operator=params['operator'],
-                N=params['N'][sample_type]
+                exclude=params['exclude'][sample_type]
             )
         elif eval_type == 'chained':
             return chained_from_operator(
@@ -430,7 +430,7 @@ class TestBoth:
                 Nb=params['Nb'], No=params['No'],
                 operator=params['operator'],
                 window_size=params['window_size'][sample_type],
-                N=params['N'][sample_type]
+                exclude=params['exclude'][sample_type]
             )
 
     # ################### Exception Testing ################### #
