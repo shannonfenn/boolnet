@@ -146,13 +146,13 @@ def chained_harness_to_fixture(test):
     else:
         Nb = Ni // 2
 
-    iterator_factory_f = OpExampleIterFactory(indices_f, Nb, op)
-    iterator_factory_s = OpExampleIterFactory(indices_s, Nb, op)
-    iterator_factory_t = OpExampleIterFactory(indices_s, Nb, op, exclude=True)
+    iter_factory_f = OpExampleIterFactory(indices_f, Nb, op)
+    iter_factory_s = OpExampleIterFactory(indices_s, Nb, op)
+    iter_factory_t = OpExampleIterFactory(indices_s, Nb, op, exclude=True)
 
-    generator_f = PackedExampleGenerator(iterator_factory_f, No)
-    generator_s = PackedExampleGenerator(iterator_factory_s, No)
-    generator_t = PackedExampleGenerator(iterator_factory_t, No)
+    generator_f = PackedExampleGenerator(iter_factory_f, No)
+    generator_s = PackedExampleGenerator(iter_factory_s, No)
+    generator_t = PackedExampleGenerator(iter_factory_t, No)
 
     Ne_f = 2**Ni
     Ne_s = indices_s.size
@@ -203,7 +203,7 @@ def state_params(request):
     test = deepcopy(HARNESS_CACHE[fname])
 
     Ni = test['Ni']
-    if test['target function'].startswith('unary'):
+    if test['target function'] in ['zero', 'unary_and', 'unary_or']:
         test['Nb'] = Ni
     else:
         test['Nb'] = Ni // 2
@@ -436,12 +436,12 @@ class TestBoth:
         assert state.Ng == len(state_params['gates'])
         assert state.zero_mask == generate_end_mask(state.Ne)
 
-    def test_from_operator_func_value(self, state_params, state_type, function, sample_type):
-        expected = state_params['function value'][sample_type][function_name(function)]
-        state = self.build_from_params(state_params, state_type, sample_type)
-        state.add_function(function)
-        actual = state.function_value(function)
-        np.testing.assert_array_almost_equal(expected, actual)
+    # def test_from_operator_func_value(self, state_params, state_type, function, sample_type):
+    #     expected = state_params['function value'][sample_type][function_name(function)]
+    #     state = self.build_from_params(state_params, state_type, sample_type)
+    #     state.add_function(function)
+    #     actual = state.function_value(function)
+    #     np.testing.assert_array_almost_equal(expected, actual)
 
     def test_function_value(self, state_harness, function, sample_type):
         state = state_harness['state'][sample_type]
