@@ -84,7 +84,7 @@ def learn_bool_net(parameters):
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner.run(learner_params, optimiser)
+    learner_result = learner.run(optimiser, learner_params)
 
     learning_end_time = time.monotonic()
 
