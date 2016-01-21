@@ -33,10 +33,9 @@ class BasicLearner:
         self.node_funcs = parameters['network']['node_funcs']
         self.budget = parameters['network']['Ng']
         # Instance
-        mapping = parameters['mapping']
-        self.input_matrix = mapping.inputs()
-        self.target_matrix = mapping.targets()
-        self.Ne = mapping.Ne()
+        mapping = parameters['training_set']
+        self.input_matrix, self.target_matrix = np.split(mapping, [mapping.Ni])
+        self.Ne = mapping.Ne
         # Optimiser
         self.optimiser = optimiser
         self.opt_params = copy(parameters['optimiser'])
@@ -51,7 +50,7 @@ class BasicLearner:
         gates = self.gate_generator(self.budget, self.input_matrix.shape[0],
                                     self.node_funcs)
         state = StandardBNState(gates, self.input_matrix,
-                                     self.target_matrix, self.Ne)
+                                self.target_matrix, self.Ne)
 
         self.opt_params['stopping_criterion'] = guiding_func_stop_criterion()
 
