@@ -1,12 +1,8 @@
 import operator
-import os.path
 import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
-from boolnet.bintools.packing import packed_type, pack_bool_matrix
 import boolnet.bintools.operator_iterator as opit
-from boolnet.bintools.example_generator import (
-    packed_from_operator, PackedExampleGenerator)
 
 
 class TestIterators:
@@ -149,101 +145,3 @@ class TestExampleIteratorFactory:
             assert i == inp
             expected_out = unary_op[1](i, max_indices)
             assert expected_out == tgt
-
-
-class TestExampleGenerator:
-    op_map = {'add': opit.ADD, 'sub': opit.SUB, 'mul': opit.MUL}
-    cache = dict()
-
-    @fixture(params=['add4.npz', 'add8.npz', 'sub4.npz', 'sub8.npz',
-                     'mul2.npz', 'mul3.npz', 'mul4.npz', 'mul6.npz',
-                     'mul2f.npz', 'mul3f.npz', 'mul4f.npz', 'mul6f.npz'])
-    def file_func_inst(self, request, test_location):
-        return test_location, request.param
-
-    @fixture(params=[True, False])
-    def exclude(self, request):
-        return request.param
-
-    def load_file_func_instance(self, instance):
-        location, name = instance
-        fname = os.path.join(location, 'functions', name)
-        if fname not in self.cache:
-            with np.load(fname) as data:
-                inp = data['input_matrix']
-                tgt = data['target_matrix']
-            self.cache[fname] = (inp, tgt)
-        inp = np.array(self.cache[fname][0], copy=True)
-        tgt = np.array(self.cache[fname][1], copy=True)
-        return self.op_map[name[:3]], inp, tgt
-
-    def build_generator_instance(self, instance, exclude):
-        op, inp, tgt = self.load_file_func_instance(instance)
-
-        Ne, Ni = inp.shape
-        _, No = tgt.shape
-
-        indices = np.random.choice(Ne, min(100, Ne-1), replace=False)
-        indices = np.sort(indices)
-        inp = inp[indices, :]
-        tgt = tgt[indices, :]
-        inp_p = pack_bool_matrix(inp)
-        tgt_p = pack_bool_matrix(tgt)
-        if exclude:
-            indices = [i for i in range(Ne) if i not in indices]
-        indices = np.array(indices, dtype=packed_type)
-
-        factory = opit.OpExampleIterFactory(
-            indices, Ni//2, op, Ne if exclude else 0)
-
-        gen = PackedExampleGenerator(factory, No)
-        return (gen, inp_p, tgt_p)
-
-    @fixture(params=[0, np.random.rand(), 1])
-    def block_fraction(self, request):
-        return request.param
-
-    def test_packed_generation(self, file_func_inst, exclude, block_fraction):
-        generator_instance = self.build_generator_instance(
-            file_func_inst, exclude)
-        generator, expected_inp, expected_tgt = generator_instance
-
-        actual_inp = np.zeros_like(expected_inp)
-        actual_tgt = np.zeros_like(expected_tgt)
-        Ni, cols = expected_inp.shape
-        No, _ = expected_tgt.shape
-        block_width = max(1, cols * block_fraction)
-
-        i = 0
-        while generator:
-            generator.next_examples(actual_inp[:, i: i + block_width],
-                                    actual_tgt[:, i: i + block_width])
-            i += block_width
-        assert_array_equal(expected_inp, actual_inp)
-        assert_array_equal(expected_tgt, actual_tgt)
-
-    def test_packed_from_operator_inc(self, file_func_inst, exclude):
-        op, inp, tgt = self.load_file_func_instance(file_func_inst)
-
-        Ne, Ni = inp.shape
-        _, No = tgt.shape
-
-        indices = np.random.choice(Ne, min(100, Ne-1), replace=False)
-        indices = np.sort(indices)
-        indices = np.array(indices, dtype=packed_type)
-        if exclude:
-            expected_indices = [i for i in range(Ne) if i not in indices]
-            expected_indices = np.array(expected_indices, dtype=packed_type)
-        else:
-            expected_indices = indices
-        expected = pack_bool_matrix(np.hstack((
-            inp[expected_indices, :],
-            tgt[expected_indices, :])))
-
-        print(Ne)
-        print(opit.num_operands(op))
-        print((opit.num_operands(op) * (Ni//2)) ** 2)
-        print(indices.shape, Ni//2, No, op, exclude)
-        actual = packed_from_operator(indices, Ni//2, No, op, exclude)
-
-        assert_array_equal(expected, actual)
