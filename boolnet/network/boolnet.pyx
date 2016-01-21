@@ -139,7 +139,7 @@ cdef class BoolNet:
     cdef _check_network_invariants(self):
         #if self.Ng == 0:
         #    raise ValueError('Empty initial gates list')
-        if self.Ni <= 0:
+        if self.Ni == 0:
             raise ValueError('Invalid Ni ({})'.format(self.Ni))
         #if self.No <= 0:
         #    raise ValueError('Invalid No ({})'.format(self.No))
