@@ -48,7 +48,7 @@ cdef class OpExampleIterFactory:
             self.max_elements = 0
             self.Ne = self.indices.size
         self.Nb = Nb
-        if operator in [UNARY_AND, UNARY_OR]:
+        if operator in [ZERO, UNARY_AND, UNARY_OR]:
             self.Ni = Nb
         else:
             self.Ni = 2*Nb
