@@ -5,6 +5,7 @@ import cython
 import numpy as np
 cimport numpy as np
 from copy import copy
+from math import ceil
 
 from boolnet.network.boolnet cimport BoolNet, Move
 from boolnet.bintools.functions cimport Function
@@ -54,10 +55,6 @@ cdef class BNState:
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
-        if 2**Ni < Ne:
-            print('WARNING: More examples ({}) than #inputs ({}) '
-                  'can represent.'.format(Ne, Ni))
-
         self.network = BoolNet(gates, Ni, No)
         Ng = self.network.Ng
 
@@ -319,20 +316,17 @@ cdef class ChainedBNState(BNState):
         super().__init__(gates, example_generator.Ni, example_generator.No,
                          example_generator.Ne, window_size)
         block_width = (self.cols * PACKED_SIZE)
-        self.blocks = self.Ne // block_width
-        if self.Ne % block_width:
-            self.blocks += 1
+        self.blocks = ceil(self.Ne / block_width)
 
         # work out the number of columns remaining after blocking
         # as this determines the zero_mask width
-        total_cols = self.Ne // PACKED_SIZE
-        if self.Ne % PACKED_SIZE:
-            total_cols += 1 
-        remaining_cols = total_cols % self.cols
-        if remaining_cols > 0:
-            self.zero_mask_cols = self.cols - remaining_cols + 1
-        else:
-            self.zero_mask_cols = 1
+        total_cols = ceil(self.Ne / PACKED_SIZE)
+        remainder = total_cols % self.cols
+
+        self.zero_mask_cols = 1
+        if remainder > 0:
+            self.zero_mask_cols += self.cols - remainder
+
         self.example_generator = example_generator
         self.function_value_cache = dict()
 
@@ -382,3 +376,27 @@ cdef class ChainedBNState(BNState):
             matrix[r, cols-self.zero_mask_cols] &= self.zero_mask
             for c in range(1, self.zero_mask_cols):
                 matrix[r, cols-self.zero_mask_cols+c] = 0
+
+
+
+
+    ## DEBUG
+    #def err(self):
+    #    cdef:
+    #        size_t block
+    #        dict evaluators = self.err_evaluators
+
+    #    errs = []
+
+    #    self.example_generator.reset()
+ 
+    #    for block in range(self.blocks):
+    #        self.example_generator.next_examples(self.inputs, self.target)
+    #        self._evaluate()
+    #        # on the last iteration we must not perform a partial evaluation
+    #        if block < self.blocks - 1:
+    #            errs.append(np.array(self.error))
+
+    #    self._apply_zero_mask(self.error)
+    #    errs.append(np.array(self.error))
+    #    return np.hstack(errs)
