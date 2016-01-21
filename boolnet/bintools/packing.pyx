@@ -157,6 +157,7 @@ cpdef partition_packed(matrix, indices):
 
     Ne = indices.shape[0]
     Nf, Nw = matrix.shape
+
     # find number of words in training and test samples
     Nw_trg = int(np.ceil(Ne / PACKED_SIZE))
     Nw_test = int(np.ceil((matrix.Ne - Ne) / PACKED_SIZE))
@@ -178,13 +179,13 @@ cpdef partition_packed(matrix, indices):
                 # if this bit of this word is in the sample
                 if b + w * PACKED_SIZE in indices:
                     # insert into training sample at the next position
-                    M_trg[w_trg] += bit << b_trg
+                    M_trg[f, w_trg] += bit << b_trg
                     # increment training sample word and bit indices
                     b_trg = (b_trg + 1) % PACKED_SIZE
                     w_trg += b_trg == 0
                 else:
                     # insert into test sample at the next position
-                    M_test[w_test] += bit << b_test
+                    M_test[f, w_test] += bit << b_test
                     # increment test sample word and bit indices
                     b_test = (b_test + 1) % PACKED_SIZE
                     w_test += b_test == 0
@@ -208,41 +209,42 @@ cpdef sample_packed(matrix, indices, invert=False):
         sample = np.zeros((Nf, cols), dtype=packed_type)
         sample = BitPackedMatrix(sample, Ne=matrix.Ne-Ne, Ni=matrix.Ni)
         
-        for f in range(Nf):
-            # word and bit positions for sample
-            sb = sw = 0
-            for w in range(Nw):
-                for i in range(PACKED_SIZE):
-                    # if this bit of this word is in the sample
-                    if i + w * PACKED_SIZE not in sample:
-                        # get the bit
-                        mask = 1 << i
-                        bit = (M[f, w] & mask) >> i
+        # word and bit positions for sample
+        sb = sw = 0
+        for w in range(Nw):
+            for b in range(PACKED_SIZE):
+                # if this bit of this word is in the sample
+                if b + w * PACKED_SIZE not in indices:
+                    # get the bit
+                    mask = 1 << b
+                    for f in range(Nf):
+                        bit = (M[f, w] & mask) >> b
                         # insert into the sample at the next position
-                        sample[sw] += bit << sb
-                        # increment sample word and bit indices
-                        sb = (sb + 1) % PACKED_SIZE
-                        sw += sb == 0
+                        sample[f, sw] += bit << sb
+                    # increment sample word and bit indices
+                    sb = (sb + 1) % PACKED_SIZE
+                    sw += sb == 0
     else:
         Nw_trg = int(np.ceil(Ne / PACKED_SIZE))
         sample = np.zeros((Nf, Nw_trg), dtype=packed_type)
         sample = BitPackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)
-        for f in range(Nf):
-            # word and bit positions for sample
-            sw = sb = 0
-            # for each index in sample
-            for index in indices:
-                # word and bit indices into original matrix
-                w = index // PACKED_SIZE
-                b = index % PACKED_SIZE
+        
+        # word and bit positions for sample
+        sw = sb = 0
+        # for each index in sample
+        for index in indices:
+            # word and bit indices into original matrix
+            w = index // PACKED_SIZE
+            b = index % PACKED_SIZE
+            mask = 1 << b
+            for f in range(Nf):
                 # get the bit
-                mask = 1 << b
                 bit = (M[f, w] & mask) >> b
                 # insert into into the sample at the next position
-                sample[sw] += (bit << sb)
-                # increment word and bit indices
-                sb = (sb + 1) % PACKED_SIZE
-                sw += sb == 0
+                sample[f, sw] += (bit << sb)
+            # increment word and bit indices
+            sb = (sb + 1) % PACKED_SIZE
+            sw += sb == 0
     return sample
 
 
