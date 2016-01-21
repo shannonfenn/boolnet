@@ -6,7 +6,8 @@ from collections import namedtuple
 from pytest import mark, raises, fixture
 
 from boolnet.bintools.packing import (
-    pack_bool_matrix, unpack_bool_matrix, generate_end_mask)
+    pack_bool_matrix, unpack_bool_matrix, generate_end_mask, BitPackedMatrix,
+    partition_packed)
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
 from boolnet.bintools.functions import function_name, all_functions
 from boolnet.bintools.operator_iterator import (
@@ -23,9 +24,9 @@ TEST_NETWORKS = glob.glob('boolnet/test/networks/*.yaml')
 
 
 operator_map = {
-    'zero': ZERO, 'and': AND, 'or': OR,
-    'unary_and': UNARY_AND, 'unary_or': UNARY_OR,
-    'add': ADD, 'sub': SUB, 'mul': MUL
+    'and': AND, 'or': OR,
+    'add': ADD, 'sub': SUB, 'mul': MUL,
+    'zero': ZERO, 'unary_and': UNARY_AND, 'unary_or': UNARY_OR
 }
 
 
@@ -90,24 +91,16 @@ def standard_harness_to_fixture(test):
     test['activation matrix']['full'] = activation
     test['error matrix']['full'] = error
 
-    # generate sample versions
-    target_s = target[samples]
-    inputs_s = inputs[samples]
-    activation_s = activation[samples]
     # add sample version of expectations to test
-    test['target matrix']['sample'] = target_s
-    test['input matrix']['sample'] = inputs_s
-    test['output matrix']['sample'] = activation_s[:, -No:]
-    test['activation matrix']['sample'] = activation_s
+    test['target matrix']['sample'] = target[samples]
+    test['input matrix']['sample'] = inputs[samples]
+    test['output matrix']['sample'] = activation[samples][:, -No:]
+    test['activation matrix']['sample'] = activation[samples]
     test['error matrix']['sample'] = error[samples]
 
-    Ne = inputs.shape[0]
-    Ne_s = inputs_s.shape[0]
-    Ne_t = Ne - Ne_s
-    test['Ne'] = {'full': Ne, 'sample': Ne_s, 'test': Ne_t}
-
     # Test sample version
-    samples_t = np.array([i for i in range(Ne_s) if i not in samples])
+    samples_t = np.array([i for i in range(inputs.shape[0])
+                          if i not in samples])
 
     target_t = target[samples_t]
     inputs_t = inputs[samples_t]
@@ -119,20 +112,20 @@ def standard_harness_to_fixture(test):
     test['activation matrix']['test'] = activation_t
     test['error matrix']['test'] = error[samples_t]
 
+    # generate sample versions
+    Mf = BitPackedMatrix(np.vstack((
+            pack_bool_matrix(inputs),
+            pack_bool_matrix(target))), Ne=inputs.shape[0], Ni=Ni)
+
+    # This is wrong, need to use packed sampling methods
+    # but they will handle Ne which is good
+    Ms, Mt = partition_packed(Mf, samples)
+
     # add states to test
     test['state'] = {
-        'sample': StandardBNState(gates,
-                                  pack_bool_matrix(inputs_s),
-                                  pack_bool_matrix(target_s),
-                                  Ne_s),
-        'full': StandardBNState(gates,
-                                pack_bool_matrix(inputs),
-                                pack_bool_matrix(target),
-                                Ne),
-        'test': StandardBNState(gates,
-                                pack_bool_matrix(inputs_t),
-                                pack_bool_matrix(target_t),
-                                Ne_t)
+        'full': StandardBNState(gates, Mf),
+        'sample': StandardBNState(gates, Ms),
+        'test': StandardBNState(gates, Mt)
     }
 
     return test
@@ -143,36 +136,36 @@ def chained_harness_to_fixture(test):
     No = test['No']
     gates = np.array(test['gates'], np.uint32)
 
-    Ne_f = 2**Ni
+    indices_f = np.arange(2**Ni, dtype=np.uint32)
     indices_s = np.array(test['samples'], dtype=np.uint32)
-    indices_f = np.arange(Ne_f, dtype=np.uint32)
-    Ne_s = indices_s.size
-    Ne_t = Ne_f - Ne_s
-    test['Ne'] = {'full': Ne_f, 'sample': Ne_s, 'test': Ne_t}
 
     op = operator_map[test['target function']]
 
-    if test['target function'].startswith('unary'):
+    if test['target function'] in ['zero', 'unary_and', 'unary_or']:
         Nb = Ni
     else:
         Nb = Ni // 2
 
-    iterator_factory_s = OpExampleIterFactory(indices_s, Nb, op)
     iterator_factory_f = OpExampleIterFactory(indices_f, Nb, op)
-    iterator_factory_t = OpExampleIterFactory(indices_s, Nb, op, Ne_f)
+    iterator_factory_s = OpExampleIterFactory(indices_s, Nb, op)
+    iterator_factory_t = OpExampleIterFactory(indices_s, Nb, op, exclude=True)
 
-    generator_s = PackedExampleGenerator(iterator_factory_s, No)
     generator_f = PackedExampleGenerator(iterator_factory_f, No)
+    generator_s = PackedExampleGenerator(iterator_factory_s, No)
     generator_t = PackedExampleGenerator(iterator_factory_t, No)
 
-    window_size_s = np.random.randint(1, max(2, Ne_s // PACKED_SIZE))
+    Ne_f = 2**Ni
+    Ne_s = indices_s.size
+    Ne_t = Ne_f - Ne_s
+
     window_size_f = np.random.randint(1, max(2, Ne_f // PACKED_SIZE))
+    window_size_s = np.random.randint(1, max(2, Ne_s // PACKED_SIZE))
     window_size_t = np.random.randint(1, max(2, Ne_t // PACKED_SIZE))
 
     # add states to test
     test['state'] = {
-        'sample': ChainedBNState(gates, generator_s, window_size_s),
         'full': ChainedBNState(gates, generator_f, window_size_f),
+        'sample': ChainedBNState(gates, generator_s, window_size_s),
         'test': ChainedBNState(gates, generator_t, window_size_t),
     }
 
@@ -210,21 +203,16 @@ def state_params(request):
     test = deepcopy(HARNESS_CACHE[fname])
 
     Ni = test['Ni']
-
-    Ne_f = 2**Ni
-    indices_s = np.array(test['samples'], dtype=np.uint32)
-    indices_f = np.arange(Ne_f, dtype=np.uint32)
-    Ne_s = indices_s.size
-    Ne_t = Ne_f - Ne_s
-    test['Ne'] = {'full': Ne_f, 'sample': Ne_s, 'test': Ne_t}
-    test['exclude'] = {'full': False, 'sample': False, 'test': True}
-
-    test['operator'] = operator_map[test['target function']]
-
     if test['target function'].startswith('unary'):
         test['Nb'] = Ni
     else:
         test['Nb'] = Ni // 2
+    test['operator'] = operator_map[test['target function']]
+
+    indices_s = np.array(test['samples'], dtype=np.uint32)
+    indices_f = np.arange(2**Ni, dtype=np.uint32)
+
+    test['exclude'] = {'full': False, 'sample': False, 'test': True}
 
     # add generated params to test
     test['indices'] = {
@@ -232,6 +220,11 @@ def state_params(request):
         'full': indices_f,
         'test': indices_s
     }
+
+    Ne_f = 2**Ni
+    Ne_s = indices_s.size
+    Ne_t = Ne_f - Ne_s
+
     test['window_size'] = {
         'sample': np.random.randint(1, max(2, Ne_s // PACKED_SIZE)),
         'full': np.random.randint(1, max(2, Ne_f // PACKED_SIZE)),
@@ -260,9 +253,8 @@ class TestStandard:
     # ##################### HELPERS ##################### #
     def build_instance(self, instance_dict, sample_type, field):
         state = instance_dict['state'][sample_type]
-        Ne = instance_dict['Ne'][sample_type]
         expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
-        return state, expected, lambda mat: unpack_bool_matrix(mat, Ne)
+        return state, expected, lambda mat: unpack_bool_matrix(mat, state.Ne)
 
     def output_different_helper(self, instance):
         state, _, eval_func = self.build_instance(
@@ -299,20 +291,16 @@ class TestStandard:
 
     # ################### Exception Testing ################### #
     @mark.parametrize("Ni, Tshape, Ne", [
-        (7, (1, 1), 1),     # inputs.cols != target.cols
-        (1, (65, 1), 1),    # inputs.cols != target.cols
-        (1, (65, 1), 4),    # Ne > 2**Ni
         (1, (2, 4), 4),     # net.No != #tgts
         (2, (1, 4), 4),     # net.Ni != #inps
         (2, (2, 4), 4)      # both
     ])
-    def test_static_construction_exceptions(self, Ni, Tshape, Ne):
-        inp = all_possible_inputs(Ni)
-        tgt = packed_zeros(Tshape)
-        print(inp.shape)
-        print(tgt.shape)
+    def test_construction_exceptions(self, Ni, Tshape, Ne):
+        M = BitPackedMatrix(np.vstack((
+            all_possible_inputs(Ni),
+            packed_zeros(Tshape))), Ne, Ni)
         with raises(ValueError):
-            StandardBNState([(0, 1, 3)], inp, tgt, Ne)
+            StandardBNState([(0, 1, 3)], M)
 
     # ################### Functionality Testing ################### #
     def test_input_matrix(self, standard_state, sample_type):
@@ -409,6 +397,7 @@ class TestStandard:
         # check full state is still giving original results
         state_f.set_gates(state_s.gates)
         actual = eval_func_f(state_f.activation_matrix)
+
         np.testing.assert_array_equal(expected, actual)
 
 
@@ -442,13 +431,10 @@ class TestBoth:
     def test_from_operator_combined_attributes(self, state_params, state_type, sample_type):
         state = self.build_from_params(state_params, state_type, sample_type)
 
-        Ne = state_params['Ne'][sample_type]
-        assert state.Ne == Ne
         assert state.Ni == state_params['Ni']
         assert state.No == state_params['No']
         assert state.Ng == len(state_params['gates'])
-        assert state.zero_mask == generate_end_mask(Ne)
-        # assert state.Ne == state_params['Ne'][sample_type]
+        assert state.zero_mask == generate_end_mask(state.Ne)
 
     def test_from_operator_func_value(self, state_params, state_type, function, sample_type):
         expected = state_params['function value'][sample_type][function_name(function)]
@@ -464,16 +450,7 @@ class TestBoth:
         actual = state.function_value(function)
         np.testing.assert_array_almost_equal(expected, actual)
 
-    def test_multiple_function_values_pre(self, state_harness, sample_type):
-        state = state_harness['state'][sample_type]
-        for function in all_functions():
-            state.add_function(function)
-        for function in all_functions():
-            expected = state_harness['function value'][sample_type][function_name(function)]
-            actual = state.function_value(function)
-            np.testing.assert_array_almost_equal(expected, actual)
-
-    def test_multiple_function_values_post(self, state_harness, sample_type):
+    def test_multiple_function_values(self, state_harness, sample_type):
         state = state_harness['state'][sample_type]
         for function in all_functions():
             state.add_function(function)
