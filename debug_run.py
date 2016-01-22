@@ -21,7 +21,7 @@ import yaml
 #     'learner': {
 #         'optimiser': {'guiding_function': 'e3L'},
 #         'auto_target': False,
-#         'kfs': True,
+#         'minfs_masking': True,
 #         'inter_file_base': '/home/shannon/HMRI/shan_test/'
 #     },
 #     'configurations': [

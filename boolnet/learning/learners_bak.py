@@ -88,9 +88,9 @@ class StratifiedLearner(BasicLearner):
     def _setup(self, parameters, state, optimiser):
         super()._setup(parameters, state, optimiser)
         self.auto_target = parameters.get('auto_target')
-        self.use_kfs_masking = parameters.get('kfs')
+        self.use_minfs_masking = parameters.get('minfs_masking')
         self.log_all_feature_sets = parameters.get('log_all_feature_sets')
-        self.one_layer_kfs = parameters.get('one_layer_kfs')
+        self.one_layer_minfs = parameters.get('one_layer_minfs')
         self.file_name_base = parameters['inter_file_base']
         self.fabcpp_opts = parameters.get('fabcpp_options')
         self.keep_files = parameters.get('keep_files', False)
