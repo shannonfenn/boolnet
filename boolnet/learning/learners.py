@@ -3,7 +3,8 @@ from collections import namedtuple
 import logging
 import numpy as np
 from boolnet.bintools.functions import PER_OUTPUT, function_from_name
-from boolnet.bintools.packing import unpack_bool_matrix, unpack_bool_vector
+from boolnet.bintools.packing import (
+    unpack_bool_matrix, unpack_bool_vector, BitPackedMatrix)
 from boolnet.learning.networkstate import StandardBNState
 import boolnet.learning.kfs as mfs
 
@@ -33,9 +34,12 @@ class BasicLearner:
         self.node_funcs = parameters['network']['node_funcs']
         self.budget = parameters['network']['Ng']
         # Instance
-        mapping = parameters['training_set']
-        self.input_matrix, self.target_matrix = np.split(mapping, [mapping.Ni])
-        self.Ne = mapping.Ne
+        self.problem_matrix = parameters['training_set']
+        self.Ni = self.problem_matrix.Ni
+        self.No = self.problem_matrix.shape[0] - self.Ni
+        self.input_matrix, self.target_matrix = np.split(
+            self.problem_matrix, [self.Ni])
+        self.Ne = self.problem_matrix.Ne
         # Optimiser
         self.optimiser = optimiser
         self.opt_params = copy(parameters['optimiser'])
@@ -47,10 +51,8 @@ class BasicLearner:
     def run(self, optimiser, parameters):
         self._setup(optimiser, parameters)
 
-        gates = self.gate_generator(self.budget, self.input_matrix.shape[0],
-                                    self.node_funcs)
-        state = StandardBNState(gates, self.input_matrix,
-                                self.target_matrix, self.Ne)
+        gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
+        state = StandardBNState(gates, self.problem_matrix)
 
         self.opt_params['stopping_criterion'] = guiding_func_stop_criterion()
 
@@ -200,8 +202,12 @@ class StratifiedLearner(BasicLearner):
                                            new.gates[-new.No:, :]))
 
         new_target = np.vstack((base.target_matrix, new.target_matrix))
-        return StandardBNState(accumulated_gates, self.input_matrix,
-                                    new_target)
+
+        new_problem_matrix = BitPackedMatrix(
+            np.vstack((self.input_matrix, new_target)),
+            Ne=self.Ne, Ni=self.Ni)
+
+        return StandardBNState(accumulated_gates, new_problem_matrix)
 
     def reorder_network(self, state):
         # all non-output gates are left alone, and the output gates are
@@ -210,8 +216,7 @@ class StratifiedLearner(BasicLearner):
             np.arange(state.Ng - state.No),
             np.argsort(self.learned_targets).tolist()))
         new_gates = state.gates[new_gate_order]
-        return StandardBNState(new_gates, self.input_matrix,
-                                    self.target_matrix)
+        return StandardBNState(new_gates, self.problem_matrix)
 
     def run(self, optimiser, parameters):
         # setup accumulated network
@@ -225,11 +230,10 @@ class StratifiedLearner(BasicLearner):
 
         opt_results = []
 
-        inputs = np.array(self.input_matrix)
+        inputs = self.input_matrix.copy()
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
-        accumulated_network = StandardBNState(
-            np.empty((0, 3)), inputs, np.empty((0, inputs.shape[1])), self.Ne)
+        accumulated_network = StandardBNState(np.empty((0, 3)), inputs)
 
         for i in range(self.No):
             # determine target
@@ -253,7 +257,8 @@ class StratifiedLearner(BasicLearner):
 
             # don't include output gates as possible inputs
             # new Ni = Ng - No + Ni
-            inputs = np.array(accumulated_network.activation_matrix[:-i, :])
+            inputs = accumulated_network.activation_matrix[:-i, :]
+            inputs = BitPackedMatrix(inputs, Ne=self.Ne, Ni=inputs.shape[0])
 
             self.learned_targets.append(target_index)
 
