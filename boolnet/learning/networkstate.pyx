@@ -80,6 +80,9 @@ cdef class BNState:
         self.invalid_start = 0
         self._check_state_invariants()
 
+    def __copy__(self):
+        raise NotImplementedError
+
     property Ni:
         def __get__(self):
             return self.network.Ni
@@ -95,6 +98,15 @@ cdef class BNState:
     property gates:
         def __get__(self):
             return self.network.gates
+
+    property representation:
+        def __get__(self):
+            return self.network
+
+    property guiding_functions:
+        def __get__(self):
+            # conversion to list prevents silly copy bugs
+            return list(self.err_evaluators.keys())
 
     cpdef add_function(self, Function function):
         pass

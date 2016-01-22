@@ -8,7 +8,7 @@ import logging
 
 
 OptimiserResult = namedtuple('OptimiserResult', [
-    'state', 'error', 'best_iteration', 'iteration', 'restarts'])
+    'representation', 'error', 'best_iteration', 'iteration', 'restarts'])
 
 
 def stepped_exp_decrease(init_temp, rate, num_temps, steps_per_temp):
@@ -61,7 +61,7 @@ class RestartLocalSearch:
                 state.randomise()
 
         return OptimiserResult(
-            state=step_result.state,
+            representation=step_result.representation,
             error=step_result.error,
             best_iteration=step_result.best_iteration,
             iteration=step_result.iteration,
@@ -113,7 +113,7 @@ class HC(RestartLocalSearch):
             state.clear_history()
 
         return OptimiserResult(
-            state=state,
+            representation=state.representation,
             error=error,
             best_iteration=best_iteration,
             iteration=iteration,
@@ -149,7 +149,7 @@ class LAHC(RestartLocalSearch):
 
         # set up aspiration criteria
         best_error = error
-        best_state = copy(state)
+        best_representation = copy(state.representation)
         best_iteration = 0
 
         # initialise cost list
@@ -158,7 +158,7 @@ class LAHC(RestartLocalSearch):
         if self.stopping_criterion(state, best_error):
             self.reached_stopping_criterion = True
             return OptimiserResult(
-                state=best_state, error=best_error,
+                representation=best_representation, error=best_error,
                 best_iteration=0, iteration=0, restarts=None)
         else:
             self.reached_stopping_criterion = False
@@ -173,7 +173,7 @@ class LAHC(RestartLocalSearch):
             # Keep best state seen
             if new_error < best_error:
                 best_error = new_error
-                best_state = copy(state)
+                best_representation = copy(state.representation)
                 best_iteration = iteration
 
             # Determine whether to accept the new state
@@ -192,7 +192,7 @@ class LAHC(RestartLocalSearch):
                 break
 
         return OptimiserResult(
-            state=best_state,
+            representation=best_representation,
             error=best_error,
             best_iteration=best_iteration,
             iteration=iteration,
@@ -242,7 +242,7 @@ class SA(RestartLocalSearch):
 
         # Setup aspiration criteria
         best_error = error
-        best_state = copy(state)
+        best_representation = copy(state.representation)
         best_iteration = 0
 
         best_error_for_temp = error
@@ -274,7 +274,7 @@ class SA(RestartLocalSearch):
 
             # Keep best state seen
             if new_error < best_error:
-                best_state = copy(state)
+                best_representation = copy(state.representation)
                 best_error = new_error
                 best_iteration = iteration
 
@@ -289,7 +289,7 @@ class SA(RestartLocalSearch):
             state.clear_history()
 
         return OptimiserResult(
-            state=best_state,
+            representation=best_representation,
             error=best_error,
             best_iteration=best_iteration,
             iteration=iteration,

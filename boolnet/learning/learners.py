@@ -10,8 +10,8 @@ import boolnet.learning.kfs as mfs
 
 
 LearnerResult = namedtuple('LearnerResult', [
-    'best_states', 'best_errors', 'best_iterations', 'final_iterations',
-    'target_order', 'feature_sets', 'restarts'])
+    'best_representations', 'best_errors', 'best_iterations',
+    'final_iterations', 'target_order', 'feature_sets', 'restarts'])
 
 
 def per_tgt_err_stop_criterion(bit):
@@ -58,7 +58,7 @@ class BasicLearner:
 
         opt_result = self.optimiser.run(state, self.opt_params)
 
-        return LearnerResult(best_states=[opt_result.state],
+        return LearnerResult(best_representations=[opt_result.representation],
                              best_errors=[opt_result.error],
                              best_iterations=[opt_result.best_iteration],
                              final_iterations=[opt_result.iteration],
@@ -75,7 +75,7 @@ class StratifiedLearner(BasicLearner):
         self.mfs_fname = parameters['inter_file_base']
         # Optional
         self.auto_target = parameters.get('auto_target', False)
-        self.use_mfs_selection = parameters.get('kfs', False)
+        self.use_minfs_selection = parameters.get('minfs', False)
         self.fabcpp_opts = parameters.get('fabcpp_options', False)
         self.keep_files = parameters.get('keep_files', False)
         # Initialise
@@ -105,7 +105,7 @@ class StratifiedLearner(BasicLearner):
                                   self.feature_sets[strata][not_learned]]
             indirect_simplest_target = np.argmin(feature_sets_sizes)
             return not_learned[indirect_simplest_target]
-        elif self.use_mfs_selection:
+        elif self.use_minfs_selection:
             target = min(not_learned)
             # find minFS for just the next target
             self._record_feature_sets(inputs, [target])
@@ -141,36 +141,29 @@ class StratifiedLearner(BasicLearner):
                 self.fabcpp_opts, self.keep_files)
             return minfs
 
-    def construct_partial_state(self, strata, target_index, inputs):
+    def make_partial_problem(self, strata, target_index, inputs):
         # determine next budget
-        size = self.remaining_budget // (self.No - strata)
         target = self.target_matrix[target_index]
 
-        if self.use_mfs_selection:
+        if self.use_minfs_selection:
             # subsample the inputs for below
             fs = self.feature_sets[strata, target_index]
             inputs = inputs[fs]
-            # check for 1-FS, if we have a 1FS we have already learnt the
-            # target, or its inverse, so simply map this feature to the output
-            # NOTE: does not working with generic node function list since it
-            #       relies on the presence of the NAND gate
-            # if fs.size == 1:
-            #     # have the below function build a network with 1 or 2
-            #     # gates and return it
-            #     gates = self.handle_single_FS(inputs[0], target)
-            #     self.remaining_budget -= gates.shape[0]
-            #     return StandardBNState(gates, inputs, target, self.Ne)
 
-        gates = self.gate_generator(size, inputs.shape[0], self.node_funcs)
+        return BitPackedMatrix(np.vstack((inputs, target)),
+                               Ne=self.Ne, Ni=inputs.shape[0])
+
+    def next_gates(self, strata, problem_matrix):
+        size = self.remaining_budget // (self.No - strata)
         self.remaining_budget -= size
-        return StandardBNState(gates, inputs, target, self.Ne)
+        return self.gate_generator(size, problem_matrix.Ni, self.node_funcs)
 
-    def insert_network(self, base, new, strata, target_index):
+    def join_networks(self, base, new, strata, target_index):
         # simple: build up a map for all sources, for sources after the
         # original minfs input just have them as + Ni_offset (whatever that is,
         # might including old.Ng) and for the former ones use the fs mapping
 
-        if self.use_mfs_selection:
+        if self.use_minfs_selection:
             # build a map for replacing sources
             new_input_map = self.feature_sets[strata][target_index]
             offset = base.Ni + base.Ng - base.No - new.Ni
@@ -236,38 +229,41 @@ class StratifiedLearner(BasicLearner):
         accumulated_network = StandardBNState(np.empty((0, 3)), inputs)
 
         for i in range(self.No):
-            # determine target
-            target_index = self._determine_next_target(i, inputs)
+            # determine next target index
+            target = self._determine_next_target(i, inputs)
 
-            partial_state = self.construct_partial_state(
-                i, target_index, inputs)
+            partial_problem = self.make_partial_problem(i, target, inputs)
+            gates = self.next_gates(i, partial_problem)
+            state = StandardBNState(gates, partial_problem)
 
             # generate an end condition based on the current target
-            criterion = guiding_func_stop_criterion(target_index)
+            criterion = guiding_func_stop_criterion(target)
             self.opt_params['stopping_criterion'] = criterion
 
             # optimise
-            partial_result = self.optimiser.run(partial_state, self.opt_params)
+            partial_result = self.optimiser.run(state, self.opt_params)
             # record result
             opt_results.append(partial_result)
 
             # build up final network by inserting this partial result
-            accumulated_network = self.insert_network(
-                accumulated_network, partial_result.state, i, target_index)
+            result_state = StandardBNState(
+                partial_result.representation, partial_problem)
+            accumulated_network = self.join_networks(
+                accumulated_network, result_state, i, target)
 
             # don't include output gates as possible inputs
             # new Ni = Ng - No + Ni
             inputs = accumulated_network.activation_matrix[:-i, :]
             inputs = BitPackedMatrix(inputs, Ne=self.Ne, Ni=inputs.shape[0])
 
-            self.learned_targets.append(target_index)
+            self.learned_targets.append(target)
 
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs
         opt_results[-1].state = self.reorder_network(opt_results[-1].state)
 
         return LearnerResult(
-            best_states=[r.state.gates for r in opt_results],
+            best_representations=[r.state.gates for r in opt_results],
             best_errors=[r.error for r in opt_results],
             best_iterations=[r.best_iteration for r in opt_results],
             final_iterations=[r.iteration for r in opt_results],
