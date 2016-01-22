@@ -102,17 +102,14 @@ def learn_bool_net(parameters):
     return results
 
 
-def build_states(gates, mapping, guiding_funcs):
+def build_states(mapping, gates, guiding_funcs):
     if mapping['type'] == 'raw':
         M = mapping['matrix']
         indices = mapping['training_indices']
         M_trg, M_test = partition_packed(M, indices)
 
-        I_trg, T_trg = np.split(M_trg, [M.Ni])
-        I_test, T_test = np.split(M_test, [M.Ni])
-
-        S_trg = StandardBNState(gates, I_trg, T_trg, M.Ne)
-        S_test = StandardBNState(gates, I_test, T_test, M.Ne)
+        S_trg = StandardBNState(gates, M_trg)
+        S_test = StandardBNState(gates, M_test)
 
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
@@ -140,7 +137,7 @@ def build_result_map(parameters, learner_result):
     guiding_function = function_from_name(
         optimiser_params['guiding_function'])
 
-    final_network = learner_result.best_states[-1]
+    final_network = learner_result.best_representations[-1]
     gates = final_network.gates
 
     # build evaluators for training and test data
@@ -154,7 +151,7 @@ def build_result_map(parameters, learner_result):
         'learner':      learner_parameters['name'],
         'config_num':   parameters['configuration_number'],
         'trg_set_num':  parameters['training_set_number'],
-        'tfs':          parameters['network']['node_funcs'],
+        'tfs':          parameters['learner']['network']['node_funcs'],
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
         'trg_error':    train_state.function_value(E1),
@@ -171,19 +168,19 @@ def build_result_map(parameters, learner_result):
         results['test_err_per'] = test_state.function_value(PER_OUTPUT)
 
     if parameters.get('record_training_indices', True):
-        results['trg_indices'] = parameters['training_indices']
+        results['trg_indices'] = parameters['mapping']['training_indices']
 
     if parameters.get('record_final_net', True):
         results['final_net'] = np.array(final_network.gates)
 
     if parameters.get('record_intermediate_nets', False):
-        for i in range(len(learner_result.best_states) - 1):
+        for i in range(len(learner_result.best_representations) - 1):
             key = 'net_{}'.format(i)
-            results[key] = np.array(learner_result.best_states[i].gates)
+            results[key] = np.array(learner_result.best_representations[i].gates)
 
-    # add ' kfs' on the end of the learner name in the result dict if required
-    if learner_parameters.get('kfs'):
-        results['learner'] += ' kfs'
+    # add ' minfs' on the end of the learner name in the result dict if required
+    if learner_parameters.get('minfs'):
+        results['learner'] += ' minfs'
 
     if learner_result.feature_sets is not None:
         for strata, strata_f_sets in enumerate(learner_result.feature_sets):
