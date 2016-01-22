@@ -137,7 +137,7 @@ def build_result_map(parameters, learner_result):
     guiding_function = function_from_name(
         optimiser_params['guiding_function'])
 
-    final_network = learner_result.best_representations[-1]
+    final_network = learner_result.network
     gates = final_network.gates
 
     # build evaluators for training and test data
@@ -174,9 +174,9 @@ def build_result_map(parameters, learner_result):
         results['final_net'] = np.array(final_network.gates)
 
     if parameters.get('record_intermediate_nets', False):
-        for i in range(len(learner_result.best_representations) - 1):
+        for i, net in enumerate(learner_result.partial_networks):
             key = 'net_{}'.format(i)
-            results[key] = np.array(learner_result.best_representations[i].gates)
+            results[key] = np.array(net.gates)
 
     # add ' minfs' on the end of the learner name in the result dict if required
     if learner_parameters.get('minfs'):
