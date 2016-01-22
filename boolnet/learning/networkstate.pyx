@@ -68,7 +68,10 @@ cdef class BNState:
 
         # create input and output view into activation matrix
         self.inputs = self.activation[:Ni, :]
-        self.outputs = self.activation[-<int>No:, :]
+        if No != 0:
+            self.outputs = self.activation[-<int>No:, :]
+        else:
+            self.outputs = np.empty((No, cols), dtype=packed_type)
 
         self.target = np.empty((No, cols), dtype=packed_type)
         # instantiate matrices for error
