@@ -212,7 +212,8 @@ class TestExampleGenerator:
         actual_tgt = np.zeros_like(expected_tgt)
         Ni, cols = expected_inp.shape
         No, _ = expected_tgt.shape
-        block_width = max(1, cols * block_fraction)
+        block_width = np.round(cols * block_fraction)
+        block_width = int(np.clip(block_width, 1, cols))
 
         i = 0
         while generator:
@@ -240,10 +241,6 @@ class TestExampleGenerator:
             inp[expected_indices, :],
             tgt[expected_indices, :])))
 
-        print(Ne)
-        print(opit.num_operands(op))
-        print((opit.num_operands(op) * (Ni//2)) ** 2)
-        print(indices.shape, Ni//2, No, op, exclude)
         actual = packed_from_operator(indices, Ni//2, No, op, exclude)
 
         assert_array_equal(expected, actual)
