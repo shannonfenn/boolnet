@@ -92,7 +92,7 @@ class TestExampleIteratorFactory:
         indices = np.random.choice(max_indices, Ne, replace=False)
         indices = np.array(indices, dtype=np.uint64)
 
-        factory = opit.OpExampleIterFactory(indices, Nb, operator_id)
+        factory = opit.OpExampleIterFactory(indices, Nb, operator_id, False)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -104,14 +104,14 @@ class TestExampleIteratorFactory:
     def test_operator_factory_exclude(self, binary_op, operand_width):
         Nb = operand_width
         upper = 2**Nb
-        max_indices = 2**(2*Nb)
-        Ne = np.random.randint(min(100, max_indices))
-        ex_indices = np.random.choice(max_indices, Ne, replace=False)
+        N = 2**(2*Nb)
+        Ne = np.random.randint(min(100, N))
+        ex_indices = np.random.choice(N, Ne, replace=False)
         ex_indices = np.array(ex_indices, dtype=np.uint64)
-        indices = (i for i in range(max_indices) if i not in ex_indices)
+        indices = (i for i in range(N) if i not in ex_indices)
 
         factory = opit.OpExampleIterFactory(
-            ex_indices, Nb, binary_op[0], max_indices)
+            ex_indices, Nb, binary_op[0], True)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -127,7 +127,7 @@ class TestExampleIteratorFactory:
         indices = np.random.choice(max_indices, Ne, replace=False)
         indices = np.array(indices, dtype=np.uint64)
 
-        factory = opit.OpExampleIterFactory(indices, Nb, unary_op[0])
+        factory = opit.OpExampleIterFactory(indices, Nb, unary_op[0], False)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
@@ -136,18 +136,18 @@ class TestExampleIteratorFactory:
 
     def test_unary_operator_factory_exclude(self, unary_op, operand_width):
         Nb = operand_width
-        max_indices = 2**Nb
-        Ne = np.random.randint(min(100, max_indices))
-        ex_indices = np.sort(np.random.choice(max_indices, Ne, replace=False))
+        N = 2**Nb
+        Ne = np.random.randint(min(100, N))
+        ex_indices = np.sort(np.random.choice(N, Ne, replace=False))
         ex_indices = np.array(ex_indices, dtype=np.uint64)
-        indices = (i for i in range(max_indices) if i not in ex_indices)
+        indices = (i for i in range(N) if i not in ex_indices)
 
         factory = opit.OpExampleIterFactory(
-            ex_indices, Nb, unary_op[0], max_indices)
+            ex_indices, Nb, unary_op[0], True)
 
         for i, (inp, tgt) in zip(indices, iter(factory)):
             assert i == inp
-            expected_out = unary_op[1](i, max_indices)
+            expected_out = unary_op[1](i, N)
             assert expected_out == tgt
 
 
