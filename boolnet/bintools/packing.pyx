@@ -44,7 +44,7 @@ class BitPackedMatrix(np.ndarray):
 
 
 cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column):
-    ''' This method assumed mat.shape[0] >= 64.'''
+    ''' This method assumed mat.shape[0] == PACKED_SIZE.'''
     cdef:
         size_t f, bit
         packed_type_t chunk, mask
@@ -159,13 +159,13 @@ cpdef partition_packed(matrix, indices):
     Nf, Nw = matrix.shape
 
     # find number of words in training and test samples
-    Nw_trg = int(np.ceil(Ne / PACKED_SIZE))
-    Nw_test = int(np.ceil((matrix.Ne - Ne) / PACKED_SIZE))
+    Nw_trg = int(np.ceil(Ne / <double>PACKED_SIZE))
+    Nw_test = int(np.ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
 
     M_trg = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=packed_type),
-                            Ne, matrix.Ni)
+                            Ne=Ne, Ni=matrix.Ni)
     M_test = BitPackedMatrix(np.zeros((Nf, Nw_test), dtype=packed_type),
-                             matrix.Ne - Ne, matrix.Ni)
+                             Ne=matrix.Ne - Ne, Ni=matrix.Ni)
 
     for f in range(Nf):
         # word and bit positions for training and test samples
@@ -205,7 +205,7 @@ cpdef sample_packed(matrix, indices, invert=False):
 
     if invert:
         # sample matrix
-        cols = int(np.ceil((matrix.Ne - Ne) / PACKED_SIZE))
+        cols = int(np.ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
         sample = np.zeros((Nf, cols), dtype=packed_type)
         sample = BitPackedMatrix(sample, Ne=matrix.Ne-Ne, Ni=matrix.Ni)
         
@@ -225,7 +225,7 @@ cpdef sample_packed(matrix, indices, invert=False):
                     sb = (sb + 1) % PACKED_SIZE
                     sw += sb == 0
     else:
-        Nw_trg = int(np.ceil(Ne / PACKED_SIZE))
+        Nw_trg = int(np.ceil(Ne / <double>PACKED_SIZE))
         sample = np.zeros((Nf, Nw_trg), dtype=packed_type)
         sample = BitPackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)
         

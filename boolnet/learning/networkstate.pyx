@@ -36,6 +36,7 @@ cpdef standard_from_operator(gates, indices, Nb, No, operator, exclude=False):
 
 
 cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, exclude=False):
+    print(gates, indices, Nb, No, operator, window_size, exclude)
     ex_factory = OpExampleIterFactory(indices, Nb, operator, exclude)
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
     return ChainedBNState(gates, packed_ex_factory, window_size)
@@ -331,11 +332,11 @@ cdef class ChainedBNState(BNState):
         super().__init__(gates, example_generator.Ni, example_generator.No,
                          example_generator.Ne, window_size)
         block_width = (self.cols * PACKED_SIZE)
-        self.blocks = ceil(self.Ne / block_width)
+        self.blocks = ceil(self.Ne / <double>block_width)
 
         # work out the number of columns remaining after blocking
         # as this determines the zero_mask width
-        total_cols = ceil(self.Ne / PACKED_SIZE)
+        total_cols = ceil(self.Ne / <double>PACKED_SIZE)
         remainder = total_cols % self.cols
 
         self.zero_mask_cols = 1
@@ -393,10 +394,50 @@ cdef class ChainedBNState(BNState):
                 matrix[r, cols-self.zero_mask_cols+c] = 0
 
 
-
-
     ## DEBUG
-    #def err(self):
+    #def I(self):
+    #    cdef:
+    #        size_t block
+    #    outs = []
+    #    self.example_generator.reset() 
+    #    for block in range(self.blocks):
+    #        self.example_generator.next_examples(self.inputs, self.target)
+    #        outs.append(np.array(self.inputs))
+    #    return np.hstack(outs)
+
+    #def T(self):
+    #    cdef:
+    #        size_t block
+    #    tgts = []
+    #    self.example_generator.reset() 
+    #    for block in range(self.blocks):
+    #        self.example_generator.next_examples(self.inputs, self.target)
+    #        if block < self.blocks - 1:
+    #            tgts.append(np.array(self.target))
+        
+    #    self._apply_zero_mask(self.target)
+    #    tgts.append(np.array(self.target))
+    #    return np.hstack(tgts)
+    
+    #def O(self):
+    #    cdef:
+    #        size_t block
+
+    #    outs = []
+    #    self.example_generator.reset()
+ 
+    #    for block in range(self.blocks):
+    #        self.example_generator.next_examples(self.inputs, self.target)
+    #        self._evaluate()
+    #        # on the last iteration we must not perform a partial evaluation
+    #        if block < self.blocks - 1:
+    #            outs.append(np.array(self.outputs))
+
+    #    self._apply_zero_mask(self.outputs)
+    #    outs.append(np.array(self.outputs))
+    #    return np.hstack(outs)
+
+    #def E(self):
     #    cdef:
     #        size_t block
     #        dict evaluators = self.err_evaluators
