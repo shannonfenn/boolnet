@@ -12,6 +12,9 @@ cpdef enum Operator:
     MUL,
 
 
+cpdef int num_operands(Operator op)
+
+
 cdef class OpExampleIterFactory:
     cdef:
         size_t Ne, Nb, Ni, max_elements
