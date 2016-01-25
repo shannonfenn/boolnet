@@ -54,7 +54,6 @@ class TestIterators:
 
     def test_exclude_indices(self, exclude_iterator, index_harness):
         indices, expected, max_index = index_harness
-        print(expected.size)
         actual = np.array(list(exclude_iterator(indices, 2, max_index)))[:, 0]
 
         assert_array_equal(expected, actual)

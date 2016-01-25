@@ -13,8 +13,6 @@ def test_biterror(error_matrix_harness, function):
     actual = error_evaluator.evaluate(E)
     expected = error_matrix_harness[function_name(function)]
 
-    print(function_name(function))
-
     assert_array_equal(actual, expected)
 
 

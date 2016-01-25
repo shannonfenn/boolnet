@@ -171,32 +171,20 @@ def test_partition_packed(single_matrix):
 
 
 def test_sample_packed(single_matrix):
-    print(single_matrix.shape)
-    print(single_matrix)
-    print(pk.pack_bool_matrix(single_matrix))
-
     Ne = single_matrix.shape[0]
 
     sample_size = np.random.randint(1, Ne)
     sample = np.random.choice(Ne, size=sample_size, replace=False)
     sample.sort()
 
-    print('sample', sample)
-
     expected_trg, expected_test = expected_partition(
         single_matrix, Ne, sample)
-
-    print(expected_trg)
-    print(expected_test)
 
     packed = pk.BitPackedMatrix(
         pk.pack_bool_matrix(single_matrix), Ne, 0)
 
     actual_trg = pk.sample_packed(packed, sample, invert=False)
     actual_test = pk.sample_packed(packed, sample, invert=True)
-
-    print(actual_trg)
-    print(actual_test)
 
     np.testing.assert_array_equal(actual_trg, expected_trg)
     np.testing.assert_array_equal(actual_test, expected_test)

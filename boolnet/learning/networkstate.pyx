@@ -36,7 +36,6 @@ cpdef standard_from_operator(gates, indices, Nb, No, operator, exclude=False):
 
 
 cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, exclude=False):
-    print(gates, indices, Nb, No, operator, window_size, exclude)
     ex_factory = OpExampleIterFactory(indices, Nb, operator, exclude)
     packed_ex_factory = PackedExampleGenerator(ex_factory, No)
     return ChainedBNState(gates, packed_ex_factory, window_size)

@@ -45,8 +45,6 @@ def construct_test_instance(harness):
 
     expected = harness[function_name(function)]
 
-    print(function_name(function))
-
     return (window_width, Ep, error_evaluator, expected)
 
 
