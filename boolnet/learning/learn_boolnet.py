@@ -126,6 +126,8 @@ def build_states(mapping, gates, guiding_funcs):
         for f in guiding_funcs:
             S_trg.add_function(f)
             S_test.add_function(f)
+    else:
+        raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
     return S_trg, S_test
 
