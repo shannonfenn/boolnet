@@ -204,14 +204,11 @@ class StratifiedLearner(BasicLearner):
     def reorder_network(self, network):
         # all non-output gates are left alone, and the output gates are
         # reordered by the inverse permutation of "learned_targets"
-        print(network.Ng, network.No)
         Ng, No = network.Ng, network.No
         new_gate_order = np.concatenate((
             np.arange(Ng - No),
             inverse_permutation(self.learned_targets) + Ng - No))
-        new_gates = np.array(network.gates)
-        print(new_gate_order)
-        new_gates = new_gates[new_gate_order]
+        new_gates = np.array(network.gates)[new_gate_order]
         network.set_gates(new_gates)
 
     def run(self, optimiser, parameters):
