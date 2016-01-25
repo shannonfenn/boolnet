@@ -21,5 +21,3 @@ cdef class PackedExampleGenerator:
 
     # cdef void _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t col)
     cdef _get_block(self, packed_type_t[:, :] inputs, packed_type_t[:, :] target, size_t col)
-
-    cdef void __check_invariants(self)
