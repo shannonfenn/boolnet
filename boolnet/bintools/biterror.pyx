@@ -5,6 +5,7 @@ from boolnet.bintools.functions import (E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E
 import numpy as np
 cimport numpy as np
 import cython
+from math import sqrt
 from boolnet.bintools.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
 from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
 from boolnet.bintools.packing import packed_type
@@ -38,6 +39,36 @@ cdef class StandardEvaluator:
         self.Ne = Ne
         self.No = No
         self.divisor = No * Ne
+
+
+cdef class StandardMCC(StandardEvaluator):
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        self.true_positive = np.zeros(self.cols, dtype=packed_type)
+        self.false_positive = np.zeros(self.cols, dtype=packed_type)
+        self.false_negative = np.zeros(self.cols, dtype=packed_type)
+        self.mcc = np.zeros(self.No, dtype=np.float64)
+        super().__init__(Ne, No, msb)
+
+    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t i, c, TP, FP, TN, FN, normaliser
+        
+        TP = FP = TN = FN = 0
+
+        for i in range(self.No):
+            for c in range(self.cols):
+                self.true_positive[c] = ~E[i, c] & T[i, c]
+                self.false_positive[c] = E[i, c] & ~T[i, c]
+                self.false_negative[c] = E[i, c] & T[i, c]
+            TP = popcount_vector(self.true_positive)
+            FP = popcount_vector(self.false_positive)
+            FN = popcount_vector(self.false_negative)
+            TN = self.Ne - TP - FP - FN
+            normaliser = (TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)
+            if normaliser == 0:
+                self.mcc[i] = 0
+            else:
+                self.mcc[i] = (TP * TN - FP * FN) / sqrt(normaliser)
+        return self.mcc
 
 
 cdef class StandardPerOutput(StandardEvaluator):
