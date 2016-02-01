@@ -11,7 +11,7 @@ cdef packed_type_t PACKED_HIGH_BIT_SET
 
 
 cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column)
-cpdef pack_bool_matrix(np.ndarray mat)
+cpdef pack_bool_matrix(np.uint8_t[:, :] mat)
 
 cpdef unpack_bool_matrix(packed_type_t[:, :] packed_mat, size_t Ne)
 cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne)
