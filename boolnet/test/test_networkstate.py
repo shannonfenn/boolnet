@@ -38,7 +38,7 @@ def to_binary(value, num_bits):
 def all_possible_inputs(num_bits):
     return pack_bool_matrix(np.array(
         [to_binary(i, num_bits) for i in range(2**num_bits)],
-        dtype=np.byte))
+        dtype=np.uint8))
 
 
 def packed_zeros(shape):
