@@ -1,0 +1,7 @@
+numpy
+progress
+pushbullet.py
+pyyaml
+scoop
+Cython
+Cythongsl
