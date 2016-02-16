@@ -62,7 +62,7 @@ def load_samples(params, data_dir, N, Ni):
     base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
 
     # load sample indices
-    sample_filename = join(data_dir, 'samples', base_name)
+    sample_filename = join(data_dir, base_name)
     training_indices = np.load(sample_filename)
     return training_indices
 
@@ -70,11 +70,11 @@ def load_samples(params, data_dir, N, Ni):
 def file_instance(data_settings, sampling_settings):
     data_dir = data_settings['dir']
     # load data set from file
-    dataset_filename = join(data_dir, 'functions', data_settings['filename'])
+    dataset_filename = join(data_dir, data_settings['filename'])
     if splitext(dataset_filename)[-1] == '':
         dataset_filename += '.npz'
     with np.load(dataset_filename) as dataset:
-        data = dataset['Matrix']
+        data = dataset['matrix']
         Ne = dataset['Ne']
         Ni = dataset['Ni']
 

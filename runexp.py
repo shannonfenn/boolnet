@@ -62,8 +62,9 @@ def parse_arguments():
     parser.add_argument('--no-notify', action='store_true',
                         help='disable PushBullet notifications.')
     parser.add_argument('--data-dir', type=str,
-                        default='experiments/datasets',
-                        help='dataset directory.')
+                        help='base directory for datasets.')
+    parser.add_argument('--sample-dir', type=str,
+                        help='base directory for sampling files.')
     parser.add_argument('--result-dir', type=str,
                         default='experiments/results',
                         help='directory to store results in (in own subdir).')
@@ -103,8 +104,16 @@ def initialise(args):
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
-    # MUST FIX THIS SINCE BASE_DIR will be code, not above
-    settings['data']['dir'] = os.path.abspath(args.data_dir)
+    if args.data_dir:
+        settings['data']['dir'] = os.path.abspath(args.data_dir)
+    else:
+        settings['data']['dir'] = os.path.abspath('experiments/datasets/functions'),
+
+    if args.sample_dir:
+        settings['sampling']['dir'] = os.path.abspath(args.data_dir)
+    else:
+        settings['sampling']['dir'] = os.path.abspath('experiments/datasets/functions'),
+
 
     # create result directory
     result_dir = create_result_dir(args.result_dir, settings['name'])

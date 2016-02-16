@@ -45,6 +45,7 @@ data_schema_file = Schema({
     })
 
 sampling_schema = Schema({
+    'dir':                      IsDir(),
     'Ns':                       All(int, Range(min=1)),
     'Ne':                       All(int, Range(min=1)),
     Optional('indices'):        [All(int, Range(min=0))],
