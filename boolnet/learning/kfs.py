@@ -47,7 +47,7 @@ def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
     abk_file(features, target, abk_file_name)
 
     # dirty dirty hack
-    if options is None:
+    if not options:
         options = {}
 
     model = options.get('model', 6)
