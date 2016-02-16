@@ -86,7 +86,7 @@ class StratifiedLearner(BasicLearner):
         # Optional
         self.auto_target = parameters.get('auto_target', False)
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.fabcpp_opts = parameters.get('fabcpp_options', False)
+        self.fabcpp_opts = parameters.get('fabcpp_options', None)
         self.keep_files = parameters.get('keep_files', False)
         # Initialise
         self.No, _ = self.target_matrix.shape
