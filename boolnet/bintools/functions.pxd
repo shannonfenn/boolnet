@@ -10,4 +10,5 @@ cpdef enum Function:
     E6M, E6L,
     E7M, E7L,    # worst example
     ACCURACY,
-    PER_OUTPUT
+    PER_OUTPUT,
+    MCC

@@ -1,7 +1,7 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 from boolnet.bintools.functions import (E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
-                                        E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT)
+                                        E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT, MCC)
 import numpy as np
 cimport numpy as np
 import cython
@@ -20,7 +20,8 @@ STANDARD_EVALUATORS = {
     E6L: (StandardE6, False), E6M: (StandardE6, True),
     E7L: (StandardE7, False), E7M: (StandardE7, True),
     ACCURACY: (StandardAccuracy, False),
-    PER_OUTPUT: (StandardPerOutput, False)
+    PER_OUTPUT: (StandardPerOutput, False),
+    MCC: (StandardMCC, False)
 }
 
 

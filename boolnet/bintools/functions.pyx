@@ -4,7 +4,7 @@
 
 def all_functions():
     return [E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L,
-            E6M, E6L, E7M, E7L, ACCURACY, PER_OUTPUT]
+            E6M, E6L, E7M, E7L, ACCURACY, PER_OUTPUT, MCC]
 
 
 def all_function_names():
