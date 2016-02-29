@@ -50,16 +50,16 @@ cdef class StandardMCC(StandardEvaluator):
         self.mcc = np.zeros(self.No, dtype=np.float64)
         super().__init__(Ne, No, msb)
 
-    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+    cpdef double[:] evaluate(self, packed_type_t[:, ::1] O, packed_type_t[:, ::1] T):
         cdef size_t i, c, TP, FP, TN, FN, normaliser
         
         TP = FP = TN = FN = 0
 
         for i in range(self.No):
             for c in range(self.cols):
-                self.true_positive[c] = ~E[i, c] & T[i, c]
-                self.false_positive[c] = E[i, c] & ~T[i, c]
-                self.false_negative[c] = E[i, c] & T[i, c]
+                self.true_positive[c] = O[i, c] & T[i, c]
+                self.false_positive[c] = O[i, c] & ~T[i, c]
+                self.false_negative[c] = ~O[i, c] & T[i, c]
             TP = popcount_vector(self.true_positive)
             FP = popcount_vector(self.false_positive)
             FN = popcount_vector(self.false_negative)

@@ -14,7 +14,7 @@ cdef class StandardMCC(StandardEvaluator):
     cdef packed_type_t[:] true_positive, false_positive, false_negative
     cdef double[:] mcc
 
-    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+    cpdef double[:] evaluate(self, packed_type_t[:, ::1] O, packed_type_t[:, ::1] T)
 
 
 cdef class StandardPerOutput(StandardEvaluator):
