@@ -1,8 +1,8 @@
-numpy
+Cython
+gmpy2 
 good
+numpy
 progress
 pushbullet.py
 pyyaml
 scoop
-Cython
-Cythongsl
