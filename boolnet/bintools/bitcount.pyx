@@ -1,26 +1,34 @@
 # cython: language_level=3
 # distutils: libraries = gmp
+
+# cython: boundscheck=False
+# cython: nonecheck=False
+# cython: cdivision=True
+
 from boolnet.bintools.packing cimport PACKED_HIGH_BIT_SET, PACKED_SIZE
 
-# @cython.boundscheck(False)
-# @cython.wraparound(False)
-# @cython.nonecheck(False)
-# @cython.cdivision(True)
 cpdef size_t popcount_matrix(packed_type_t[:, :] mat):
-    return mpn_popcount(&mat[0, 0], mat.size)
+    return mpn_popcount(&mat[0, 0], mat.shape[0]*mat.shape[1])
 
 
 cpdef size_t popcount_vector(packed_type_t[:] vec):
-    return mpn_popcount(&vec[0], vec.size)
+    return mpn_popcount(&vec[0], vec.shape[0])
 
 
 cpdef size_t popcount_chunk(packed_type_t chunk):
     return mpn_popcount(&chunk, 1)
 
 
+cpdef void popcount_matrix_rows(packed_type_t[:, :] mat, size_t[:] row_counts):
+    cdef size_t i, cols
+    cols = mat.shape[1]
+    for i in range(row_counts.shape[0]):
+        row_counts[i] = mpn_popcount(&mat[i, 0], cols)
+
+
 cpdef size_t floodcount_vector(packed_type_t[:] vec, size_t end_mask_len=0):
     cdef bint was_zero
-    cdef size_t pos, row_len = PACKED_SIZE * vec.size
+    cdef size_t pos, row_len = PACKED_SIZE * vec.shape[0]
 
     # to ensure there is at least a 1 at the end for mpn_scan1 we need to add it, but also
     # remember if the last bit was set so we can unset it, and also return the correct count
