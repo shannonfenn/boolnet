@@ -8,7 +8,19 @@ cdef class ChainedEvaluator:
     cdef double divisor
 
 
-cdef class ChainedPerOutput(ChainedEvaluator):
+cdef class ChainedPerOutputMCC(ChainedEvaluator):
+    cdef:
+        packed_type_t[:] true_positive, false_positive, false_negative
+        size_t[:] TP, FP, FN
+        double[:] mcc
+        packed_type_t end_mask
+
+    cpdef reset(self)
+    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T, packed_type_t end_mask=*)
+    cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
+cdef class ChainedPerOutputMean(ChainedEvaluator):
     cdef:
         np.uint64_t[:] row_accumulator
         double[:] accumulator
@@ -26,6 +38,14 @@ cdef class ChainedAccuracy(ChainedEvaluator):
     cpdef reset(self)
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, size_t end_sub=*)
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E)
+
+
+cdef class ChainedMeanMCC:
+    cdef ChainedPerOutputMCC per_out_evaluator
+
+    cpdef reset(self)
+    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+    cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
 cdef class ChainedE1(ChainedEvaluator):

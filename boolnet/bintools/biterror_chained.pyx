@@ -1,17 +1,17 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
-from boolnet.bintools.functions import (
-    E1, E2L, E2M, E3L, E3M, E4L, E4M, E5L, E5M,
-    E6L, E6M, E7L, E7M, ACCURACY, PER_OUTPUT)
+from boolnet.bintools.functions cimport (E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L,
+            E6M, E6L, E7M, E7L, ACCURACY, MCC, PER_OUTPUT_ERROR, PER_OUTPUT_MCC)
 import numpy as np
 cimport numpy as np
 import cython
+from libc.math cimport sqrt
 from boolnet.bintools.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
-from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
+from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET, generate_end_mask
 from boolnet.bintools.packing import packed_type
 
 
-CHAINED_EVALUATORS = {
+CHAINED_SCALAR_EVALUATORS = {
     E1:  (ChainedE1, False),
     E2L: (ChainedE2, False), E2M: (ChainedE2, True),
     E3L: (ChainedE3, False), E3M: (ChainedE3, True),
@@ -20,8 +20,14 @@ CHAINED_EVALUATORS = {
     E6L: (ChainedE6, False), E6M: (ChainedE6, True),
     E7L: (ChainedE7, False), E7M: (ChainedE7, True),
     ACCURACY: (ChainedAccuracy, False),
-    PER_OUTPUT: (ChainedPerOutput, False)
+    MCC: (ChainedMeanMCC, False)
 }
+
+CHAINED_PER_OUTPUT_EVALUATORS = {
+    PER_OUTPUT_ERROR: (ChainedPerOutputMean, False),
+    PER_OUTPUT_MCC: (ChainedPerOutputMCC, False)
+}
+
 
 
 cdef class ChainedEvaluator:
@@ -36,7 +42,59 @@ cdef class ChainedEvaluator:
             self.start = 0
             self.step = 1
 
-cdef class ChainedPerOutput(ChainedEvaluator):
+
+cdef class ChainedPerOutputMCC(ChainedEvaluator):
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
+        super().__init__(Ne, No, msb)
+        self.true_positive = np.zeros(self.cols, dtype=packed_type)
+        self.false_positive = np.zeros(self.cols, dtype=packed_type)
+        self.false_negative = np.zeros(self.cols, dtype=packed_type)
+        self.mcc = np.zeros(self.No, dtype=np.float64)
+        self.TP = np.zeros(self.No, dtype=np.float64)
+        self.FP = np.zeros(self.No, dtype=np.float64)
+        self.FN = np.zeros(self.No, dtype=np.float64)
+        self.end_mask = generate_end_mask(Ne)
+
+    cpdef reset(self):
+        self.TP[...] = 0
+        self.FP[...] = 0
+        self.FN[...] = 0
+
+    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T, packed_type_t end_mask=PACKED_ALL_SET):
+        cdef size_t i, c
+
+        for i in range(self.No):
+            for c in range(self.cols):
+                self.true_positive[c] = ~E[i, c] & T[i, c]
+                self.false_positive[c] = E[i, c] & ~T[i, c]
+                self.false_negative[c] = E[i, c] & T[i, c]
+            # ensure we do not count past Ne
+            self.true_positive[-1] &= end_mask
+            self.false_positive[-1] &= end_mask
+            self.false_negative[-1] &= end_mask
+
+            self.TP[i] += popcount_vector(self.true_positive)
+            self.FP[i] += popcount_vector(self.false_positive)
+            self.FN[i] += popcount_vector(self.false_negative)
+
+    cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t i, TP, TN, FP, FN, normaliser
+
+        self.partial_evaluation(E, T, self.end_mask)
+
+        for i in range(self.No):
+            TP, FP, FN = self.TP[i], self.FP[i], self.FN[i]
+            TN = self.Ne - TP - FP - FN
+
+            normaliser = (TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)
+            if normaliser == 0:
+                self.mcc[i] = 0
+            else:
+                self.mcc[i] = (TP * TN - FP * FN) / sqrt(normaliser)
+        return self.mcc
+
+
+cdef class ChainedPerOutputMean(ChainedEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
         super().__init__(Ne, No, cols, msb)
         self.No = No
@@ -85,6 +143,20 @@ cdef class ChainedAccuracy(ChainedEvaluator):
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E):
         self.partial_evaluation(E)
         return 1.0 - self.accumulator / self.divisor
+
+
+cdef class ChainedMeanMCC:
+    def __init__(self, size_t Ne, size_t No, size_t cols, bint msb):
+        self.per_out_evaluator = ChainedPerOutputMCC(Ne, No, cols, msb)
+
+    cpdef reset(self):
+        self.per_out_evaluator.reset()
+
+    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        self.per_out_evaluator.partial_evaluation(E, T)
+
+    cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        return self.per_out_evaluator.final_evaluation(E, T).mean()
 
 
 cdef class ChainedE1(ChainedEvaluator):
