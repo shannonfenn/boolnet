@@ -3,17 +3,28 @@ from numpy.testing import assert_array_equal as assert_array_equal
 from boolnet.bintools.biterror import STANDARD_EVALUATORS
 
 
-def test_biterror(error_matrix_harness, function):
+def test_scalar_function(error_matrix_harness, scalar_function):
     Ne = error_matrix_harness['Ne']
     E = error_matrix_harness['packed error matrix']
     No, _ = E.shape
-    eval_class, msb = STANDARD_EVALUATORS[function]
+    eval_class, msb = STANDARD_EVALUATORS[scalar_function]
     error_evaluator = eval_class(Ne, No, msb)
 
     actual = error_evaluator.evaluate(E)
-    expected = error_matrix_harness[function_name(function)]
+    expected = error_matrix_harness[function_name(scalar_function)]
 
-    print(function_name(function))
+    assert actual == expected
+
+
+def test_per_output_function(error_matrix_harness, per_output_function):
+    Ne = error_matrix_harness['Ne']
+    E = error_matrix_harness['packed error matrix']
+    No, _ = E.shape
+    eval_class, msb = STANDARD_EVALUATORS[per_output_function]
+    error_evaluator = eval_class(Ne, No, msb)
+
+    actual = error_evaluator.evaluate(E)
+    expected = error_matrix_harness[function_name(per_output_function)]
 
     assert_array_equal(actual, expected)
 

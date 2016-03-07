@@ -9,7 +9,7 @@ from boolnet.bintools.packing import (
     pack_bool_matrix, unpack_bool_matrix, generate_end_mask, BitPackedMatrix,
     partition_packed)
 from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
-from boolnet.bintools.functions import function_name, all_functions
+from boolnet.bintools.functions import function_name, scalar_functions
 from boolnet.bintools.operator_iterator import (
     ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL,
     OpExampleIterFactory)
@@ -423,9 +423,9 @@ class TestBoth:
             )
 
     # ################### Exception Testing ################### #
-    def test_function_not_added(self, chained_state, function, sample_type):
+    def test_function_not_added(self, chained_state, any_function, sample_type):
         with raises(ValueError):
-            chained_state['state'][sample_type].function_value(function)
+            chained_state['state'][sample_type].function_value(any_function)
 
     # ################### Functionality Testing ################### #
     def test_from_operator_combined_attributes(self, state_params, state_type, sample_type):
@@ -443,18 +443,25 @@ class TestBoth:
     #     actual = state.function_value(function)
     #     np.testing.assert_array_almost_equal(expected, actual)
 
-    def test_function_value(self, state_harness, function, sample_type):
+    def test_scalar_function_value(self, state_harness, scalar_function, sample_type):
         state = state_harness['state'][sample_type]
-        expected = state_harness['function value'][sample_type][function_name(function)]
-        state.add_function(function)
-        actual = state.function_value(function)
+        expected = state_harness['function value'][sample_type][function_name(scalar_function)]
+        state.add_function(scalar_function)
+        actual = state.function_value(scalar_function)
+        assert expected == actual
+
+    def test_vector_function_value(self, state_harness, per_output_function, sample_type):
+        state = state_harness['state'][sample_type]
+        expected = state_harness['function value'][sample_type][function_name(per_output_function)]
+        state.add_function(per_output_function)
+        actual = state.function_value(per_output_function)
         np.testing.assert_array_almost_equal(expected, actual)
 
     def test_multiple_function_values(self, state_harness, sample_type):
         state = state_harness['state'][sample_type]
-        for function in all_functions():
+        for function in scalar_functions():
             state.add_function(function)
-        for function in all_functions():
+        for function in scalar_functions():
             expected = state_harness['function value'][sample_type][function_name(function)]
             actual = state.function_value(function)
-            np.testing.assert_array_almost_equal(expected, actual)
+            assert expected == actual
