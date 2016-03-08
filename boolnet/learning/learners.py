@@ -86,8 +86,8 @@ class StratifiedLearner(BasicLearner):
         # Optional
         self.auto_target = parameters.get('auto_target', False)
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.fabcpp_opts = parameters.get('fabcpp_options', False)
         self.keep_files = parameters.get('keep_files', False)
+        self.fabcpp_opts = parameters.get('fabcpp_options', {})
         # Initialise
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
@@ -164,23 +164,24 @@ class StratifiedLearner(BasicLearner):
 
         if self.use_minfs_selection:
             # build a map for replacing sources
-            new_input_map = self.feature_sets[strata][target_index]
-            offset = base.Ni + base.Ng - base.No - new.Ni
+            new_input_map = self.feature_sets[strata][target_index].tolist()
+            # difference in input sizes plus # of non-output base gates
+            # offset = base.Ni - new.Ni + base.Ng - base.No
+            offset = base.Ni + base.Ng - base.No
             new_gate_map = list(range(offset,
                                       offset + new.Ng - new.No))
-            new_output_map = list(range(offset + new.Ng + base.No - new.No,
+            new_output_map = list(range(offset + new.Ng - new.No + base.No,
                                         offset + new.Ng + base.No))
             sources_map = new_input_map + new_gate_map + new_output_map
 
-            # vectorised function for applying the map
-            def mapper(entry):
-                return sources_map[entry]
-            mapper = np.vectorize(mapper)
-
             # apply to all but the last column (it is for the transfer
-            # functions) and the last No rows (since they ) of the gate matrix
-            remapped_new_gates = np.hstack(mapper(new.gates[:-new.No, :-1]),
-                                           new.gates[:, -1])
+            # functions) of the gate matrix
+            # remapped_new_gates = new.gates.copy()
+            # numpy array since cython memoryview slicing is broken
+            remapped_new_gates = np.array(new.gates)
+            for gate in remapped_new_gates:
+                for i in range(gate.size - 1):
+                    gate[i] = sources_map[gate[i]]
 
             accumulated_gates = np.vstack((base.gates[:-base.No, :],
                                            remapped_new_gates[:-new.No, :],
@@ -201,14 +202,13 @@ class StratifiedLearner(BasicLearner):
 
         return StandardBNState(accumulated_gates, new_problem_matrix)
 
-    def reorder_network(self, network):
+    def reorder_network_outputs(self, network):
         # all non-output gates are left alone, and the output gates are
         # reordered by the inverse permutation of "learned_targets"
-        Ng, No = network.Ng, network.No
-        new_gate_order = np.concatenate((
-            np.arange(Ng - No),
-            inverse_permutation(self.learned_targets) + Ng - No))
-        new_gates = np.array(network.gates)[new_gate_order]
+        No = network.No
+        new_out_order = inverse_permutation(self.learned_targets)
+        new_gates = np.array(network.gates)
+        new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
         network.set_gates(new_gates)
 
     def run(self, optimiser, parameters):
@@ -262,7 +262,7 @@ class StratifiedLearner(BasicLearner):
 
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs
-        self.reorder_network(accumulated_network.representation)
+        self.reorder_network_outputs(accumulated_network.representation)
 
         return LearnerResult(
             network=accumulated_network.representation,

@@ -46,8 +46,8 @@ def FABCPP_cmd_line(features, target, file_name_base, options, keep_files):
     # write abk file
     abk_file(features, target, abk_file_name)
 
-    # dirty dirty hack
-    if options is None:
+    # ensure options is a mapping type if another 'False' type is given
+    if not options:
         options = {}
 
     model = options.get('model', 6)
