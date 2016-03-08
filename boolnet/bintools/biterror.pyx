@@ -1,5 +1,4 @@
 # cython: language_level=3
-# cython: boundscheck=False, nonecheck=False, cdivision=True, initializedcheck=False
 from boolnet.bintools.functions cimport (E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L,
             E6M, E6L, E7M, E7L, ACCURACY, MCC, PER_OUTPUT_ERROR, PER_OUTPUT_MCC)
 import numpy as np
@@ -11,7 +10,7 @@ from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET
 from boolnet.bintools.packing import packed_type
 
 
-SCALAR_EVALUATORS = {
+EVALUATORS = {
     E1:  (StandardE1, False),
     E2L: (StandardE2, False), E2M: (StandardE2, True),
     E3L: (StandardE3, False), E3M: (StandardE3, True),
@@ -20,10 +19,7 @@ SCALAR_EVALUATORS = {
     E6L: (StandardE6, False), E6M: (StandardE6, True),
     E7L: (StandardE7, False), E7M: (StandardE7, True),
     ACCURACY: (Accuracy, False),
-    MCC: (MeanMCC, False)
-}
-
-PER_OUTPUT_EVALUATORS = {
+    MCC: (MeanMCC, False),
     PER_OUTPUT_ERROR: (PerOutputMean, False),
     PER_OUTPUT_MCC: (PerOutputMCC, False)
 }
@@ -88,7 +84,7 @@ cdef class PerOutputMean(Evaluator):
         self.accumulator = np.zeros(self.No, dtype=np.float64)
         self.divisor = Ne
 
-    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i
 
         for i in range(self.No):
@@ -100,8 +96,8 @@ cdef class MeanMCC:
     def __init__(self, size_t Ne, size_t No, bint msb):
         self.per_out_evaluator = PerOutputMCC(Ne, No, msb)
 
-    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        return self.per_out_evaluator.evaluate(E, T).mean()
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        return sum(self.per_out_evaluator.evaluate(E, T)) / <double>self.per_out_evaluator.No
 
 
 cdef class Accuracy(Evaluator):
@@ -110,7 +106,7 @@ cdef class Accuracy(Evaluator):
         self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
         self.divisor = Ne
 
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, c
         
         self.row_disjunction[:] = 0
@@ -127,7 +123,7 @@ cdef class StandardE1(Evaluator):
     def __init__(self, size_t Ne, size_t No, bint msb):
         super().__init__(Ne, No, msb)
 
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef double result = 0.0
         return popcount_matrix(E) / self.divisor
 
@@ -141,7 +137,7 @@ cdef class StandardE2(Evaluator):
         super().__init__(Ne, No, msb)
         self.divisor = Ne * (No + 1.0) * No / 2.0
 
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i
         cdef double result = 0.0
             
@@ -156,7 +152,7 @@ cdef class StandardE3(Evaluator):
         super().__init__(Ne, No, msb)
         self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
 
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, c
         cdef double result = 0.0
         
@@ -175,7 +171,7 @@ cdef class StandardE4(Evaluator):
         super().__init__(Ne, No, msb)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne
 
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, row_sum
         cdef double result
         
@@ -197,7 +193,7 @@ cdef class StandardE5(Evaluator):
         super().__init__(Ne, No, msb)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
 
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, row_sum
         
         # find earliest row with an error value
@@ -211,7 +207,7 @@ cdef class StandardE5(Evaluator):
 
 
 cdef class StandardE6(Evaluator):
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, row_sum
         
         # find earliest row with an error value
@@ -225,7 +221,7 @@ cdef class StandardE6(Evaluator):
 
 
 cdef class StandardE7(Evaluator):
-    cpdef double evaluate(self, packed_type_t[:, ::1] E):
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, c
         
         # find earliest row with an error value
