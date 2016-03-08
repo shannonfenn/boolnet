@@ -9,10 +9,8 @@ from math import ceil
 
 from boolnet.network.boolnet cimport BoolNet, Move
 from boolnet.bintools.functions cimport Function
-from boolnet.bintools.biterror import STANDARD_EVALUATORS
-from boolnet.bintools.biterror cimport StandardEvaluator
+from boolnet.bintools.biterror import EVALUATORS
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
-from boolnet.bintools.biterror_chained cimport ChainedEvaluator
 from boolnet.bintools.packing import packed_type
 from boolnet.bintools.packing cimport (
     packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE)
@@ -284,7 +282,7 @@ cdef class StandardBNState(BNState):
             return self.error
 
     cpdef add_function(self, Function function):
-        eval_class, msb = STANDARD_EVALUATORS[function]
+        eval_class, msb = EVALUATORS[function]
         self.err_evaluators[function] = eval_class(self.Ne, self.No, msb)
         self.evaluated = False
 
