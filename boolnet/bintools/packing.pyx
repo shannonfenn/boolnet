@@ -158,14 +158,12 @@ cpdef partition_packed(matrix, indices):
     Nw_trg = int(np.ceil(Ne / <double>PACKED_SIZE))
     Nw_test = int(np.ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
 
+    # typed views for speed
+    M = matrix
     M_trg = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=packed_type),
                             Ne=Ne, Ni=matrix.Ni)
     M_test = BitPackedMatrix(np.zeros((Nf, Nw_test), dtype=packed_type),
                              Ne=matrix.Ne-Ne, Ni=matrix.Ni)
-    # typed views for speed
-    M = matrix
-    M_trg = trg_matrix
-    M_test = test_matrix
 
     for f in range(Nf):
         # word and bit positions for training and test samples
@@ -190,7 +188,7 @@ cpdef partition_packed(matrix, indices):
                     b_test = (b_test + 1) % PACKED_SIZE
                     w_test += b_test == 0
                 mask <<= 1
-    return trg_matrix, test_matrix
+    return M_trg, M_test
 
 
 cpdef sample_packed(matrix, indices, invert=False):
