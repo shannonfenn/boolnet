@@ -1,6 +1,6 @@
 import numpy as np
 from pytest import fixture
-from numpy.testing import assert_array_almost_equal as assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal
 from boolnet.bintools.functions import function_name
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.packing import packed_type
@@ -52,23 +52,26 @@ def eval_chained(window_width, E, error_evaluator):
     ''' This helper evaluates the error matrix using the given
         chained evaluator.'''
     No, array_width = E.shape
-    window = np.array(np.zeros(shape=(No, window_width)), dtype=packed_type)
+    error_window = np.array(
+        np.zeros(shape=(No, window_width)), dtype=packed_type)
+    target_window = np.zeros_like(error_window)
 
     steps = array_width // window_width
     if array_width % window_width != 0:
         steps += 1
 
     for i in range(steps-1):
-        window[:, :] = E[:, i*window_width: (i+1)*window_width]
-        error_evaluator.partial_evaluation(window)
+        error_window[:, :] = E[:, i*window_width: (i+1)*window_width]
+        error_evaluator.partial_evaluation(error_window, target_window)
 
     if array_width % window_width != 0:
-        window[:, :] = 0
-        window[:, :array_width % window_width] = np.array(E[:, (steps-1)*window_width:])
+        error_window[:, :] = 0
+        error_window[:, :array_width % window_width] = np.array(
+            E[:, (steps-1)*window_width:])
     else:
-        window[:, :] = E[:, -window_width:]
+        error_window[:, :] = E[:, -window_width:]
 
-    return error_evaluator.final_evaluation(window)
+    return error_evaluator.final_evaluation(error_window, target_window)
 
 
 def test_single_column_eval(single_column):
