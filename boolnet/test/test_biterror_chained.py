@@ -7,26 +7,26 @@ from boolnet.bintools.packing import packed_type
 
 
 @fixture
-def single_column(error_matrix_harness, function):
-    error_matrix_harness['function'] = function
+def single_column(error_matrix_harness, any_function):
+    error_matrix_harness['function'] = any_function
     window_width = 1
     error_matrix_harness['window_width'] = window_width
     return construct_test_instance(error_matrix_harness)
 
 
 @fixture
-def full_width(error_matrix_harness, function):
+def full_width(error_matrix_harness, any_function):
     Ep = error_matrix_harness['packed error matrix']
-    error_matrix_harness['function'] = function
+    error_matrix_harness['function'] = any_function
     window_width = Ep.shape[1]
     error_matrix_harness['window_width'] = window_width
     return construct_test_instance(error_matrix_harness)
 
 
 @fixture
-def random_width(error_matrix_harness, function):
+def random_width(error_matrix_harness, any_function):
     Ep = error_matrix_harness['packed error matrix']
-    error_matrix_harness['function'] = function
+    error_matrix_harness['function'] = any_function
     window_width = max(int(np.random.random(1) * Ep.shape[1]), 1)
     error_matrix_harness['window_width'] = window_width
     return construct_test_instance(error_matrix_harness)

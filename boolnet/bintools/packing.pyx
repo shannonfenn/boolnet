@@ -1,6 +1,7 @@
 # cython: language_level=3, profile=False
 import numpy as np
 cimport numpy as np
+from math import ceil
 from libc.limits cimport ULLONG_MAX
 
 
@@ -58,15 +59,15 @@ cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, si
         packed[f, column] = chunk
 
 
-cpdef pack_bool_matrix(np.ndarray mat):
+cpdef pack_bool_matrix(np.uint8_t[:, :] mat):
     cdef:
         size_t Ne, Nf, num_chunks, f, c, bit
         packed_type_t chunk
         packed_type_t[:, :] packed
-        np.ndarray[np.uint8_t, ndim=2] padded
+        np.uint8_t[:, :] padded
 
     Ne, Nf = mat.shape[0], mat.shape[1]
-    num_chunks = int(np.ceil(Ne / <double>PACKED_SIZE))
+    num_chunks = int(ceil(Ne / <double>PACKED_SIZE))
     # pad rows with zeros to next multiple of PACKED_SIZE 
     padded = np.zeros((num_chunks * PACKED_SIZE, Nf), dtype=np.uint8)
     padded[:Ne, :] = mat
@@ -107,16 +108,9 @@ cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne):
         packed_type_t mask, chunk
         np.uint8_t[:] unpacked
 
-    num_chunks = packed_vec.size
+    num_chunks = packed_vec.shape[0]
     unpacked = np.zeros(num_chunks*PACKED_SIZE, dtype=np.uint8)
     for c in range(num_chunks):
-        # mask = 1
-        # example = (c + 1) * PACKED_SIZE - 1
-        # chunk = packed_vec[c]
-        # for bit in range(PACKED_SIZE):
-        #     unpacked[example] += ((chunk & mask) >> bit)
-        #     mask <<= 1
-        #     example -= 1
         mask = 1
         example = c * PACKED_SIZE
         chunk = packed_vec[c]
@@ -130,7 +124,7 @@ cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne):
 cpdef packed_type_t generate_end_mask(Ne):
     cdef:
         packed_type_t end_mask, shift
-        size_t bits
+        size_t bits, b, bits_to_remain
     
     end_mask = PACKED_ALL_SET
     bits_to_remain = Ne % PACKED_SIZE
@@ -148,9 +142,11 @@ cpdef packed_type_t generate_end_mask(Ne):
 
 
 cpdef partition_packed(matrix, indices):
-    cdef packed_type_t mask
-    cdef packed_type_t[:, :] M = matrix # typed view
-    cdef size_t Nf, Nw, Ne, f, w, b, b_trg, b_test, w_trg, w_test
+    cdef:
+        packed_type_t mask, bit
+        packed_type_t[:, :] M, M_trg, M_test
+        size_t Nf, Nw, Nw_trg, Nw_test, Ne, f, w
+        size_t b, b_trg, b_test, w_trg, w_test
 
     if matrix.dtype != packed_type:
         raise ValueError('sample_packed only accepts np.uint64')
@@ -165,16 +161,20 @@ cpdef partition_packed(matrix, indices):
     M_trg = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=packed_type),
                             Ne=Ne, Ni=matrix.Ni)
     M_test = BitPackedMatrix(np.zeros((Nf, Nw_test), dtype=packed_type),
-                             Ne=matrix.Ne - Ne, Ni=matrix.Ni)
+                             Ne=matrix.Ne-Ne, Ni=matrix.Ni)
+    # typed views for speed
+    M = matrix
+    M_trg = trg_matrix
+    M_test = test_matrix
 
     for f in range(Nf):
         # word and bit positions for training and test samples
         b_trg = b_test = 0
         w_trg = w_test = 0
         for w in range(Nw):
+            mask = 1
             for b in range(PACKED_SIZE):
                 # get the bit from the original matrix
-                mask = 1 << b
                 bit = (M[f, w] & mask) >> b
                 # if this bit of this word is in the sample
                 if b + w * PACKED_SIZE in indices:
@@ -189,45 +189,52 @@ cpdef partition_packed(matrix, indices):
                     # increment test sample word and bit indices
                     b_test = (b_test + 1) % PACKED_SIZE
                     w_test += b_test == 0
-    return M_trg, M_test
+                mask <<= 1
+    return trg_matrix, test_matrix
 
 
 cpdef sample_packed(matrix, indices, invert=False):
     cdef packed_type_t mask
-    cdef packed_type_t[:, :] M = matrix # typed view
-    cdef size_t Nf, Nw, Ne, f, w, b, sw, sb
+    cdef packed_type_t[:, :] M, S
+    cdef size_t Nf, Nw, Ne, f, w, b, sw, sb, cols, index
 
     if matrix.dtype != packed_type:
         raise ValueError('sample_packed only accepts np.uint64')
 
-    Nf, Nw = matrix.shape
+    Nf = matrix.shape[0]
     Ne = indices.shape[0]
+
+    M = matrix # typed view for speed
 
     if invert:
         # sample matrix
-        cols = int(np.ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
-        sample = np.zeros((Nf, cols), dtype=packed_type)
-        sample = BitPackedMatrix(sample, Ne=matrix.Ne-Ne, Ni=matrix.Ni)
-        
+        cols = int(ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
+        sample = BitPackedMatrix(
+            np.zeros((Nf, cols), dtype=packed_type), Ne=matrix.Ne-Ne, Ni=matrix.Ni)
+        S = sample # typed view for speed
+
         # word and bit positions for sample
         sb = sw = 0
+        Nw = matrix.shape[1]
         for w in range(Nw):
             for b in range(PACKED_SIZE):
                 # if this bit of this word is in the sample
+                mask = 1
                 if b + w * PACKED_SIZE not in indices:
                     # get the bit
-                    mask = 1 << b
                     for f in range(Nf):
                         bit = (M[f, w] & mask) >> b
                         # insert into the sample at the next position
-                        sample[f, sw] += bit << sb
+                        S[f, sw] += bit << sb
                     # increment sample word and bit indices
                     sb = (sb + 1) % PACKED_SIZE
                     sw += sb == 0
+                    mask <<= 1
     else:
-        Nw_trg = int(np.ceil(Ne / <double>PACKED_SIZE))
-        sample = np.zeros((Nf, Nw_trg), dtype=packed_type)
-        sample = BitPackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)
+        Nw = int(ceil(Ne / <double>PACKED_SIZE))
+        sample = BitPackedMatrix(np.zeros((Nf, Nw), dtype=packed_type),
+                                 Ne=Ne, Ni=matrix.Ni)
+        S = sample # typed view for speed
         
         # word and bit positions for sample
         sw = sb = 0
@@ -236,12 +243,12 @@ cpdef sample_packed(matrix, indices, invert=False):
             # word and bit indices into original matrix
             w = index // PACKED_SIZE
             b = index % PACKED_SIZE
-            mask = 1 << b
+            mask = <packed_type_t>1 << b
             for f in range(Nf):
                 # get the bit
                 bit = (M[f, w] & mask) >> b
                 # insert into into the sample at the next position
-                sample[f, sw] += (bit << sb)
+                S[f, sw] += (bit << sb)
             # increment word and bit indices
             sb = (sb + 1) % PACKED_SIZE
             sw += sb == 0

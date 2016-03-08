@@ -5,54 +5,68 @@ cimport numpy as np
 from boolnet.bintools.packing cimport packed_type_t
 
 
-cdef class StandardEvaluator:
+cdef class Evaluator:
     cdef size_t Ne, No, cols, start, step
     cdef double divisor
 
 
-cdef class StandardPerOutput(StandardEvaluator):
+cdef class PerOutputMCC(Evaluator):
+    cdef packed_type_t[:] true_positive, false_positive, false_negative
+    cdef double[:] mcc
+    cdef packed_type_t end_mask
+
+    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
+cdef class PerOutputMean(Evaluator):
     cdef double[:] accumulator
 
     cpdef double[:] evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardAccuracy(StandardEvaluator):
+cdef class MeanMCC:
+    cdef PerOutputMCC per_out_evaluator
+
+    cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
+cdef class Accuracy(Evaluator):
     cdef packed_type_t[:] row_disjunction
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE1(StandardEvaluator):
+cdef class StandardE1(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE2(StandardEvaluator):
+cdef class StandardE2(Evaluator):
     cdef double[:] weight_vector
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE3(StandardEvaluator):
+cdef class StandardE3(Evaluator):
     cdef packed_type_t[:] row_disjunction
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE4(StandardEvaluator):
+cdef class StandardE4(Evaluator):
     cdef size_t end_subtractor
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE5(StandardEvaluator):
+cdef class StandardE5(Evaluator):
     cdef size_t row_width, end_subtractor
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE6(StandardEvaluator):
+cdef class StandardE6(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E)
 
 
-cdef class StandardE7(StandardEvaluator):
+cdef class StandardE7(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E)

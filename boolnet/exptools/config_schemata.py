@@ -3,10 +3,10 @@ import numpy as np
 from good import (Schema, In, All, Any, Range,
                   Type, IsDir, message, Optional)
 
-from boolnet.bintools.functions import all_function_names
+from boolnet.bintools.functions import scalar_function_names
 
 
-guiding_functions = all_function_names()
+guiding_functions = scalar_function_names()
 
 
 @message('2D array expected')
@@ -45,6 +45,7 @@ data_schema_file = Schema({
     })
 
 sampling_schema = Schema({
+    'dir':                      IsDir(),
     'Ns':                       All(int, Range(min=1)),
     'Ne':                       All(int, Range(min=1)),
     Optional('indices'):        [All(int, Range(min=0))],

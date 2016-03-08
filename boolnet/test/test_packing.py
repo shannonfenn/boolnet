@@ -16,13 +16,13 @@ def shape(request):
 
 @fixture
 def single_matrix(shape):
-    return randint(low=0, high=2, size=shape)
+    return np.array(randint(low=0, high=2, size=shape), dtype=np.uint8)
 
 
 @fixture
 def matrix_pair(shape):
-    M1 = randint(low=0, high=2, size=shape)
-    M2 = randint(low=0, high=2, size=shape)
+    M1 = np.array(randint(low=0, high=2, size=shape), dtype=np.uint8)
+    M2 = np.array(randint(low=0, high=2, size=shape), dtype=np.uint8)
     return (M1, M2)
 
 

@@ -1,7 +1,7 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 
-cpdef enum Function:
+cpdef enum ScalarFunction:
     E1
     E2M, E2L,    # weighted
     E3M, E3L,    # hierarchical
@@ -9,5 +9,8 @@ cpdef enum Function:
     E5M, E5L,
     E6M, E6L,
     E7M, E7L,    # worst example
-    ACCURACY,
-    PER_OUTPUT
+    ACCURACY, MCC
+
+cpdef enum PerOutputFunction:
+    PER_OUTPUT_ERROR,
+    PER_OUTPUT_MCC
