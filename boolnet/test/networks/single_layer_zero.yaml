@@ -52,7 +52,9 @@ function value:
         e6L:        0.9375
         e6M:        0.875
         accuracy:   0.125
-        per_output: [0.875, 0.75]
+        mcc:        0.0
+        per_output_error: [0.875, 0.75]
+        per_output_mcc: [0.0, 0.0]
     test: 
         e1:         0.6875
         e2L:        0.6666666666666666
@@ -68,7 +70,9 @@ function value:
         e6L:        0.8125
         e6M:        0.875
         accuracy:   0.0
-        per_output: [0.625, 0.75]
+        mcc:        0.0
+        per_output_error: [0.625, 0.75]
+        per_output_mcc: [0.0, 0.0]
     full: 
         e1:         0.75
         e2L:        0.75
@@ -84,7 +88,9 @@ function value:
         e6L:        0.875
         e6M:        0.875
         accuracy:   0.0625
-        per_output: [0.75, 0.75]
+        mcc:        0.0
+        per_output_error: [0.75, 0.75]
+        per_output_mcc: [0.0, 0.0]
 
 multiple_moves_test_case:
     - move: {gate: 0, new_source: 1, terminal: False}
