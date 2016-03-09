@@ -4,6 +4,9 @@ cimport numpy as np
 from boolnet.bintools.packing cimport packed_type_t
 
 
+cdef double matthews_correlation_coefficient(size_t FP, size_t TP, size_t FN, size_t TN)
+
+
 cdef class Evaluator:
     cdef size_t Ne, No, cols, start, step
     cdef double divisor

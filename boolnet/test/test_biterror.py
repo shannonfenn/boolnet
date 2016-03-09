@@ -1,36 +1,21 @@
-from boolnet.bintools.functions import function_name
+from boolnet.bintools.functions import function_from_name
 import numpy as np
 from boolnet.bintools.biterror import EVALUATORS
 
 
-def test_scalar_function(error_matrix_harness, scalar_function):
+def test_function_value(error_matrix_harness, any_function):
+    func_id = function_from_name(any_function)
     Ne = error_matrix_harness['Ne']
     E = error_matrix_harness['packed error matrix']
     T = np.zeros_like(E)
     No, _ = E.shape
-    eval_class, msb = EVALUATORS[scalar_function]
-    error_evaluator = eval_class(Ne, No, msb)
-
-    print(E.dtype, T.dtype)
-
-    actual = error_evaluator.evaluate(E, T)
-    expected = error_matrix_harness[function_name(scalar_function)]
-
-    assert actual == expected
-
-
-def test_per_output_function(error_matrix_harness, per_output_function):
-    Ne = error_matrix_harness['Ne']
-    E = error_matrix_harness['packed error matrix']
-    T = np.zeros_like(E)
-    No, _ = E.shape
-    eval_class, msb = EVALUATORS[per_output_function]
+    eval_class, msb = EVALUATORS[func_id]
     error_evaluator = eval_class(Ne, No, msb)
 
     actual = error_evaluator.evaluate(E, T)
-    expected = error_matrix_harness[function_name(per_output_function)]
+    expected = error_matrix_harness[any_function]
 
-    np.testing.assert_array_equal(actual, expected)
+    np.testing.assert_array_almost_equal(actual, expected)
 
 
 # @pytest.mark.python

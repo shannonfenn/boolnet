@@ -5,7 +5,7 @@ import os.path
 from copy import copy
 from pytest import fixture
 from boolnet.bintools.packing import unpack_bool_matrix
-from boolnet.bintools.functions import scalar_functions, per_output_functions
+import boolnet.bintools.functions as fn
 
 
 ERROR_MATRIX_FILES = glob.glob('boolnet/test/error matrices/*.yaml')
@@ -18,17 +18,17 @@ def test_location():
 
 
 # #################### Fixtures ############################ #
-@fixture(params=scalar_functions() + per_output_functions())
+@fixture(params=fn.all_function_names())
 def any_function(request):
     return request.param
 
 
-@fixture(params=scalar_functions())
+@fixture(params=fn.scalar_function_names())
 def scalar_function(request):
     return request.param
 
 
-@fixture(params=per_output_functions())
+@fixture(params=fn.per_output_function_names())
 def per_output_function(request):
     return request.param
 

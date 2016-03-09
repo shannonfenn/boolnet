@@ -6,6 +6,7 @@ import numpy as np
 cimport numpy as np
 import cython
 from libc.math cimport sqrt
+from boolnet.bintools.biterror cimport matthews_correlation_coefficient
 from boolnet.bintools.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
 from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET, generate_end_mask
 from boolnet.bintools.packing import packed_type
@@ -76,19 +77,16 @@ cdef class ChainedPerOutputMCC(ChainedEvaluator):
             self.FN[i] += popcount_vector(self.false_negative)
 
     cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, TP, TN, FP, FN, normaliser
+        cdef size_t i, FP, TP, FN
 
         self.partial_evaluation(E, T, self.end_mask)
 
         for i in range(self.No):
             TP, FP, FN = self.TP[i], self.FP[i], self.FN[i]
-            TN = self.Ne - TP - FP - FN
 
-            normaliser = (TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)
-            if normaliser == 0:
-                self.mcc[i] = 0
-            else:
-                self.mcc[i] = (TP * TN - FP * FN) / sqrt(normaliser)
+            self.mcc[i] = matthews_correlation_coefficient(
+                FP, TP, FN, self.Ne - TP - FP - FN)
+
         return self.mcc
 
 
@@ -154,7 +152,7 @@ cdef class ChainedMeanMCC:
         self.per_out_evaluator.partial_evaluation(E, T)
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        return self.per_out_evaluator.final_evaluation(E, T).mean()
+        return sum(self.per_out_evaluator.final_evaluation(E, T)) / <double> self.per_out_evaluator.No
 
 
 cdef class ChainedE1(ChainedEvaluator):

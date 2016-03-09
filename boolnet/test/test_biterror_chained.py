@@ -1,7 +1,7 @@
 import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_almost_equal
-from boolnet.bintools.functions import function_name
+from boolnet.bintools.functions import function_from_name
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.packing import packed_type
 
@@ -34,16 +34,17 @@ def random_width(error_matrix_harness, any_function):
 
 def construct_test_instance(harness):
     Ep = harness['packed error matrix']
-    function = harness['function']
+    func_name = harness['function']
+    func_id = function_from_name(func_name)
     window_width = harness['window_width']
 
     Ne = harness['Ne']
     No, cols = Ep.shape
 
-    eval_class, msb = CHAINED_EVALUATORS[function]
+    eval_class, msb = CHAINED_EVALUATORS[func_id]
     error_evaluator = eval_class(Ne, No, window_width, msb)
 
-    expected = harness[function_name(function)]
+    expected = harness[func_name]
 
     return (window_width, Ep, error_evaluator, expected)
 

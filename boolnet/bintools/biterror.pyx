@@ -25,6 +25,26 @@ EVALUATORS = {
 }
 
 
+cdef double matthews_correlation_coefficient(size_t FP, size_t TP, size_t FN, size_t TN):
+    cdef size_t actual_positives, actual_negatives, normaliser
+
+    actual_positives = (TP + FN)
+    actual_negatives = (TN + FP)
+    normaliser = actual_positives * actual_negatives * (TP + FP) * (TN + FN)
+    if actual_positives == 0:
+        # only one given class give accuracy in [-1, 1]
+        return TN / <double>actual_negatives * 2 - 1
+    elif actual_negatives == 0:
+        # only one given class give accuracy in [-1, 1]
+        return TP / <double>actual_positives * 2 - 1
+    elif normaliser == 0:
+        # normal limitting case when two classes present but only one predicted
+        return 0
+    else:
+        return (TP * TN - FP * FN) / sqrt(normaliser)
+
+
+
 cdef class Evaluator:
     def __init__(self, size_t Ne, size_t No, bint msb):
         if Ne % PACKED_SIZE == 0:
@@ -52,29 +72,25 @@ cdef class PerOutputMCC(Evaluator):
         self.end_mask = generate_end_mask(Ne)
 
     cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, c, TP, FP, TN, FN, normaliser
+        cdef size_t i, c, FP, TP, FN
+        cdef size_t actual_positives, actual_negatives, normaliser
         
-        TP = FP = TN = FN = 0
-
         for i in range(self.No):
             for c in range(self.cols):
-                self.true_positive[c] = ~E[i, c] & T[i, c]
                 self.false_positive[c] = E[i, c] & ~T[i, c]
+                self.true_positive[c] = ~E[i, c] & T[i, c]
                 self.false_negative[c] = E[i, c] & T[i, c]
             # ensure we do not count past Ne
-            self.true_positive[-1] &= self.end_mask
             self.false_positive[-1] &= self.end_mask
+            self.true_positive[-1] &= self.end_mask
             self.false_negative[-1] &= self.end_mask
                 
-            TP = popcount_vector(self.true_positive)
             FP = popcount_vector(self.false_positive)
+            TP = popcount_vector(self.true_positive)
             FN = popcount_vector(self.false_negative)
-            TN = self.Ne - TP - FP - FN
-            normaliser = (TP + FP) * (TP + FN) * (TN + FP) * (TN + FN)
-            if normaliser == 0:
-                self.mcc[i] = 0
-            else:
-                self.mcc[i] = (TP * TN - FP * FN) / sqrt(normaliser)
+            
+            self.mcc[i] = matthews_correlation_coefficient(
+                FP, TP, FN, self.Ne - TP - FP - FN)
         return self.mcc
 
 
