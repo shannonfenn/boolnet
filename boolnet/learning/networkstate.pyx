@@ -258,6 +258,10 @@ cdef class StandardBNState(BNState):
         self.inputs[...] = P[:Ni, :]
         self.target[...] = P[Ni:, :]
 
+        # just in case
+        self._apply_zero_mask(self.activation)   # does input/output too (they're views)
+        self._apply_zero_mask(self.target)
+
     property input_matrix:
         def __get__(self):
             return self.inputs
@@ -291,7 +295,7 @@ cdef class StandardBNState(BNState):
             self.add_function(function)
         if not self.evaluated:
             self.evaluate()
-        return self.err_evaluators[function].evaluate(self.error)
+        return self.err_evaluators[function].evaluate(self.error, self.target)
 
     cpdef evaluate(self):
         ''' Evaluate the activation and error matrices if the
@@ -371,11 +375,11 @@ cdef class ChainedBNState(BNState):
             # on the last iteration we must not perform a partial evaluation
             if block < self.blocks - 1:
                 for m in evaluators:
-                    evaluators[m].partial_evaluation(self.error)
+                    evaluators[m].partial_evaluation(self.error, self.target)
 
         self._apply_zero_mask(self.error)
         for m in evaluators:
-            self.function_value_cache[m] = evaluators[m].final_evaluation(self.error)
+            self.function_value_cache[m] = evaluators[m].final_evaluation(self.error, self.target)
         self.evaluated = True
 
     cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
