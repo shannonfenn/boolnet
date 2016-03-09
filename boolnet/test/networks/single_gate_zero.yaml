@@ -44,9 +44,9 @@ function value:
         e6L:        1.0
         e6M:        1.0
         accuracy:   0.0
-        mcc:        0.0
+        mcc:        -1.0
         per_output_error: [1.0]
-        per_output_mcc: [0.0]
+        per_output_mcc: [-1.0]
     test:
         e1:         0.5
         e2M:        0.5
@@ -80,6 +80,6 @@ function value:
         e6L:        0.75
         e6M:        0.75
         accuracy:   0.25
-        mcc:        0.0
+        mcc:        -0.5
         per_output_error: [0.75]
-        per_output_mcc: [0.0]
+        per_output_mcc: [-0.5]

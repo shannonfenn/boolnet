@@ -90,9 +90,9 @@ function value:
     e6L:        0.625
     e6M:        1.0
     accuracy:   0.0
-    mcc:        0.0
+    mcc:        -0.25
     per_output_error: [0.25, 1.0]
-    per_output_mcc: [0.0, 0.0]
+    per_output_mcc: [0.5, -1.0]
   test:
     e1:         0.4375
     e2L:        0.78125
@@ -108,9 +108,9 @@ function value:
     e6L:        0.96875
     e6M:        0.59375
     accuracy:   0.0
-    mcc:        0.0
+    mcc:        -0.16666667000000002
     per_output_error: [0.91666667, 0.25]
-    per_output_mcc: [0.0, 0.0]
+    per_output_mcc: [-0.83333334, 0.5]
   full:
     e1:         0.59375
     e2L:        0.6458333333333334
@@ -126,7 +126,7 @@ function value:
     e6L:        0.875
     e6M:        0.71875
     accuracy:   0.0
-    mcc:        0.0
+    mcc:        -0.1875
     per_output_error: [0.75, 0.4375]
-    per_output_mcc: [0.0, 0.0]
+    per_output_mcc: [-0.5, 0.125]
 
