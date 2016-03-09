@@ -222,10 +222,10 @@ cpdef sample_packed(matrix, indices, invert=False):
         sb = sw = 0
         Nw = matrix.shape[1]
         for w in range(Nw):
+            # if this bit of this word is in the sample
+            mask = 1
             for b in range(PACKED_SIZE):
-                # if this bit of this word is in the sample
-                mask = 1
-                if b + w * PACKED_SIZE not in indices:
+                if w * PACKED_SIZE + b not in indices:
                     # get the bit
                     for f in range(Nf):
                         bit = (M[f, w] & mask) >> b
@@ -234,7 +234,7 @@ cpdef sample_packed(matrix, indices, invert=False):
                     # increment sample word and bit indices
                     sb = (sb + 1) % PACKED_SIZE
                     sw += sb == 0
-                    mask <<= 1
+                mask <<= 1
     else:
         Nw = int(ceil(Ne / <double>PACKED_SIZE))
         sample = BitPackedMatrix(np.zeros((Nf, Nw), dtype=packed_type),
