@@ -158,12 +158,16 @@ cpdef partition_packed(matrix, indices):
     Nw_trg = int(np.ceil(Ne / <double>PACKED_SIZE))
     Nw_test = int(np.ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
 
-    # typed views for speed
-    M = matrix
-    M_trg = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=packed_type),
+    # BitPackedMatrix types with meta-data
+    training_matrix = BitPackedMatrix(np.zeros((Nf, Nw_trg), dtype=packed_type),
                             Ne=Ne, Ni=matrix.Ni)
-    M_test = BitPackedMatrix(np.zeros((Nf, Nw_test), dtype=packed_type),
+    test_matrix = BitPackedMatrix(np.zeros((Nf, Nw_test), dtype=packed_type),
                              Ne=matrix.Ne-Ne, Ni=matrix.Ni)
+
+    # typed memoryviews for speed
+    M = matrix
+    M_trg = training_matrix
+    M_test = test_matrix
 
     for f in range(Nf):
         # word and bit positions for training and test samples
@@ -188,7 +192,8 @@ cpdef partition_packed(matrix, indices):
                     b_test = (b_test + 1) % PACKED_SIZE
                     w_test += b_test == 0
                 mask <<= 1
-    return M_trg, M_test
+    # return the BitPackedMatrix types to provide meta-data
+    return training_matrix, test_matrix
 
 
 cpdef sample_packed(matrix, indices, invert=False):
@@ -202,14 +207,16 @@ cpdef sample_packed(matrix, indices, invert=False):
     Nf = matrix.shape[0]
     Ne = indices.shape[0]
 
-    M = matrix # typed view for speed
+    # typed view for speed
+    M = matrix
 
     if invert:
         # sample matrix
         cols = int(ceil((matrix.Ne - Ne) / <double>PACKED_SIZE))
         sample = BitPackedMatrix(
             np.zeros((Nf, cols), dtype=packed_type), Ne=matrix.Ne-Ne, Ni=matrix.Ni)
-        S = sample # typed view for speed
+        # typed view for speed
+        S = sample
 
         # word and bit positions for sample
         sb = sw = 0
