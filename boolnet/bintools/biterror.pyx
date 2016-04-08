@@ -27,6 +27,7 @@ EVALUATORS = {
 
 cdef double matthews_correlation_coefficient(size_t FP, size_t TP, size_t FN, size_t TN):
     cdef size_t actual_positives, actual_negatives, normaliser
+    cdef double d
 
     actual_positives = (TP + FN)
     actual_negatives = (TN + FP)
@@ -41,7 +42,10 @@ cdef double matthews_correlation_coefficient(size_t FP, size_t TP, size_t FN, si
         # normal limitting case when two classes present but only one predicted
         return 0
     else:
-        return (TP * TN - FP * FN) / sqrt(normaliser)
+        # MCC = (TP * TN - FP * FN) / sqrt(normaliser)
+        # below method has slight numerical inaccuracy but reduces overflow risk
+        d = sqrt(sqrt(normaliser))
+        return TP/d * TN/d - FP/d * FN/d
 
 
 
