@@ -344,8 +344,6 @@ cdef class ChainedBNState(BNState):
         if remainder > 0:
             self.zero_mask_cols += self.cols - remainder
 
-        print('self.zero_mask_cols:', self.zero_mask_cols)
-
         self.example_generator = example_generator
         self.function_value_cache = dict()
 
