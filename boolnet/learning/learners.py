@@ -50,8 +50,8 @@ class BasicLearner:
         self.opt_params['guiding_function'] = (
             lambda x: x.function_value(self.guiding_func_id))
 
-        if self.guiding_func_id == gf.PER_OUTPUT:
-            raise ValueError('Invalid guiding function: \'PER_OUTPUT\'')
+        if self.guiding_func_id not in gf.scalar_functions():
+            raise ValueError('Invalid guiding function: {}'.format(gf_name))
         if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                              format(self.node_funcs))

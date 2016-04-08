@@ -1,7 +1,7 @@
 import time
 import random
 from boolnet.bintools.functions import (
-    E1, ACCURACY, PER_OUTPUT, function_from_name)
+    E1, ACCURACY, PER_OUTPUT_ERROR, function_from_name)
 from boolnet.bintools.packing import partition_packed, sample_packed
 from boolnet.bintools.example_generator import packed_from_operator
 from boolnet.learning.networkstate import (
@@ -143,7 +143,7 @@ def build_result_map(parameters, learner_result):
     gates = final_network.gates
 
     # build evaluators for training and test data
-    funcs = [guiding_function, E1, ACCURACY, PER_OUTPUT]
+    funcs = [guiding_function, E1, ACCURACY, PER_OUTPUT_ERROR]
     train_state, test_state = build_states(parameters['mapping'], gates, funcs)
 
     results = {
@@ -165,9 +165,9 @@ def build_result_map(parameters, learner_result):
 
     if parameters.get('verbose_errors'):
         results['trg_err_gf'] = train_state.function_value(guiding_function)
-        results['trg_err_per'] = train_state.function_value(PER_OUTPUT)
+        results['trg_err_per'] = train_state.function_value(PER_OUTPUT_ERROR)
         results['test_err_gf'] = test_state.function_value(guiding_function)
-        results['test_err_per'] = test_state.function_value(PER_OUTPUT)
+        results['test_err_per'] = test_state.function_value(PER_OUTPUT_ERROR)
 
     if parameters.get('record_training_indices', True):
         results['trg_indices'] = parameters['mapping']['training_indices']
@@ -198,10 +198,10 @@ def build_result_map(parameters, learner_result):
     if learner_result.restarts is not None:
         results['restarts'] = learner_result.restarts
 
-    for bit, v in enumerate(train_state.function_value(PER_OUTPUT)):
+    for bit, v in enumerate(train_state.function_value(PER_OUTPUT_ERROR)):
         key = 'trg_err_tgt_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_state.function_value(PER_OUTPUT)):
+    for bit, v in enumerate(test_state.function_value(PER_OUTPUT_ERROR)):
         key = 'test_err_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):

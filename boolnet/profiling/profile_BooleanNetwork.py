@@ -11,7 +11,7 @@ sys.path.append(os.path.expanduser('~/HMRI/Code/Python/'))
 
 from BoolNet.NetworkEvaluator import NetworkEvaluator
 from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
-from BoolNet.function_names import all_functions, function_name, Function
+from BoolNet.function_names import scalar_functions, function_name, Function
 from BoolNet.BooleanNetwork import BooleanNetwork
 from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
 from BoolNet.Packing import pack_bool_matrix
@@ -123,10 +123,10 @@ if __name__ == '__main__':
         metrics = IMPLEMENTED_METRICS
     elif args.evaluator == 'cy':
         evaluator_class = NetworkEvaluatorCython
-        metrics = list(all_functions())
+        metrics = list(scalar_functions())
     else:
         evaluator_class = NetworkEvaluator
-        metrics = list(all_functions())
+        metrics = list(scalar_functions())
 
     tests = tests(metrics, 100)
 
