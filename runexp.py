@@ -61,11 +61,13 @@ def parse_arguments():
                         help='provide to retain temporary FABCPP files.')
     parser.add_argument('--no-notify', action='store_true',
                         help='disable PushBullet notifications.')
-    parser.add_argument('--data-dir', type=str,
+    parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
+                        default='experiments/datasets/functions',
                         help='base directory for datasets.')
-    parser.add_argument('--sample-dir', type=str,
+    parser.add_argument('-s', '--sample-dir', type=str, metavar='dir',
+                        default='experiments/datasets/samples',
                         help='base directory for sampling files.')
-    parser.add_argument('--result-dir', type=str,
+    parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
                         help='directory to store results in (in own subdir).')
 
@@ -104,16 +106,9 @@ def initialise(args):
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
-    if args.data_dir:
-        settings['data']['dir'] = os.path.abspath(args.data_dir)
-    else:
-        settings['data']['dir'] = os.path.abspath('experiments/datasets/functions'),
+    settings['data']['dir'] = os.path.abspath(args.data_dir)
 
-    if args.sample_dir:
-        settings['sampling']['dir'] = os.path.abspath(args.data_dir)
-    else:
-        settings['sampling']['dir'] = os.path.abspath('experiments/datasets/functions'),
-
+    settings['sampling']['dir'] = os.path.abspath(args.sample_dir)
 
     # create result directory
     result_dir = create_result_dir(args.result_dir, settings['name'])

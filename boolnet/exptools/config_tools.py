@@ -53,24 +53,25 @@ def load_dataset(settings):
                          format(data_settings['type']))
 
 
-def load_samples(params, data_dir, N, Ni):
+def load_samples(params, N, Ni):
     # load samples from file
     # prepare filename
     Ns = params['Ns']
     Ne = params['Ne']
+    directory = params['dir']
     suffix = params.get('file_suffix', '')
     base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
 
     # load sample indices
-    sample_filename = join(data_dir, base_name)
+    sample_filename = join(directory, base_name)
     training_indices = np.load(sample_filename)
     return training_indices
 
 
 def file_instance(data_settings, sampling_settings):
-    data_dir = data_settings['dir']
     # load data set from file
-    dataset_filename = join(data_dir, data_settings['filename'])
+    dataset_filename = join(data_settings['dir'],
+                            data_settings['filename'])
     if splitext(dataset_filename)[-1] == '':
         dataset_filename += '.npz'
     with np.load(dataset_filename) as dataset:
@@ -79,7 +80,7 @@ def file_instance(data_settings, sampling_settings):
         Ni = dataset['Ni']
 
     training_indices = load_samples(
-        sampling_settings, data_dir, data.shape[0], Ni)
+        sampling_settings, data.shape[0], Ni)
     # build list of train/test set instances
     instances = [{
         'type': 'raw',
@@ -91,7 +92,6 @@ def file_instance(data_settings, sampling_settings):
 
 
 def generated_instance(data_settings, sampling_settings):
-    data_dir = data_settings['dir']
     Nb = data_settings['bits']
     op = operator_from_name(data_settings['operator'])
 
@@ -103,7 +103,7 @@ def generated_instance(data_settings, sampling_settings):
     # default window size of 4 (arbitrary at this point)
     window_size = data_settings.get('window_size', 4)
 
-    training_indices = load_samples(sampling_settings, data_dir, N, Ni)
+    training_indices = load_samples(sampling_settings, N, Ni)
     Ns, Ne = training_indices.shape
 
     # Parameters
