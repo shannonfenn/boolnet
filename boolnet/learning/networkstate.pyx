@@ -62,7 +62,7 @@ cdef class BNState:
         self.zero_mask = generate_end_mask(Ne)
 
         # instantiate a matrix for activation
-        self.activation = np.empty((Ng + Ni, cols), dtype=packed_type)
+        self.activation = np.zeros((Ng + Ni, cols), dtype=packed_type)
 
         # create input and output view into activation matrix
         self.inputs = self.activation[:Ni, :]
@@ -71,7 +71,7 @@ cdef class BNState:
         else:
             self.outputs = np.empty((No, cols), dtype=packed_type)
 
-        self.target = np.empty((No, cols), dtype=packed_type)
+        self.target = np.zeros((No, cols), dtype=packed_type)
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
 
@@ -343,6 +343,8 @@ cdef class ChainedBNState(BNState):
         self.zero_mask_cols = 1
         if remainder > 0:
             self.zero_mask_cols += self.cols - remainder
+
+        print('self.zero_mask_cols:', self.zero_mask_cols)
 
         self.example_generator = example_generator
         self.function_value_cache = dict()
