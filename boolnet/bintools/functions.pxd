@@ -3,12 +3,15 @@
 
 cpdef enum Function:
     E1
-    E2M, E2L,    # weighted
-    E3M, E3L,    # hierarchical
+    E2M, E2L,
+    E3M, E3L,
     E4M, E4L,
     E5M, E5L,
     E6M, E6L,
-    E7M, E7L,    # worst example
-    ACCURACY, MCC,
+    E7M, E7L,
+    E1_MCC,
+    E2M_MCC, E2L_MCC,
+    E6M_MCC, E6L_MCC,
+    ACCURACY,
     PER_OUTPUT_ERROR,
     PER_OUTPUT_MCC

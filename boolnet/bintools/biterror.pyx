@@ -1,6 +1,5 @@
 # cython: language_level=3
-from boolnet.bintools.functions cimport (E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L,
-            E6M, E6L, E7M, E7L, ACCURACY, MCC, PER_OUTPUT_ERROR, PER_OUTPUT_MCC)
+import boolnet.bintools.functions as fn
 import numpy as np
 cimport numpy as np
 import cython
@@ -11,21 +10,43 @@ from boolnet.bintools.packing import packed_type
 
 
 EVALUATORS = {
-    E1:  (StandardE1, False),
-    E2L: (StandardE2, False), E2M: (StandardE2, True),
-    E3L: (StandardE3, False), E3M: (StandardE3, True),
-    E4L: (StandardE4, False), E4M: (StandardE4, True),
-    E5L: (StandardE5, False), E5M: (StandardE5, True),
-    E6L: (StandardE6, False), E6M: (StandardE6, True),
-    E7L: (StandardE7, False), E7M: (StandardE7, True),
-    ACCURACY: (Accuracy, False),
-    MCC: (MeanMCC, False),
-    PER_OUTPUT_ERROR: (PerOutputMean, False),
-    PER_OUTPUT_MCC: (PerOutputMCC, False)
+    fn.E1:  (StandardE1, False),
+    fn.E2L: (StandardE2, False), fn.E2M: (StandardE2, True),
+    fn.E3L: (StandardE3, False), fn.E3M: (StandardE3, True),
+    fn.E4L: (StandardE4, False), fn.E4M: (StandardE4, True),
+    fn.E5L: (StandardE5, False), fn.E5M: (StandardE5, True),
+    fn.E6L: (StandardE6, False), fn.E6M: (StandardE6, True),
+    fn.E7L: (StandardE7, False), fn.E7M: (StandardE7, True),
+    fn.E1_MCC: (MeanMCC, False),
+    fn.E2L_MCC: (StandardE2MCC, False), fn.E2M_MCC: (StandardE2MCC, True),
+    fn.E6L_MCC: (StandardE6MCC, False), fn.E6M_MCC: (StandardE6MCC, True),
+    fn.ACCURACY: (Accuracy, False),
+    fn.PER_OUTPUT_ERROR: (PerOutputMean, False),
+    fn.PER_OUTPUT_MCC: (PerOutputMCC, False)
 }
 
 
-cdef double matthews_correlation_coefficient(size_t FP, size_t TP, size_t FN, size_t TN):
+cdef confusion(packed_type_t[:] errors, packed_type_t[:] target, packed_type_t end_mask, size_t Ne,
+               packed_type_t[:] TP_buffer, packed_type_t[:] FP_buffer, packed_type_t[:] FN_buffer):
+    # returns (TP, TN, FP, FN)
+    cdef size_t TP, FP, FN
+    cdef size_t blocks = errors.shape[0]
+    for b in range(blocks):
+        TP_buffer[b]  = ~errors[b] &  target[b]
+        FP_buffer[b] =  errors[b] & ~target[b]
+        FN_buffer[b] =  errors[b] &  target[b]
+    # ensure we do not count past Ne
+    TP_buffer[-1] &= end_mask
+    FP_buffer[-1] &= end_mask
+    FN_buffer[-1] &= end_mask
+                
+    TP = popcount_vector(TP_buffer)
+    FP = popcount_vector(FP_buffer)
+    FN = popcount_vector(FN_buffer)
+    return TP, Ne - TP - FP - FN, FP, FN 
+
+
+cdef double matthews_correlation_coefficient(size_t TP, size_t TN, size_t FP, size_t FN):
     cdef size_t actual_positives, actual_negatives, normaliser
     cdef double d
 
@@ -69,32 +90,27 @@ cdef class Evaluator:
 cdef class PerOutputMCC(Evaluator):
     def __init__(self, size_t Ne, size_t No, bint msb):
         super().__init__(Ne, No, msb)
-        self.true_positive = np.zeros(self.cols, dtype=packed_type)
-        self.false_positive = np.zeros(self.cols, dtype=packed_type)
-        self.false_negative = np.zeros(self.cols, dtype=packed_type)
+        self.tp_buffer = np.zeros(self.cols, dtype=packed_type)
+        self.fp_buffer = np.zeros(self.cols, dtype=packed_type)
+        self.fn_buffer = np.zeros(self.cols, dtype=packed_type)
+        self.TP = np.zeros(No, dtype=np.uintp)
+        self.TN = np.zeros(No, dtype=np.uintp)
+        self.FP = np.zeros(No, dtype=np.uintp)
+        self.FN = np.zeros(No, dtype=np.uintp)
         self.mcc = np.zeros(self.No, dtype=np.float64)
         self.end_mask = generate_end_mask(Ne)
 
     cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, c, FP, TP, FN
+        cdef size_t i
         cdef size_t actual_positives, actual_negatives, normaliser
         
         for i in range(self.No):
-            for c in range(self.cols):
-                self.false_positive[c] = E[i, c] & ~T[i, c]
-                self.true_positive[c] = ~E[i, c] & T[i, c]
-                self.false_negative[c] = E[i, c] & T[i, c]
-            # ensure we do not count past Ne
-            self.false_positive[-1] &= self.end_mask
-            self.true_positive[-1] &= self.end_mask
-            self.false_negative[-1] &= self.end_mask
-                
-            FP = popcount_vector(self.false_positive)
-            TP = popcount_vector(self.true_positive)
-            FN = popcount_vector(self.false_negative)
+            self.TP[i], self.TN[i], self.FP[i], self.FN[i] = confusion(
+                E[i, :], T[i, :], self.end_mask, self.Ne,
+                self.tp_buffer, self.fp_buffer, self.fn_buffer)
             
             self.mcc[i] = matthews_correlation_coefficient(
-                FP, TP, FN, self.Ne - TP - FP - FN)
+                self.TP[i], self.TN[i], self.FP[i], self.FN[i])
         return self.mcc
 
 
@@ -118,6 +134,51 @@ cdef class MeanMCC:
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         return sum(self.per_out_evaluator.evaluate(E, T)) / <double>self.per_out_evaluator.No
+
+
+cdef class StandardE2MCC(Evaluator):
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        cdef size_t i 
+        super().__init__(Ne, No, msb)
+        if msb:
+            self.weight_vector = np.arange(1, No+1, dtype=np.float64)
+        else:
+            self.weight_vector = np.arange(No, 0, -1, dtype=np.float64)
+        # normalise the weight vector
+        for i in range(No):
+            self.weight_vector[i] /= 0.5 * (No + 1.0) * No
+        self.per_out_evaluator = PerOutputMCC(Ne, No, msb)
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t i
+        cdef double result = 0.0
+        cdef double[:] per_output
+
+        per_output = self.per_output_evaluator.evaluate(E, T)
+            
+        for i in range(self.No):
+            result += per_output[i] * self.weight_vector[i] 
+        return result
+
+
+cdef class StandardE6MCC(Evaluator):
+    def __init__(self, size_t Ne, size_t No, bint msb):
+        super().__init__(Ne, No, msb)
+        self.per_out_evaluator = PerOutputMCC(Ne, No, msb)
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t i, r, row_sum
+        cdef double[:] per_output
+
+        per_output = self.per_output_evaluator.evaluate(E, T)
+
+        # find earliest row with an error value
+        r = self.start
+        for i in range(self.No):
+            if self.per_output_evaluator.FP[i] + self.per_output_evaluator.FN[i] > 0:
+                return self.Ne * (self.No - i - 1) / self.divisor + per_output[r]
+            r += self.step
+        return 0.0
 
 
 cdef class Accuracy(Evaluator):
@@ -150,12 +211,15 @@ cdef class StandardE1(Evaluator):
 
 cdef class StandardE2(Evaluator):
     def __init__(self, size_t Ne, size_t No, bint msb):
+        cdef size_t i
+        super().__init__(Ne, No, msb)
         if msb:
             self.weight_vector = np.arange(1, No+1, dtype=np.float64)
         else:
             self.weight_vector = np.arange(No, 0, -1, dtype=np.float64)
-        super().__init__(Ne, No, msb)
-        self.divisor = Ne * (No + 1.0) * No / 2.0
+        # normalise the weight vector
+        for i in range(No):
+            self.weight_vector[i] /= 0.5 * (No + 1.0) * No
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i
@@ -164,7 +228,7 @@ cdef class StandardE2(Evaluator):
         for i in range(self.No):
             result += popcount_vector(E[i, :]) * self.weight_vector[i] 
 
-        return result / self.divisor
+        return result / self.Ne
 
 
 cdef class StandardE3(Evaluator):

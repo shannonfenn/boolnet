@@ -1,7 +1,6 @@
 # cython: language_level=3
 # cython: boundscheck=False, nonecheck=False, cdivision=True, initializedcheck=False
-from boolnet.bintools.functions cimport (E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L,
-            E6M, E6L, E7M, E7L, ACCURACY, MCC, PER_OUTPUT_ERROR, PER_OUTPUT_MCC)
+import boolnet.bintools.functions as fn
 import numpy as np
 cimport numpy as np
 import cython
@@ -13,17 +12,19 @@ from boolnet.bintools.packing import packed_type
 
 
 CHAINED_EVALUATORS = {
-    E1:  (ChainedE1, False),
-    E2L: (ChainedE2, False), E2M: (ChainedE2, True),
-    E3L: (ChainedE3, False), E3M: (ChainedE3, True),
-    E4L: (ChainedE4, False), E4M: (ChainedE4, True),
-    E5L: (ChainedE5, False), E5M: (ChainedE5, True),
-    E6L: (ChainedE6, False), E6M: (ChainedE6, True),
-    E7L: (ChainedE7, False), E7M: (ChainedE7, True),
-    ACCURACY: (ChainedAccuracy, False),
-    MCC: (ChainedMeanMCC, False),
-    PER_OUTPUT_ERROR: (ChainedPerOutputMean, False),
-    PER_OUTPUT_MCC: (ChainedPerOutputMCC, False)
+    fn.E1:  (ChainedE1, False),
+    fn.E2L: (ChainedE2, False), fn.E2M: (ChainedE2, True),
+    fn.E3L: (ChainedE3, False), fn.E3M: (ChainedE3, True),
+    fn.E4L: (ChainedE4, False), fn.E4M: (ChainedE4, True),
+    fn.E5L: (ChainedE5, False), fn.E5M: (ChainedE5, True),
+    fn.E6L: (ChainedE6, False), fn.E6M: (ChainedE6, True),
+    fn.E7L: (ChainedE7, False), fn.E7M: (ChainedE7, True),
+    fn.E1_MCC: (ChainedMeanMCC, False),
+    #fn.E2L_MCC: (ChainedE2MCC, False), fn.E2M_MCC: (ChainedE2MCC, True),
+    #fn.E6L_MCC: (ChainedE6MCC, False), fn.E6M_MCC: (ChainedE6MCC, True),
+    fn.ACCURACY: (ChainedAccuracy, False),
+    fn.PER_OUTPUT_ERROR: (ChainedPerOutputMean, False),
+    fn.PER_OUTPUT_MCC: (ChainedPerOutputMCC, False)
 }
 
 
