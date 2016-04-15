@@ -176,7 +176,7 @@ cdef class StandardE6MCC(Evaluator):
         r = self.start
         for i in range(self.No):
             if self.per_output_evaluator.FP[i] + self.per_output_evaluator.FN[i] > 0:
-                return self.Ne * (self.No - i - 1) / self.divisor + per_output[r]
+                return (-1.0 * (self.No - i - 1) + per_output[r]) / self.No
             r += self.step
         return 0.0
 
