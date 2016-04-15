@@ -14,6 +14,10 @@ e6M: 0.4375
 e7L: 1.0
 e7M: 1.0
 accuracy: 0.5625
-mcc: 0.125
+e1_mcc: 0.125
+e2L_mcc: 0.125
+e2M_mcc: 0.125
+e6L_mcc: 0.125
+e6M_mcc: 0.125
 per_output_error: [0.4375]
 per_output_mcc: [0.125]
