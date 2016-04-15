@@ -1,4 +1,4 @@
-from boolnet.learning.kfs import abk_file, minimum_feature_set
+from boolnet.learning.feature_selection import abk_file, minimum_feature_set
 import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import fixture

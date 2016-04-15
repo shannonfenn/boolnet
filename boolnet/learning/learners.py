@@ -6,7 +6,7 @@ import boolnet.bintools.functions as gf
 from boolnet.bintools.packing import (
     unpack_bool_matrix, unpack_bool_vector, BitPackedMatrix)
 from boolnet.learning.networkstate import StandardBNState
-import boolnet.learning.kfs as mfs
+import boolnet.learning.feature_selection as mfs
 
 
 LearnerResult = namedtuple('LearnerResult', [
