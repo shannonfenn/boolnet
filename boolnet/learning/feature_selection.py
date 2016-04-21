@@ -82,19 +82,14 @@ def best_feature_set(features, target, method):
             method))
 
 
-def multi_target_minimum_feature_sets(features, targets, file_name_base,
-                                      options, keep_files):
-    ''' Takes a featureset matrix and target vector and finds a minimum FS.
-    features    - 2D numpy array-like in example x feature format.
-    target      - 2D numpy array-like of the same number of rows as features
-    returns     - list of 1D numpy array-likes of feature indices representing
-                  a feature set of minimal cardinality for each target.'''
-    num_targets = targets.shape[1]
-    feature_sets = [
-        minimum_feature_set(features, targets[:, t], file_name_base,
-                            options, keep_files)
-        for t in range(num_targets)]
-    return feature_sets
+def multi_target_best_feature_sets(features, targets, method):
+    ''' Takes a featureset matrix and target matrix and finds a minimum FS.
+    features    - <2D numpy array> in example x feature format.
+    targets     - <2D numpy array> in example x feature format.
+    method      - <string> which method to use to pick best feature set.
+    returns     - <list of 1D numpy arrays> feature indices representing best
+                  FS for each target according to given method.'''
+    return [best_feature_set(features, t, method) for t in targets.T]
 
 
 # import os
