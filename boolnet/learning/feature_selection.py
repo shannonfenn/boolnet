@@ -1,8 +1,8 @@
 import numpy as np
-from minizinc_tools import mzn_all_minfs
 from itertools import combinations
 from collections import defaultdict
 from scipy.stats import entropy
+import fs_solver import all_minimum_feature_sets as all_minfs
 
 
 def diversity(patterns):
@@ -26,27 +26,6 @@ def feature_set_entropy(all_features, fs_indices):
     for pattern in fs:
         counts[tuple(pattern)] += 1
     return entropy(counts.values(), base=2)
-
-
-def build_coverage(features, target):
-    Ne, Nf = features.shape
-    class_0_indices = np.where(target == 0)
-    class_1_indices = np.where(target)
-    num_eg_pairs = class_0_indices.size * class_1_indices.size
-    coverage_matrix = np.zeros((num_eg_pairs, Nf), dtype=np.uint8)
-    i = 0
-    for i0 in class_0_indices:
-        for i1 in class_1_indices:
-            for f in range(Nf):
-                if features[i0, f] != features[i1, f]:
-                    coverage_matrix[i, f] = 1
-            i += 1
-    return coverage_matrix
-
-
-def all_minfs(features, target):
-    coverage_matrix = build_coverage(features, target)
-    feature_sets = mzn_all_minfs(coverage_matrix)
 
 
 def best_feature_set(features, target, method):
