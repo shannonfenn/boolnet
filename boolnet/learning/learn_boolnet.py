@@ -1,7 +1,6 @@
 import time
 import random
-from boolnet.bintools.functions import (
-    E1, ACCURACY, PER_OUTPUT_ERROR, function_from_name)
+import boolnet.bintools.functions as fn
 from boolnet.bintools.packing import partition_packed, sample_packed
 from boolnet.bintools.example_generator import packed_from_operator
 from boolnet.learning.networkstate import (
@@ -143,7 +142,8 @@ def build_result_map(parameters, learner_result):
     gates = final_network.gates
 
     # build evaluators for training and test data
-    funcs = [guiding_function, E1, ACCURACY, PER_OUTPUT_ERROR]
+    funcs = [guiding_function, fn.E1, fn.E1_MCC, fn.ACCURACY,
+             fn.PER_OUTPUT_ERROR, fn.PER_OUTPUT_MCC]
     train_state, test_state = build_states(parameters['mapping'], gates, funcs)
 
     results = {
@@ -156,18 +156,16 @@ def build_result_map(parameters, learner_result):
         'tfs':          parameters['learner']['network']['node_funcs'],
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
-        'trg_error':    train_state.function_value(E1),
-        'trg_acc':      train_state.function_value(ACCURACY),
-        'test_error':   test_state.function_value(E1),
-        'test_acc':     test_state.function_value(ACCURACY),
+        'trg_error':    train_state.function_value(fn.E1),
+        'trg_acc':      train_state.function_value(fn.ACCURACY),
+        'trg_mcc':      train_state.function_value(fn.E1_MCC),
+        'trg_err_gf':   train_state.function_value(guiding_function)
+        'test_error':   test_state.function_value(fn.E1),
+        'test_acc':     test_state.function_value(fn.ACCURACY),
+        'test_mcc':     test_state.function_value(fn.E1_MCC),
+        'test_err_gf':  test_state.function_value(guiding_function)
         'Ne':           train_state.Ne
         }
-
-    if parameters.get('verbose_errors'):
-        results['trg_err_gf'] = train_state.function_value(guiding_function)
-        results['trg_err_per'] = train_state.function_value(PER_OUTPUT_ERROR)
-        results['test_err_gf'] = test_state.function_value(guiding_function)
-        results['test_err_per'] = test_state.function_value(PER_OUTPUT_ERROR)
 
     if parameters.get('record_training_indices', True):
         results['trg_indices'] = parameters['mapping']['training_indices']
@@ -198,11 +196,18 @@ def build_result_map(parameters, learner_result):
     if learner_result.restarts is not None:
         results['restarts'] = learner_result.restarts
 
-    for bit, v in enumerate(train_state.function_value(PER_OUTPUT_ERROR)):
+    # multi-key results
+    for bit, v in enumerate(train_state.function_value(fn.PER_OUTPUT_ERROR)):
         key = 'trg_err_tgt_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_state.function_value(PER_OUTPUT_ERROR)):
+    for bit, v in enumerate(test_state.function_value(fn.PER_OUTPUT_ERROR)):
         key = 'test_err_tgt_{}'.format(bit)
+        results[key] = v
+    for bit, v in enumerate(train_state.function_value(fn.PER_OUTPUT_MCC)):
+        key = 'trg_mcc_tgt_{}'.format(bit)
+        results[key] = v
+    for bit, v in enumerate(test_state.function_value(fn.PER_OUTPUT_MCC)):
+        key = 'test_mcc_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):
         key = 'max_depth_tgt_{}'.format(bit)
