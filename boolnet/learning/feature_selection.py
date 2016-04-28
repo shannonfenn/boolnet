@@ -25,7 +25,7 @@ def feature_set_entropy(all_features, fs_indices):
     counts = defaultdict(int)
     for pattern in fs:
         counts[tuple(pattern)] += 1
-    return entropy(counts.values(), base=2)
+    return entropy(list(counts.values()), base=2)
 
 
 def best_feature_set(features, target, method):
