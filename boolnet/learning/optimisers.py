@@ -3,6 +3,8 @@ from math import exp
 from copy import copy
 from itertools import chain, repeat
 from collections import deque, namedtuple
+import operator as op
+import boolnet.bintools.functions as fn
 import sys
 import logging
 
@@ -29,6 +31,12 @@ class RestartLocalSearch:
         # unpack options
         try:
             self.guiding_function = parameters['guiding_function']
+            if parameters['minimise']:
+                self.is_as_good = op.le
+                self.is_better = op.lt
+            else:
+                self.is_as_good = op.ge
+                self.is_better = op.gt
             self.stopping_criterion = parameters['stopping_criterion']
             # self.max_restarts = parameters.get('max_restarts', 0)
             self.max_restarts = parameters.get('max_restarts', 0)
@@ -121,15 +129,8 @@ class HC(RestartLocalSearch):
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()
-        if new_error <= current_error:
-            self.costs.append(new_error)
+        if self.is_as_good(new_error, current_error):
             return True
-        elif new_error < oldest_error:
-            self.costs.append(min(new_error, self.costs[-1]))
-            return True
-        else:
-            self.costs.append(min(oldest_error, self.costs[-1]))
-            return False
 
 
 class LAHC(RestartLocalSearch):
@@ -200,10 +201,10 @@ class LAHC(RestartLocalSearch):
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()
-        if new_error <= current_error:
+        if self.is_as_good(new_error, current_error):
             self.costs.append(new_error)
             return True
-        elif new_error < oldest_error:
+        elif self.is_better(new_error, oldest_error):
             self.costs.append(min(new_error, self.costs[-1]))
             return True
         else:
@@ -214,7 +215,9 @@ class LAHC(RestartLocalSearch):
 class SA(RestartLocalSearch):
 
     def accept(self, old_error, new_error, temperature):
-        delta = new_error - old_error
+        delta = abs(new_error - old_error)
+        if is_better(new_error, old_error):
+            delta *= -1
         # DETERMINISTIC
         # return delta < -temperature or 0 <= delta < temperature
         # STOCHASTIC

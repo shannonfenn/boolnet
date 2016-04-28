@@ -2,7 +2,7 @@ from copy import copy
 from collections import namedtuple
 import logging
 import numpy as np
-import boolnet.bintools.functions as gf
+import boolnet.bintools.functions as fn
 from boolnet.bintools.packing import (
     unpack_bool_matrix, unpack_bool_vector, BitPackedMatrix)
 from boolnet.learning.networkstate import StandardBNState
@@ -15,11 +15,15 @@ LearnerResult = namedtuple('LearnerResult', [
 
 
 def per_tgt_err_stop_criterion(bit):
-    return lambda ev, _: ev.function_value(gf.PER_OUTPUT)[bit] <= 0
+    return lambda ev, _: ev.function_value(fn.PER_OUTPUT)[bit] <= 0
 
 
-def guiding_func_stop_criterion():
-    return lambda _, error: error <= 0
+def guiding_func_stop_criterion(func_id):
+    optimum = fn.optimum(func_id)
+    if fn.is_minimiser(func_id):
+        lambda _, error: error <= optimum
+    else:
+        lambda _, error: error >= optimum
 
 
 def inverse_permutation(permutation):
@@ -46,11 +50,12 @@ class BasicLearner:
         self.optimiser = optimiser
         self.opt_params = copy(parameters['optimiser'])
         gf_name = self.opt_params['guiding_function']
-        self.guiding_func_id = gf.function_from_name(gf_name)
+        self.guiding_func_id = fn.function_from_name(gf_name)
         self.opt_params['guiding_function'] = (
             lambda x: x.function_value(self.guiding_func_id))
+        self.opt_params['minimise'] = fn.is_minimiser(self.guiding_func_id)
 
-        if self.guiding_func_id not in gf.scalar_functions():
+        if self.guiding_func_id not in fn.scalar_functions():
             raise ValueError('Invalid guiding function: {}'.format(gf_name))
         if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
@@ -62,7 +67,7 @@ class BasicLearner:
         gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
         state = StandardBNState(gates, self.problem_matrix)
 
-        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion()
+        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(self.guiding_func_id)
 
         opt_result = self.optimiser.run(state, self.opt_params)
 
@@ -238,7 +243,7 @@ class StratifiedLearner(BasicLearner):
             state = StandardBNState(gates, partial_problem)
 
             # generate an end condition based on the error
-            criterion = guiding_func_stop_criterion()
+            criterion = guiding_func_stop_criterion(self.guiding_func_id)
             self.opt_params['stopping_criterion'] = criterion
 
             # optimise
