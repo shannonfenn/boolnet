@@ -4,6 +4,7 @@
   Author: Shannon Fenn (shannon.fenn@gmail.com)
 """
 from ortools.constraint_solver import pywrapcp
+import numpy as np
 
 
 def all_minimum_feature_sets(features, target):
@@ -58,8 +59,9 @@ def mink(coverage):
                  [collector, objective])
 
     best_k = collector.ObjectiveValue(0)
-    best_x = [collector.Value(0, x[f]) for f in range(Nf)]
-    return best_k, best_x
+#    best_x = [collector.Value(0, x[f]) for f in range(Nf)]
+    best_indices = [f for f in range(Nf) if collector.Value(0, x[f]) == 1]
+    return best_k, best_indices
 
 
 def all_kfs(coverage, k):
@@ -90,7 +92,8 @@ def all_kfs(coverage, k):
 
     # collect all feature sets
     numSol = collector.SolutionCount()
-    feature_sets = [[collector.Value(i, v) for v in x] for i in range(numSol)]
-    # feature_sets = [collector.Solution(i) for i in range(numSolutions)]
+#    feature_sets = [[collector.Value(i, v) for v in x] for i in range(numSol)]
+    feature_sets = [[f for f in range(Nf) if collector.Value(i, x[f]) == 1]
+                    for i in range(numSol)]
 
     return feature_sets
