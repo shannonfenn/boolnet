@@ -97,23 +97,14 @@ LAHC_schema = Schema({
 optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
 
 
-minFS_option_schema = Schema({
-    'model':            In([1, 6]),
-    'a_min':            All(int, Range(min=1)),
-    'b_min':            All(int, Range(min=0)),
-    Optional('cover'):  In(['alfa', 'beta', 'alfa+beta'])
-    })
-
-
 learner_schema_stratified = Schema({
     'name':                         'stratified',
     'optimiser':                    optimiser_schema,
     'network':                      network_schema,
-    Optional('inter_file_base'):    str,
     Optional('minfs_masking'):      bool,
     Optional('auto_target'):        bool,
     Optional('keep_files'):         bool,
-    Optional('minfs_options'):      minFS_option_schema,
+    'minfs_selection_method':       str,
     })
 
 
@@ -121,7 +112,6 @@ learner_schema_basic = Schema({
     'name':                         'basic',
     'network':                      network_schema,
     'optimiser':                    optimiser_schema,
-    Optional('inter_file_base'):    str,
     })
 
 
