@@ -28,6 +28,14 @@ def feature_set_entropy(all_features, fs_indices):
     return entropy(list(counts.values()), base=2)
 
 
+def unique_pattern_count(all_features, fs_indices):
+    fs = all_features[:, fs_indices]
+    counts = defaultdict(int)
+    for pattern in fs:
+        counts[tuple(pattern)] = 1
+    return len(counts)
+
+
 def best_feature_set(features, target, method):
     ''' Takes a featureset matrix and target vector and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
