@@ -1,13 +1,14 @@
-from boolnet.learning.feature_selection import abk_file, minimum_feature_set
+# from boolnet.learning.feature_selection import abk_file, minimum_feature_set
+from boolnet.learning.fs_solver import all_minimum_feature_sets
 import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import fixture
 
 
-@fixture
-def tmpfilename():
-    random_suffix = ''.join(str(i) for i in np.random.randint(0, 9, 10))
-    return '/tmp/shantemp' + random_suffix
+# @fixture
+# def tmpfilename():
+#     random_suffix = ''.join(str(i) for i in np.random.randint(0, 9, 10))
+#     return '/tmp/shantemp' + random_suffix
 
 
 @fixture(params=[1, 2, 3, 4])
@@ -17,30 +18,23 @@ def instance(request):
         features = data['features']
         target = data['target']
         minfs = data['minfs']
-    abkfilename = filename_base + '.abk'
-
-    return features, target, minfs, abkfilename
+    return features, target, minfs
 
 
-def test_abk_file_generation(instance, tmpfilename):
-    features, target, _, abk_file_name = instance
-
-    abk_file(features, target, tmpfilename)
-
-    with open(tmpfilename) as f:
-        actual = f.read()
-
-    with open(abk_file_name) as f:
-        expected = f.read()
-
-    assert expected == actual
+# def test_abk_file_generation(instance, tmpfilename):
+#     features, target, _, abk_file_name = instance
+#     abk_file(features, target, tmpfilename)
+#     with open(tmpfilename) as f:
+#         actual = f.read()
+#     with open(abk_file_name) as f:
+#         expected = f.read()
+#     assert expected == actual
 
 
-def test_min_fs(instance, tmpfilename):
-    features, target, expected, _ = instance
+def test_min_fs(instance):
+    features, target, expected = instance
 
-    random_suffix = ''.join(str(i) for i in np.random.randint(0, 9, 10))
-    tempfilename = '/tmp/shantemp' + random_suffix
-    actual = minimum_feature_set(features, target, tempfilename, {}, False)
+    all_actual = all_minimum_feature_sets(features, target)
 
-    assert_array_equal(expected, actual)
+    # check the expected minfs is one of the returned
+    any(np.array_equal(expected, actual) for actual in all_actual)
