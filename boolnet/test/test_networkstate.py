@@ -133,6 +133,16 @@ def standard_harness_to_fixture(test):
     return test
 
 
+
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
+###     HERE BE DRAGONS!!!!
 def chained_harness_to_fixture(test):
     Ni = test['Ni']
     No = test['No']
@@ -424,42 +434,41 @@ class TestBoth:
                 exclude=params['exclude'][sample_type]
             )
 
+    def run_instance(self, instance, state):
+        func_id = function_from_name(instance['function'])
+        order = instance['order']
+        if order == 'l':
+            order = np.arange(state.No, dtype=np.uintp)
+        elif order == 'm':
+            order = np.arange(state.No, dtype=np.uintp)[::-1]
+        expected = instance['value']
+        name = state.add_function(func_id, order)
+        actual = state.function_value(name)
+        np.testing.assert_array_almost_equal(expected, actual)
+
     # ################### Exception Testing ################### #
-    def test_function_not_added(self, chained_state, any_function, sample_type):
-        func_id = function_from_name(any_function)
+    def test_function_not_added(self, chained_state, sample_type):
         with raises(ValueError):
-            chained_state['state'][sample_type].function_value(func_id)
+            chained_state['state'][sample_type].function_value('non-existant')
 
     # ################### Functionality Testing ################### #
-    def test_from_operator_combined_attributes(self, state_params, state_type, sample_type):
+    def test_from_operator_combined_attributes(self, state_params,
+                                               state_type, sample_type):
         state = self.build_from_params(state_params, state_type, sample_type)
-
         assert state.Ni == state_params['Ni']
         assert state.No == state_params['No']
         assert state.Ng == len(state_params['gates'])
         assert state.zero_mask == generate_end_mask(state.Ne)
 
-    def test_from_operator_func_value(self, state_params, state_type, any_function, sample_type):
-        func_id = function_from_name(any_function)
-        expected = state_params['function value'][sample_type][any_function]
-        state = self.build_from_params(state_params, state_type, sample_type)
-        state.add_function(func_id)
-        actual = state.function_value(func_id)
-        np.testing.assert_array_almost_equal(expected, actual)
+    def test_from_operator_func_value(self, state_params,
+                                      state_type, sample_type):
+        for instance in state_params['instances'][sample_type]:
+            state = self.build_from_params(
+                state_params, state_type, sample_type)
+            self.run_instance(instance, state)
 
-    def test_function_value(self, state_harness, any_function, sample_type):
-        func_id = function_from_name(any_function)
+    def test_function_value(self, state_harness, sample_type):
         state = state_harness['state'][sample_type]
-        expected = state_harness['function value'][sample_type][any_function]
-        state.add_function(func_id)
-        actual = state.function_value(func_id)
-        np.testing.assert_array_almost_equal(expected, actual)
-
-    def test_multiple_function_values(self, state_harness, sample_type):
-        state = state_harness['state'][sample_type]
-        for function in all_functions():
-            state.add_function(function)
-        for function in all_functions():
-            expected = state_harness['function value'][sample_type][function_name(function)]
-            actual = state.function_value(function)
-            np.testing.assert_array_almost_equal(expected, actual)
+        for instance in state_harness['instances'][sample_type]:
+            if instance['function'] in ['e1', 'e2', 'e3', 'e4', 'e5', 'e6']:#, 'e7']:
+                self.run_instance(instance, state)

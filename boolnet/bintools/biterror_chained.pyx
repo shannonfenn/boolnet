@@ -325,10 +325,11 @@ cdef class ChainedE6(ChainedE5):
                 self.row_accumulator = row_sum
                 self.err_rows = self.No - i
                 return
-
         # no errors in earlier rows so just accumulate the same row
-        r = self.order[self.No - self.err_rows]
-        self.row_accumulator += popcount_vector(E[r, :])
+        # as long as errors have been found in the current row
+        if self.err_rows > 0:
+            r = self.order[self.No - self.err_rows]
+            self.row_accumulator += popcount_vector(E[r, :])
 
 
 cdef class ChainedE6MCC(ChainedEvaluator):

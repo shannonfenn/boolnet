@@ -8,8 +8,9 @@ from copy import copy
 from math import ceil
 
 from boolnet.network.boolnet cimport BoolNet, Move
+from boolnet.bintools.functions import function_name
 from boolnet.bintools.functions cimport Function
-from boolnet.bintools.biterror import EVALUATORS
+from boolnet.bintools.biterror import EVALUATORS 
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.packing import packed_type
 from boolnet.bintools.packing cimport (
@@ -109,10 +110,10 @@ cdef class BNState:
             # conversion to list prevents silly copy bugs
             return list(self.err_evaluators.keys())
 
-    cpdef add_function(self, Function function):
-        pass
+    cpdef add_function(self, Function function, size_t[:] order, name=''):
+       pass
 
-    cpdef function_value(self, Function function):
+    cpdef function_value(self, name):
         pass
 
     cpdef set_gates(self, np.uint32_t[:, :] gates):
@@ -285,17 +286,20 @@ cdef class StandardBNState(BNState):
             self.evaluate()
             return self.error
 
-    cpdef add_function(self, Function function):
-        eval_class, msb = EVALUATORS[function]
-        self.err_evaluators[function] = eval_class(self.Ne, self.No, msb)
+    cpdef add_function(self, Function function, size_t[:] order, name=''):
+        eval_class = EVALUATORS[function]
+        if not name:
+            name = function_name(function) + str(np.asarray(order))
+        self.err_evaluators[name] = eval_class(self.Ne, self.No, order)
         self.evaluated = False
+        return name
 
-    cpdef function_value(self, Function function):
-        if function not in self.err_evaluators:
-            self.add_function(function)
+    cpdef function_value(self, name):
+        if name not in self.err_evaluators:
+            raise ValueError('No evaluator with name: {}'.format(name))
         if not self.evaluated:
             self.evaluate()
-        return self.err_evaluators[function].evaluate(self.error, self.target)
+        return self.err_evaluators[name].evaluate(self.error, self.target)
 
     cpdef evaluate(self):
         ''' Evaluate the activation and error matrices if the
@@ -347,18 +351,20 @@ cdef class ChainedBNState(BNState):
         self.example_generator = example_generator
         self.function_value_cache = dict()
 
-    cpdef add_function(self, Function function):
-        eval_class, msb = CHAINED_EVALUATORS[function]
-        self.err_evaluators[function] = eval_class(self.Ne, self.No, self.cols, msb)
+    cpdef add_function(self, Function function, size_t[:] order, name=''):
+        eval_class = CHAINED_EVALUATORS[function]
+        if not name:
+            name = function_name(function) + str(np.asarray(order))
+        self.err_evaluators[name] = eval_class(self.Ne, self.No, self.cols, order)
         self.evaluated = False
+        return name
 
-    cpdef function_value(self, Function function):
-        if function not in self.err_evaluators:
-            raise ValueError('Guiding function must be added to chained evaluator prior to evaluation.')
-
+    cpdef function_value(self, name):
+        if name not in self.err_evaluators:
+            raise ValueError('No evaluator with name: {}'.format(name))
         if not self.evaluated:
             self.evaluate()
-        return self.function_value_cache[function]
+        return self.function_value_cache[name]
 
     cdef evaluate(self):
         cdef:

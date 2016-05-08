@@ -36,61 +36,61 @@ error matrix:
     full:
         [[1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 1], [1, 1], [1, 1], [0, 1], [1, 0], [1, 0], [1, 0], [0, 0]]
 
-function value:
+instances:
     sample: 
-        e1:         0.8125
-        e2L:        0.8333333333333334
-        e2M:        0.7916666666666666
-        e3L:        0.875
-        e3M:        0.8125
-        e7L:        1.0
-        e7M:        1.0
-        e4L:        1.0
-        e4M:        1.0
-        e5L:        1.0
-        e5M:        1.0
-        e6L:        0.9375
-        e6M:        0.875
-        accuracy:   0.125
-        mcc:        -0.625
-        per_output_error: [0.875, 0.75]
-        per_output_mcc: [-0.75, -0.5]
+         - {function: e1, order: l, value: 0.8125}
+         - {function: e2, order: l, value: 0.8333333333333334}
+         - {function: e2, order: m, value: 0.7916666666666666}
+         - {function: e3, order: l, value: 0.875}
+         - {function: e3, order: m, value: 0.8125}
+         - {function: e7, order: l, value: 1.0}
+         - {function: e7, order: m, value: 1.0}
+         - {function: e4, order: l, value: 1.0}
+         - {function: e4, order: m, value: 1.0}
+         - {function: e5, order: l, value: 1.0}
+         - {function: e5, order: m, value: 1.0}
+         - {function: e6, order: l, value: 0.9375}
+         - {function: e6, order: m, value: 0.875}
+         - {function: accuracy, order: l, value: 0.125}
+         - {function: e1_mcc, order: l, value: -0.625}
+         - {function: per_output_error, order: l, value: [0.875, 0.75]}
+         - {function: per_output_mcc, order: l, value: [-0.75, -0.5]}
     test: 
-        e1:         0.6875
-        e2L:        0.6666666666666666
-        e2M:        0.7083333333333334
-        e3L:        0.8125
-        e3M:        0.875
-        e7L:        1.0
-        e7M:        1.0
-        e4L:        1.0
-        e4M:        1.0
-        e5L:        1.0
-        e5M:        1.0
-        e6L:        0.8125
-        e6M:        0.875
-        accuracy:   0.0
-        mcc:        -0.375
-        per_output_error: [0.625, 0.75]
-        per_output_mcc: [-0.25, -0.5]
+         - {function: e1, order: l, value: 0.6875}
+         - {function: e2, order: l, value: 0.6666666666666666}
+         - {function: e2, order: m, value: 0.7083333333333334}
+         - {function: e3, order: l, value: 0.8125}
+         - {function: e3, order: m, value: 0.875}
+         - {function: e7, order: l, value: 1.0}
+         - {function: e7, order: m, value: 1.0}
+         - {function: e4, order: l, value: 1.0}
+         - {function: e4, order: m, value: 1.0}
+         - {function: e5, order: l, value: 1.0}
+         - {function: e5, order: m, value: 1.0}
+         - {function: e6, order: l, value: 0.8125}
+         - {function: e6, order: m, value: 0.875}
+         - {function: accuracy, order: l, value: 0.0}
+         - {function: e1_mcc, order: l, value: -0.375}
+         - {function: per_output_error, order: l, value: [0.625, 0.75]}
+         - {function: per_output_mcc, order: l, value: [-0.25, -0.5]}
     full: 
-        e1:         0.75
-        e2L:        0.75
-        e2M:        0.75
-        e3L:        0.84375
-        e3M:        0.84375
-        e7L:        1.0
-        e7M:        1.0
-        e4L:        1.0
-        e4M:        1.0
-        e5L:        1.0
-        e5M:        1.0
-        e6L:        0.875
-        e6M:        0.875
-        accuracy:   0.0625
-        mcc:        -0.5
-        per_output_error: [0.75, 0.75]
-        per_output_mcc: [-0.5, -0.5]
+         - {function: e1, order: l, value: 0.75}
+         - {function: e2, order: l, value: 0.75}
+         - {function: e2, order: m, value: 0.75}
+         - {function: e3, order: l, value: 0.84375}
+         - {function: e3, order: m, value: 0.84375}
+         - {function: e7, order: l, value: 1.0}
+         - {function: e7, order: m, value: 1.0}
+         - {function: e4, order: l, value: 1.0}
+         - {function: e4, order: m, value: 1.0}
+         - {function: e5, order: l, value: 1.0}
+         - {function: e5, order: m, value: 1.0}
+         - {function: e6, order: l, value: 0.875}
+         - {function: e6, order: m, value: 0.875}
+         - {function: accuracy, order: l, value: 0.0625}
+         - {function: e1_mcc, order: l, value: -0.5}
+         - {function: per_output_error, order: l, value: [0.75, 0.75]}
+         - {function: per_output_mcc, order: l, value: [-0.5, -0.5]}
 
 multiple_moves_test_case:
     - move: {gate: 0, new_source: 1, terminal: False}
