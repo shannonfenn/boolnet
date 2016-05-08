@@ -10,3 +10,4 @@ py*.cpp
 *.html
 *.pytest.restart
 /boolnet.sublime-workspace
+compilelog
