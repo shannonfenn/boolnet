@@ -1,6 +1,7 @@
 from boolnet.learning.optimisers import SA, stepped_exp_decrease, geometric
 from math import exp
 import numpy as np
+import operator as op
 import random
 
 
@@ -27,6 +28,8 @@ class TestSA:
 
     def test_accept(self):
         annealer = SA()
+        # inject default
+        annealer.is_better = op.lt
         assert annealer.accept(1.0, 0.5, 100)
         assert annealer.accept(1.0, 1.0, 100)
         assert not annealer.accept(0.0, 0.5, 0)

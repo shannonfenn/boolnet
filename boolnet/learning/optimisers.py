@@ -216,7 +216,7 @@ class SA(RestartLocalSearch):
 
     def accept(self, old_error, new_error, temperature):
         delta = abs(new_error - old_error)
-        if is_better(new_error, old_error):
+        if self.is_better(new_error, old_error):
             delta *= -1
         # DETERMINISTIC
         # return delta < -temperature or 0 <= delta < temperature
