@@ -470,5 +470,4 @@ class TestBoth:
     def test_function_value(self, state_harness, sample_type):
         state = state_harness['state'][sample_type]
         for instance in state_harness['instances'][sample_type]:
-            if instance['function'] in ['e1', 'e2', 'e3', 'e4', 'e5', 'e6']:#, 'e7']:
-                self.run_instance(instance, state)
+            self.run_instance(instance, state)
