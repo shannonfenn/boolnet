@@ -4,19 +4,20 @@ cimport numpy as np
 
 
 cdef class ChainedEvaluator:
-    cdef size_t Ne, No, cols, start, step
+    cdef size_t Ne, No, cols
+    cdef size_t[:] order
     cdef double divisor
 
 
 cdef class ChainedPerOutputMCC(ChainedEvaluator):
     cdef:
-        packed_type_t[:] true_positive, false_positive, false_negative
+        packed_type_t[:] tp_buffer, fp_buffer, fn_buffer
         size_t[:] TP, FP, FN
+        np.uint8_t[:] errors_exist
         double[:] mcc
-        packed_type_t end_mask
 
     cpdef reset(self)
-    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T, packed_type_t end_mask=*)
+    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T, size_t end_sub=*)
     cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
@@ -40,8 +41,8 @@ cdef class ChainedAccuracy(ChainedEvaluator):
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class ChainedMeanMCC:
-    cdef ChainedPerOutputMCC per_out_evaluator
+cdef class ChainedMeanMCC(ChainedEvaluator):
+    cdef ChainedPerOutputMCC per_output_evaluator
 
     cpdef reset(self)
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
@@ -59,6 +60,12 @@ cdef class ChainedE1(ChainedEvaluator):
 
 cdef class ChainedE2(ChainedE1):
     cdef double[:] weight_vector
+
+    cpdef double final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
+cdef class ChainedE2MCC(ChainedE2):
+    cdef ChainedPerOutputMCC per_output_evaluator
 
     cpdef double final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
@@ -87,6 +94,14 @@ cdef class ChainedE5(ChainedEvaluator):
 
 cdef class ChainedE6(ChainedE5):
     cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T, size_t end_sub=*)
+
+
+cdef class ChainedE6MCC(ChainedEvaluator):
+    cdef ChainedPerOutputMCC per_output_evaluator
+
+    cpdef reset(self)
+    cpdef partial_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T, size_t end_sub=*)
+    cpdef double final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
 cdef class ChainedE7(ChainedEvaluator):

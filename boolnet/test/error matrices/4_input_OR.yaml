@@ -1,23 +1,24 @@
 name: 4_input_OR
 Ne: 16
-e1: 0.9375
-e2L: 0.9375
-e2M: 0.9375
-e3L: 0.9375
-e3M: 0.9375
-e4L: 0.9375
-e4M: 0.9375
-e5L: 0.9375
-e5M: 0.9375
-e6L: 0.9375
-e6M: 0.9375
-e7L: 1.0
-e7M: 1.0
-accuracy: 0.0625
-e1_mcc: -0.875
-e2L_mcc: -0.875
-e2M_mcc: -0.875
-e6L_mcc: -0.875
-e6M_mcc: -0.875
-per_output_error: [0.9375]
-per_output_mcc: [-0.875]
+tests:
+  - {order: 'l', function: 'e1', value: 0.9375}
+  - {order: 'l', function: 'e2', value: 0.9375}
+  - {order: 'm', function: 'e2', value: 0.9375}
+  - {order: 'l', function: 'e3', value: 0.9375}
+  - {order: 'm', function: 'e3', value: 0.9375}
+  - {order: 'l', function: 'e4', value: 0.9375}
+  - {order: 'm', function: 'e4', value: 0.9375}
+  - {order: 'l', function: 'e5', value: 0.9375}
+  - {order: 'm', function: 'e5', value: 0.9375}
+  - {order: 'l', function: 'e6', value: 0.9375}
+  - {order: 'm', function: 'e6', value: 0.9375}
+  - {order: 'l', function: 'e7', value: 1.0}
+  - {order: 'm', function: 'e7', value: 1.0}
+  - {order: 'l', function: 'accuracy', value: 0.0625}
+  - {order: 'l', function: 'e1_mcc', value: -0.875}
+  - {order: 'l', function: 'e2_mcc', value: -0.875}
+  - {order: 'm', function: 'e2_mcc', value: -0.875}
+  - {order: 'l', function: 'e6_mcc', value: -0.875}
+  - {order: 'm', function: 'e6_mcc', value: -0.875}
+  - {order: 'l', function: 'per_output_error', value: [0.9375]}
+  - {order: 'l', function: 'per_output_mcc', value: [-0.875]}

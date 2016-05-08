@@ -6,9 +6,8 @@ def all_functions():
 
 
 def scalar_functions():
-    return [E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L,
-            E6M, E6L, E7M, E7L, ACCURACY, 
-            E1_MCC, E2M_MCC, E2L_MCC, E6M_MCC, E6L_MCC]
+    return [E1, E2, E3, E4, E5, E6, E7,
+            ACCURACY, E1_MCC, E2_MCC, E6_MCC]
 
 
 def per_output_functions():
@@ -29,24 +28,16 @@ def per_output_function_names():
 
 def function_from_name(name):
     if name == 'e1':                    return E1
-    elif name == 'e2M':                 return E2M
-    elif name == 'e2L':                 return E2L
-    elif name == 'e3M':                 return E3M
-    elif name == 'e3L':                 return E3L
-    elif name == 'e4M':                 return E4M
-    elif name == 'e4L':                 return E4L
-    elif name == 'e5M':                 return E5M
-    elif name == 'e5L':                 return E5L
-    elif name == 'e6M':                 return E6M
-    elif name == 'e6L':                 return E6L
-    elif name == 'e7M':                 return E7M
-    elif name == 'e7L':                 return E7L
+    elif name == 'e2':                  return E2
+    elif name == 'e3':                  return E3
+    elif name == 'e4':                  return E4
+    elif name == 'e5':                  return E5
+    elif name == 'e6':                  return E6
+    elif name == 'e7':                  return E7
     elif name == 'accuracy':            return ACCURACY
     elif name == 'e1_mcc':              return E1_MCC
-    elif name == 'e2M_mcc':             return E2M_MCC
-    elif name == 'e2L_mcc':             return E2L_MCC
-    elif name == 'e6M_mcc':             return E6M_MCC
-    elif name == 'e6L_mcc':             return E6L_MCC
+    elif name == 'e2_mcc':              return E2_MCC
+    elif name == 'e6_mcc':              return E6_MCC
     elif name == 'per_output_error':    return PER_OUTPUT_ERROR
     elif name == 'per_output_mcc':      return PER_OUTPUT_MCC
     else: raise ValueError('No function named \'{}\''.format(name))
@@ -54,42 +45,34 @@ def function_from_name(name):
 
 def function_name(function_id):
     if function_id == E1:                   return 'e1'
-    elif function_id == E2M:                return 'e2M'
-    elif function_id == E2L:                return 'e2L'
-    elif function_id == E3M:                return 'e3M'
-    elif function_id == E3L:                return 'e3L'
-    elif function_id == E4M:                return 'e4M'
-    elif function_id == E4L:                return 'e4L'
-    elif function_id == E5M:                return 'e5M'
-    elif function_id == E5L:                return 'e5L'
-    elif function_id == E6M:                return 'e6M'
-    elif function_id == E6L:                return 'e6L'
-    elif function_id == E7M:                return 'e7M'
-    elif function_id == E7L:                return 'e7L'
+    elif function_id == E2:                 return 'e2'
+    elif function_id == E3:                 return 'e3'
+    elif function_id == E4:                 return 'e4'
+    elif function_id == E5:                 return 'e5'
+    elif function_id == E6:                 return 'e6'
+    elif function_id == E7:                 return 'e7'
     elif function_id == ACCURACY:           return 'accuracy'
     elif function_id == E1_MCC:             return 'e1_mcc'
-    elif function_id == E2M_MCC:            return 'e2M_mcc'
-    elif function_id == E2L_MCC:            return 'e2L_mcc'
-    elif function_id == E6M_MCC:            return 'e6M_mcc'
-    elif function_id == E6L_MCC:            return 'e6L_mcc'
+    elif function_id == E2_MCC:             return 'e2_mcc'
+    elif function_id == E6_MCC:             return 'e6_mcc'
     elif function_id == PER_OUTPUT_ERROR:   return 'per_output_error'
     elif function_id == PER_OUTPUT_MCC:     return 'per_output_mcc'
     else: raise ValueError('No function id \'{}\''.format(function_id))
 
 
 def is_minimiser(function_id):
-    if function_id in [E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L, E6M, E6L, E7M, E7L, PER_OUTPUT_ERROR]:
+    if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR]:
         return True
-    elif function_id in [ACCURACY, E1_MCC, E2M_MCC, E2L_MCC, E6M_MCC, E6L_MCC, PER_OUTPUT_MCC]:
+    elif function_id in [ACCURACY, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return False
     else:
         raise ValueError('No function id \'{}\''.format(function_id))
 
 
 def optimum(function_id):
-    if function_id in [E1, E2M, E2L, E3M, E3L, E4M, E4L, E5M, E5L, E6M, E6L, E7M, E7L, PER_OUTPUT_ERROR]:
+    if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR]:
         return 0.0
-    elif function_id in [ACCURACY, E1_MCC, E2M_MCC, E2L_MCC, E6M_MCC, E6L_MCC, PER_OUTPUT_MCC]:
+    elif function_id in [ACCURACY, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return 1.0
     else:
         raise ValueError('No function id \'{}\''.format(function_id))

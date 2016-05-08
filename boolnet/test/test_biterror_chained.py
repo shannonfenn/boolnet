@@ -6,110 +6,104 @@ from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
 from boolnet.bintools.packing import packed_type
 
 
-@fixture
-def single_column(error_matrix_harness, any_function):
-    error_matrix_harness['function'] = any_function
-    window_width = 1
-    error_matrix_harness['window_width'] = window_width
-    return construct_test_instance(error_matrix_harness)
-
-
-@fixture
-def full_width(error_matrix_harness, any_function):
-    Ep = error_matrix_harness['packed error matrix']
-    error_matrix_harness['function'] = any_function
-    window_width = Ep.shape[1]
-    error_matrix_harness['window_width'] = window_width
-    return construct_test_instance(error_matrix_harness)
-
-
-@fixture
-def random_width(error_matrix_harness, any_function):
-    Ep = error_matrix_harness['packed error matrix']
-    error_matrix_harness['function'] = any_function
-    window_width = max(int(np.random.random(1) * Ep.shape[1]), 1)
-    error_matrix_harness['window_width'] = window_width
-    return construct_test_instance(error_matrix_harness)
-
-
-def construct_test_instance(harness):
-    Ep = harness['packed error matrix']
-    func_name = harness['function']
-    func_id = function_from_name(func_name)
-    window_width = harness['window_width']
-
-    Ne = harness['Ne']
-    No, cols = Ep.shape
-
-    eval_class, msb = CHAINED_EVALUATORS[func_id]
-    error_evaluator = eval_class(Ne, No, window_width, msb)
-
-    expected = harness[func_name]
-
-    return (window_width, Ep, error_evaluator, expected)
-
-
-def eval_chained(window_width, E, error_evaluator):
+def eval_chained(window_width, Ep, error_evaluator):
     ''' This helper evaluates the error matrix using the given
         chained evaluator.'''
-    No, array_width = E.shape
-    error_window = np.array(
-        np.zeros(shape=(No, window_width)), dtype=packed_type)
-    target_window = np.zeros_like(error_window)
+    No, array_width = Ep.shape
+    # error window
+    Ew = np.array(np.zeros((No, window_width)), dtype=packed_type)
+    Tw = np.zeros_like(Ew)
 
     steps = array_width // window_width
     if array_width % window_width != 0:
         steps += 1
 
     for i in range(steps-1):
-        error_window[:, :] = E[:, i*window_width: (i+1)*window_width]
-        error_evaluator.partial_evaluation(error_window, target_window)
+        Ew[:, :] = Ep[:, i*window_width: (i+1)*window_width]
+        error_evaluator.partial_evaluation(Ew, Tw)
 
     if array_width % window_width != 0:
-        error_window[:, :] = 0
-        error_window[:, :array_width % window_width] = np.array(
-            E[:, (steps-1)*window_width:])
+        Ew[:, :] = 0
+        Ew[:, :array_width % window_width] = np.array(
+            Ep[:, (steps-1)*window_width:])
     else:
-        error_window[:, :] = E[:, -window_width:]
+        Ew[:, :] = Ep[:, -window_width:]
 
-    return error_evaluator.final_evaluation(error_window, target_window)
+    return error_evaluator.final_evaluation(Ew, Tw)
 
 
-def test_single_column_eval(single_column):
+def evaluate(harness, window_width):
+    Ep = harness['packed error matrix']
+    Ne = harness['Ne']
+    No, _ = Ep.shape
+    for test in harness['tests']:
+        print(test)
+        func_name = test['function']
+        order = test['order']
+        expected = test['value']
+
+        if order == 'l':
+            order = np.arange(No, dtype=np.uintp)
+        elif order == 'm':
+            order = np.arange(No, dtype=np.uintp)[::-1]
+
+        eval_class = CHAINED_EVALUATORS[function_from_name(func_name)]
+        error_evaluator = eval_class(Ne, Ep.shape[0], window_width, order)
+
+        actual = eval_chained(window_width, Ep, error_evaluator)
+        assert_array_almost_equal(expected, actual)
+
+
+def test_single_column_eval(error_matrix_harness):
+    ''' Test the chained evaluator gives correct function values
+        for a window width of 1.'''
+    window_width = 1
+    evaluate(error_matrix_harness, window_width)
+
+
+def test_full_width_eval(error_matrix_harness):
+    ''' Test the chained evaluator gives correct function values
+        for full window width.'''
+    Ep = error_matrix_harness['packed error matrix']
+    window_width = Ep.shape[1]
+    evaluate(error_matrix_harness, window_width)
+
+
+def test_eval(error_matrix_harness):
     ''' Test the chained evaluator gives correct function values
         for varying window widths.'''
-    window_width, E, error_evaluator, expected = single_column
-
-    actual = eval_chained(window_width, E, error_evaluator)
-    assert_array_almost_equal(expected, actual)
-
-
-def test_full_width_eval(full_width):
-    ''' Test the chained evaluator gives correct function values
-        for varying window widths.'''
-    window_width, E, error_evaluator, expected = full_width
-
-    actual = eval_chained(window_width, E, error_evaluator)
-    assert_array_almost_equal(expected, actual)
+    Ep = error_matrix_harness['packed error matrix']
+    window_width = max(int(np.random.random(1) * Ep.shape[1]), 1)
+    evaluate(error_matrix_harness, window_width)
 
 
-def test_eval(random_width):
-    ''' Test the chained evaluator gives correct function values
-        for varying window widths.'''
-    window_width, E, error_evaluator, expected = random_width
-
-    actual = eval_chained(window_width, E, error_evaluator)
-    assert_array_almost_equal(expected, actual)
-
-
-def test_reset(random_width):
+def test_reset(error_matrix_harness):
     ''' Test the chained evaluator gives correct function values
         after being evaluated and reset.'''
-    window_width, E, error_evaluator, expected = random_width
+    # random width
+    Ep = error_matrix_harness['packed error matrix']
+    window_width = max(int(np.random.random(1) * Ep.shape[1]), 1)
 
-    # evaluate once and then reset
-    eval_chained(window_width, E, error_evaluator)
-    error_evaluator.reset()
+    Ne = error_matrix_harness['Ne']
+    No, _ = Ep.shape
+    for test in error_matrix_harness['tests']:
+        print(test)
+        func_name = test['function']
+        order = test['order']
+        expected = test['value']
 
-    actual = eval_chained(window_width, E, error_evaluator)
-    assert_array_almost_equal(actual, expected)
+        if order == 'l':
+            order = np.arange(No, dtype=np.uintp)
+        elif order == 'm':
+            order = np.arange(No, dtype=np.uintp)[::-1]
+
+        eval_class = CHAINED_EVALUATORS[function_from_name(func_name)]
+        error_evaluator = eval_class(Ne, Ep.shape[0], window_width, order)
+
+        # evaluate once and then reset
+        eval_chained(window_width, Ep, error_evaluator)
+        error_evaluator.reset()
+        actual = eval_chained(window_width, Ep, error_evaluator)
+        # actual = eval_chained(1, Ep, error_evaluator)
+
+        assert_array_almost_equal(expected, actual)

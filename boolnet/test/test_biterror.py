@@ -3,19 +3,26 @@ import numpy as np
 from boolnet.bintools.biterror import EVALUATORS
 
 
-def test_function_value(error_matrix_harness, any_function):
-    func_id = function_from_name(any_function)
+def test_function_value(error_matrix_harness):
     Ne = error_matrix_harness['Ne']
     E = error_matrix_harness['packed error matrix']
     T = np.zeros_like(E)
     No, _ = E.shape
-    eval_class, msb = EVALUATORS[func_id]
-    error_evaluator = eval_class(Ne, No, msb)
 
-    actual = error_evaluator.evaluate(E, T)
-    expected = error_matrix_harness[any_function]
+    for test in error_matrix_harness['tests']:
+        order = test['order']
+        func_id = function_from_name(test['function'])
+        expected = test['value']
 
-    np.testing.assert_array_almost_equal(actual, expected)
+        if order == 'l':
+            order = np.arange(No, dtype=np.uintp)
+        elif order == 'm':
+            order = np.arange(No, dtype=np.uintp)[::-1]
+
+        eval_class = EVALUATORS[func_id]
+        error_evaluator = eval_class(Ne, No, order)
+        actual = error_evaluator.evaluate(E, T)
+        np.testing.assert_array_almost_equal(actual, expected)
 
 
 # @pytest.mark.python
