@@ -38,59 +38,59 @@ error matrix:
 
 instances:
     sample: 
-         - {function: e1, order: l, value: 0.8125}
-         - {function: e2, order: l, value: 0.8333333333333334}
-         - {function: e2, order: m, value: 0.7916666666666666}
-         - {function: e3, order: l, value: 0.875}
-         - {function: e3, order: m, value: 0.8125}
-         - {function: e7, order: l, value: 1.0}
-         - {function: e7, order: m, value: 1.0}
-         - {function: e4, order: l, value: 1.0}
-         - {function: e4, order: m, value: 1.0}
-         - {function: e5, order: l, value: 1.0}
-         - {function: e5, order: m, value: 1.0}
-         - {function: e6, order: l, value: 0.9375}
-         - {function: e6, order: m, value: 0.875}
-         - {function: accuracy, order: l, value: 0.125}
-         - {function: e1_mcc, order: l, value: -0.625}
-         - {function: per_output_error, order: l, value: [0.875, 0.75]}
-         - {function: per_output_mcc, order: l, value: [-0.75, -0.5]}
+         - {function: e1, order: lsb, value: 0.8125}
+         - {function: e2, order: lsb, value: 0.8333333333333334}
+         - {function: e2, order: msb, value: 0.7916666666666666}
+         - {function: e3, order: lsb, value: 0.875}
+         - {function: e3, order: msb, value: 0.8125}
+         - {function: e7, order: lsb, value: 1.0}
+         - {function: e7, order: msb, value: 1.0}
+         - {function: e4, order: lsb, value: 1.0}
+         - {function: e4, order: msb, value: 1.0}
+         - {function: e5, order: lsb, value: 1.0}
+         - {function: e5, order: msb, value: 1.0}
+         - {function: e6, order: lsb, value: 0.9375}
+         - {function: e6, order: msb, value: 0.875}
+         - {function: accuracy, order: lsb, value: 0.125}
+         - {function: e1_mcc, order: lsb, value: -0.625}
+         - {function: per_output_error, order: lsb, value: [0.875, 0.75]}
+         - {function: per_output_mcc, order: lsb, value: [-0.75, -0.5]}
     test: 
-         - {function: e1, order: l, value: 0.6875}
-         - {function: e2, order: l, value: 0.6666666666666666}
-         - {function: e2, order: m, value: 0.7083333333333334}
-         - {function: e3, order: l, value: 0.8125}
-         - {function: e3, order: m, value: 0.875}
-         - {function: e7, order: l, value: 1.0}
-         - {function: e7, order: m, value: 1.0}
-         - {function: e4, order: l, value: 1.0}
-         - {function: e4, order: m, value: 1.0}
-         - {function: e5, order: l, value: 1.0}
-         - {function: e5, order: m, value: 1.0}
-         - {function: e6, order: l, value: 0.8125}
-         - {function: e6, order: m, value: 0.875}
-         - {function: accuracy, order: l, value: 0.0}
-         - {function: e1_mcc, order: l, value: -0.375}
-         - {function: per_output_error, order: l, value: [0.625, 0.75]}
-         - {function: per_output_mcc, order: l, value: [-0.25, -0.5]}
+         - {function: e1, order: lsb, value: 0.6875}
+         - {function: e2, order: lsb, value: 0.6666666666666666}
+         - {function: e2, order: msb, value: 0.7083333333333334}
+         - {function: e3, order: lsb, value: 0.8125}
+         - {function: e3, order: msb, value: 0.875}
+         - {function: e7, order: lsb, value: 1.0}
+         - {function: e7, order: msb, value: 1.0}
+         - {function: e4, order: lsb, value: 1.0}
+         - {function: e4, order: msb, value: 1.0}
+         - {function: e5, order: lsb, value: 1.0}
+         - {function: e5, order: msb, value: 1.0}
+         - {function: e6, order: lsb, value: 0.8125}
+         - {function: e6, order: msb, value: 0.875}
+         - {function: accuracy, order: lsb, value: 0.0}
+         - {function: e1_mcc, order: lsb, value: -0.375}
+         - {function: per_output_error, order: lsb, value: [0.625, 0.75]}
+         - {function: per_output_mcc, order: lsb, value: [-0.25, -0.5]}
     full: 
-         - {function: e1, order: l, value: 0.75}
-         - {function: e2, order: l, value: 0.75}
-         - {function: e2, order: m, value: 0.75}
-         - {function: e3, order: l, value: 0.84375}
-         - {function: e3, order: m, value: 0.84375}
-         - {function: e7, order: l, value: 1.0}
-         - {function: e7, order: m, value: 1.0}
-         - {function: e4, order: l, value: 1.0}
-         - {function: e4, order: m, value: 1.0}
-         - {function: e5, order: l, value: 1.0}
-         - {function: e5, order: m, value: 1.0}
-         - {function: e6, order: l, value: 0.875}
-         - {function: e6, order: m, value: 0.875}
-         - {function: accuracy, order: l, value: 0.0625}
-         - {function: e1_mcc, order: l, value: -0.5}
-         - {function: per_output_error, order: l, value: [0.75, 0.75]}
-         - {function: per_output_mcc, order: l, value: [-0.5, -0.5]}
+         - {function: e1, order: lsb, value: 0.75}
+         - {function: e2, order: lsb, value: 0.75}
+         - {function: e2, order: msb, value: 0.75}
+         - {function: e3, order: lsb, value: 0.84375}
+         - {function: e3, order: msb, value: 0.84375}
+         - {function: e7, order: lsb, value: 1.0}
+         - {function: e7, order: msb, value: 1.0}
+         - {function: e4, order: lsb, value: 1.0}
+         - {function: e4, order: msb, value: 1.0}
+         - {function: e5, order: lsb, value: 1.0}
+         - {function: e5, order: msb, value: 1.0}
+         - {function: e6, order: lsb, value: 0.875}
+         - {function: e6, order: msb, value: 0.875}
+         - {function: accuracy, order: lsb, value: 0.0625}
+         - {function: e1_mcc, order: lsb, value: -0.5}
+         - {function: per_output_error, order: lsb, value: [0.75, 0.75]}
+         - {function: per_output_mcc, order: lsb, value: [-0.5, -0.5]}
 
 multiple_moves_test_case:
     - move: {gate: 0, new_source: 1, terminal: False}
