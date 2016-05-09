@@ -14,9 +14,9 @@ def test_function_value(error_matrix_harness):
         func_id = function_from_name(test['function'])
         expected = test['value']
 
-        if order == 'l':
+        if order == 'lsb':
             order = np.arange(No, dtype=np.uintp)
-        elif order == 'm':
+        elif order == 'msb':
             order = np.arange(No, dtype=np.uintp)[::-1]
 
         eval_class = EVALUATORS[func_id]

@@ -133,16 +133,6 @@ def standard_harness_to_fixture(test):
     return test
 
 
-
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
-###     HERE BE DRAGONS!!!!
 def chained_harness_to_fixture(test):
     Ni = test['Ni']
     No = test['No']
@@ -437,9 +427,9 @@ class TestBoth:
     def run_instance(self, instance, state):
         func_id = function_from_name(instance['function'])
         order = instance['order']
-        if order == 'l':
+        if order == 'lsb':
             order = np.arange(state.No, dtype=np.uintp)
-        elif order == 'm':
+        elif order == 'msb':
             order = np.arange(state.No, dtype=np.uintp)[::-1]
         expected = instance['value']
         name = state.add_function(func_id, order)

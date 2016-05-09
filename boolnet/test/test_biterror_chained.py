@@ -42,9 +42,9 @@ def evaluate(harness, window_width):
         order = test['order']
         expected = test['value']
 
-        if order == 'l':
+        if order == 'lsb':
             order = np.arange(No, dtype=np.uintp)
-        elif order == 'm':
+        elif order == 'msb':
             order = np.arange(No, dtype=np.uintp)[::-1]
 
         eval_class = CHAINED_EVALUATORS[function_from_name(func_name)]
@@ -92,9 +92,9 @@ def test_reset(error_matrix_harness):
         order = test['order']
         expected = test['value']
 
-        if order == 'l':
+        if order == 'lsb':
             order = np.arange(No, dtype=np.uintp)
-        elif order == 'm':
+        elif order == 'msb':
             order = np.arange(No, dtype=np.uintp)[::-1]
 
         eval_class = CHAINED_EVALUATORS[function_from_name(func_name)]
