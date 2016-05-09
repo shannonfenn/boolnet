@@ -101,7 +101,8 @@ def learn_bool_net(parameters):
     return results
 
 
-def build_states(mapping, gates, guiding_funcs):
+def build_states(mapping, gates, objectives):
+    ''' objectives should be a list of (func_id, ordering, name) tuples.'''
     if mapping['type'] == 'raw':
         M = mapping['matrix']
         indices = mapping['training_indices']
@@ -122,9 +123,9 @@ def build_states(mapping, gates, guiding_funcs):
         S_test = chained_from_operator(
             gates, indices, Nb, No, operator, window_size, exclude=True)
         # pre-add functions to avoid redundant network evaluations
-        for f in guiding_funcs:
-            S_trg.add_function(f)
-            S_test.add_function(f)
+        for func, order, name in objectives:
+            S_trg.add_function(func, order, name)
+            S_test.add_function(func, order, name)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
@@ -142,9 +143,16 @@ def build_result_map(parameters, learner_result):
     gates = final_network.gates
 
     # build evaluators for training and test data
-    funcs = [guiding_function, fn.E1, fn.E1_MCC, fn.ACCURACY,
-             fn.PER_OUTPUT_ERROR, fn.PER_OUTPUT_MCC]
-    train_state, test_state = build_states(parameters['mapping'], gates, funcs)
+    target_order = learner_result.target_order
+    objectives = [
+        (guiding_function, target_order, 'guiding'),
+        (fn.E1, target_order, 'e1'),
+        (fn.E1_MCC, target_order, 'e1_mcc'),
+        (fn.ACCURACY, target_order, 'accuracy'),
+        (fn.PER_OUTPUT_ERROR, target_order, 'per_output_error'),
+        (fn.PER_OUTPUT_MCC, target_order, 'per_output_mcc')]
+
+    train_state, test_state = build_states(parameters['mapping'], gates, objectives)
 
     results = {
         'Ni':           final_network.Ni,
@@ -156,15 +164,16 @@ def build_result_map(parameters, learner_result):
         'tfs':          parameters['learner']['network']['node_funcs'],
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
-        'trg_error':    train_state.function_value(fn.E1),
-        'trg_acc':      train_state.function_value(fn.ACCURACY),
-        'trg_mcc':      train_state.function_value(fn.E1_MCC),
-        'trg_err_gf':   train_state.function_value(guiding_function)
-        'test_error':   test_state.function_value(fn.E1),
-        'test_acc':     test_state.function_value(fn.ACCURACY),
-        'test_mcc':     test_state.function_value(fn.E1_MCC),
-        'test_err_gf':  test_state.function_value(guiding_function)
-        'Ne':           train_state.Ne
+        'trg_error':    train_state.function_value('e1'),
+        'trg_acc':      train_state.function_value('accuracy'),
+        'trg_mcc':      train_state.function_value('e1_mcc'),
+        'trg_err_gf':   train_state.function_value('guiding')
+        'test_error':   test_state.function_value('e1'),
+        'test_acc':     test_state.function_value('accuracy'),
+        'test_mcc':     test_state.function_value('e1_mcc'),
+        'test_err_gf':  test_state.function_value('guiding')
+        'Ne':           train_state.Ne,
+        'tgt_order':    target_order
         }
 
     if parameters.get('record_training_indices', True):
@@ -190,23 +199,20 @@ def build_result_map(parameters, learner_result):
                     key = 'fs_s{}_t{}'.format(strata, target)
                     results[key] = v
 
-    if learner_result.target_order is not None:
-        results['tgt_order'] = learner_result.target_order
-
     if learner_result.restarts is not None:
         results['restarts'] = learner_result.restarts
 
     # multi-key results
-    for bit, v in enumerate(train_state.function_value(fn.PER_OUTPUT_ERROR)):
+    for bit, v in enumerate(train_state.function_value('per_output_error')):
         key = 'trg_err_tgt_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_state.function_value(fn.PER_OUTPUT_ERROR)):
+    for bit, v in enumerate(test_state.function_value('per_output_error')):
         key = 'test_err_tgt_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(train_state.function_value(fn.PER_OUTPUT_MCC)):
+    for bit, v in enumerate(train_state.function_value('per_output_mcc')):
         key = 'trg_mcc_tgt_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(test_state.function_value(fn.PER_OUTPUT_MCC)):
+    for bit, v in enumerate(test_state.function_value('per_output_mcc')):
         key = 'test_mcc_tgt_{}'.format(bit)
         results[key] = v
     for bit, v in enumerate(final_network.max_node_depths()):

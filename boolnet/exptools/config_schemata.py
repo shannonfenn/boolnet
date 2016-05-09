@@ -1,7 +1,8 @@
 import sys
 import numpy as np
 from good import (Schema, In, All, Any, Range,
-                  Type, IsDir, message, Optional)
+                  Type, IsDir, message, Optional,
+                  Exclusive)
 
 from boolnet.bintools.functions import scalar_function_names
 
@@ -97,36 +98,42 @@ LAHC_schema = Schema({
 optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
 
 
+target_order_schema = Any('auto', 'msb', 'lsb', [All(int, Range(min=0))])
+
+
 learner_schema_stratified = Schema({
     'name':                         'stratified',
     'optimiser':                    optimiser_schema,
     'network':                      network_schema,
-    Optional('minfs_masking'):      bool,
-    Optional('auto_target'):        bool,
-    Optional('keep_files'):         bool,
     'minfs_selection_method':       str,
+    'target_order':                 target_order_schema,
+    Optional('minfs_masking'):      bool,
+    Optional('keep_files'):         bool,
     })
 
 
 learner_schema_basic = Schema({
-    'name':                         'basic',
-    'network':                      network_schema,
-    'optimiser':                    optimiser_schema,
+    'name':                             'basic',
+    'network':                          network_schema,
+    'optimiser':                        optimiser_schema,
+    'target_order':                     target_order_schema,
+    Optional('minfs_selection_method'): str
     })
 
 
 learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
+
 config_schema = Schema({
-    'name':                     str,
-    'data':                     Any(data_schema_file, data_schema_generated),
-    'logging':                  In(['none', 'warning', 'info', 'debug']),
-    'learner':                  learner_schema,
-    'sampling':                 sampling_schema,
+    'name':                                 str,
+    'data':                                 Any(data_schema_file, data_schema_generated),
+    'logging':                              In(['none', 'warning', 'info', 'debug']),
+    'learner':                              learner_schema,
+    'sampling':                             sampling_schema,
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
     Optional('record_training_indices'):    bool,
-    Optional('seed'):           All(int, Range(0, sys.maxsize)),
+    Optional('seed'):                       All(int, Range(0, sys.maxsize)),
     })

@@ -14,16 +14,12 @@ LearnerResult = namedtuple('LearnerResult', [
     'final_iterations', 'target_order', 'feature_sets', 'restarts'])
 
 
-def per_tgt_err_stop_criterion(bit):
-    return lambda ev, _: ev.function_value(fn.PER_OUTPUT)[bit] <= 0
-
-
 def guiding_func_stop_criterion(func_id):
     optimum = fn.optimum(func_id)
     if fn.is_minimiser(func_id):
-        lambda _, error: error <= optimum
+        return lambda _, error: error <= optimum
     else:
-        lambda _, error: error >= optimum
+        return lambda _, error: error >= optimum
 
 
 def inverse_permutation(permutation):
@@ -51,9 +47,24 @@ class BasicLearner:
         self.opt_params = copy(parameters['optimiser'])
         gf_name = self.opt_params['guiding_function']
         self.guiding_func_id = fn.function_from_name(gf_name)
-        self.opt_params['guiding_function'] = (
-            lambda x: x.function_value(self.guiding_func_id))
         self.opt_params['minimise'] = fn.is_minimiser(self.guiding_func_id)
+
+        # convert shorthands for target order 
+        if parameters['target_order'] == 'lsb':
+            self.target_order = np.arange(self.No, dtype=np.uintp)
+        elif parameters['target_order'] == 'msb':
+            self.target_order = np.arange(self.No, dtype=np.uintp)[::-1]
+        elif parameters['target_order'] == 'auto':
+            self.target_order = None
+            # this key is only required if auto-targetting
+            self.mfs_method = parameters['minfs_selection_method']
+        else:
+            self.target_order = np.array(parameters['target_order'], dtype=np.uintp)
+
+        # add functors for evaluating the guiding function and stopping criteria
+        self.gf_eval_name = 'guiding'
+        self.opt_params['guiding_function'] = lambda x: x.function_value(self.gf_eval_name)
+        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(self.guiding_func_id)
 
         if self.guiding_func_id not in fn.scalar_functions():
             raise ValueError('Invalid guiding function: {}'.format(gf_name))
@@ -61,14 +72,35 @@ class BasicLearner:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                              format(self.node_funcs))
 
+    def order_from_rank(self, ranks):
+        ''' Converts a ranking with ties into an ordering, breaking ties with uniform probability.'''
+        order = []
+        ranks, counts = np.unique(ranks, return_counts=True)
+        for rank, count in zip(ranks, counts):
+            order.extend((np.random.permutation(count) + rank).tolist())
+        return order
+
     def run(self, optimiser, parameters):
         self._setup(optimiser, parameters)
 
+        if self.target_order is None:
+            # determine the target order by ranking feature sets
+            mfs_matrix = unpack_bool_matrix(self.input_matrix, self.Ne)
+            mfs_targets = unpack_bool_matrix(self.target_matrix, self.Ne)
+
+            # use external solver for minFS
+            rank, feature_sets = ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
+
+            # randomly pick from top ranked targets
+            return np.choice(np.where(rank == 0)[0])
+
+        # build the network state
         gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
         state = StandardBNState(gates, self.problem_matrix)
+        # add the guiding function to be evaluated
+        state.add_function(self.guiding_func_id, self.target_order, self.gf_eval_name)
 
-        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(self.guiding_func_id)
-
+        # run the optimiser
         opt_result = self.optimiser.run(state, self.opt_params)
 
         return LearnerResult(
@@ -77,7 +109,7 @@ class BasicLearner:
             best_iterations=[opt_result.best_iteration],
             final_iterations=[opt_result.iteration],
             restarts=[opt_result.restarts],
-            target_order=None,
+            target_order=self.target_order,
             feature_sets=None,
             partial_networks=[])
 
@@ -88,11 +120,10 @@ class StratifiedLearner(BasicLearner):
         super()._setup(optimiser, parameters)
         # Required
         self.mfs_fname = parameters['inter_file_base']
+        self.mfs_method = parameters['minfs_selection_method']
+        self.auto_target = (parameters['target_order'] == 'auto')
         # Optional
-        self.auto_target = parameters.get('auto_target', False)
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.keep_files = parameters.get('keep_files', False)
-        self.fabcpp_opts = parameters.get('fabcpp_options', {})
         # Initialise
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
@@ -100,59 +131,42 @@ class StratifiedLearner(BasicLearner):
         self.feature_sets = np.empty((self.No, self.No),
                                      dtype=list)
 
-    def _determine_next_target(self, strata, inputs):
-        all_targets = set(range(self.No))
-        not_learned = list(all_targets.difference(self.learned_targets))
+    def determine_next_target(self, strata, inputs):
         if self.auto_target:
-            # find minFS for all unlearned targets
-            self._record_feature_sets(strata, inputs, not_learned)
-            feature_sets_sizes = [len(l) for l in
-                                  self.feature_sets[strata][not_learned]]
-            indirect_simplest_target = np.argmin(feature_sets_sizes)
-            return not_learned[indirect_simplest_target]
-        elif self.use_minfs_selection:
-            target = min(not_learned)
-            # find minFS for just the next target
-            self._record_feature_sets(strata, inputs, [target])
-            return target
-        else:
-            return min(not_learned)
+            # get unlearned targets
+            all_targets = np.arange(self.No, dtype=int)
+            not_learned = np.setdiff1d(all_targets, self.learned_targets)
+            mfs_targets = self.target_matrix[not_learned, :]
+            
+            # unpack inputs to minFS solver
+            mfs_features = unpack_bool_matrix(inputs, self.Ne)
+            mfs_targets = unpack_bool_matrix(mfs_target, self.Ne)
 
-    def _record_feature_sets(self, strata, inputs, targets):
-        # keep a log of the feature sets found at each iteration
-        for t in targets:
-            fs = self._get_fs(inputs, t, strata)
-            self.feature_sets[strata, t] = fs
-
-    def _get_fs(self, inputs, target_index, strata):
-        # input to minFS solver
-        mfs_matrix = unpack_bool_matrix(inputs, self.Ne)
-        # target feature
-        mfs_target = self.target_matrix[target_index, :]
-        mfs_target = unpack_bool_vector(mfs_target, self.Ne)
-
-        mfs_filename = self.mfs_fname + '{}_{}'.format(strata, target_index)
-
-        # check if the target is constant 1 or 0 and if so do not run minFS
-        if np.all(mfs_target) or not np.any(mfs_target):
-            logging.warning('Constant target: {}'.format(target_index))
-            # we cannot discriminate features so simply return all inputs
-            return np.arange(inputs.shape[0])
-        else:
             # use external solver for minFS
-            minfs = mfs.minimum_feature_set(
-                mfs_matrix, mfs_target, mfs_filename,
-                self.fabcpp_opts, self.keep_files)
-            return minfs
+            rank, feature_sets = ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
 
-    def make_partial_problem(self, strata, target_index, inputs):
-        # determine next budget
-        target = self.target_matrix[target_index]
+            self.feature_sets[strata, not_learned] = feature_sets
 
+            # randomly pick from top ranked targets
+            return np.choice(np.where(rank == 0)[0])
+        else:
+            # get next target from given ordering
+            t = self.target_order[strata]
+            if self.use_minfs_selection:
+                # unpack inputs to minFS solver
+                mfs_features = unpack_bool_matrix(inputs, self.Ne)
+                mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
+                fs = mfs.best_feature_set(mfs_matrix, mfs_target, self.mfs_method)
+                self.feature_sets[strata, t] = fs
+            return t
+
+    def make_partial_instance(self, strata, target_index, inputs):
         if self.use_minfs_selection:
             # subsample the inputs for below
             fs = self.feature_sets[strata, target_index]
             inputs = inputs[fs]
+
+        target = self.target_matrix[target_index]
 
         return BitPackedMatrix(np.vstack((inputs, target)),
                                Ne=self.Ne, Ni=inputs.shape[0])
@@ -235,16 +249,15 @@ class StratifiedLearner(BasicLearner):
 
         for i in range(self.No):
             # determine next target index
-            target = self._determine_next_target(i, inputs)
+            target = self.determine_next_target(i, inputs)
 
-            partial_problem = self.make_partial_problem(i, target, inputs)
+            partial_instance = self.make_partial_instance(i, target, inputs)
 
-            gates = self.next_gates(i, partial_problem)
-            state = StandardBNState(gates, partial_problem)
-
-            # generate an end condition based on the error
-            criterion = guiding_func_stop_criterion(self.guiding_func_id)
-            self.opt_params['stopping_criterion'] = criterion
+            # build state to be optimised
+            gates = self.next_gates(i, partial_instance)
+            state = StandardBNState(gates, partial_instance)
+            # add the guiding function to be evaluated
+            state.add_function(self.guiding_func_id, np.arange(state.No, np.uintp), self.gf_eval_name)
 
             # optimise
             partial_result = self.optimiser.run(state, self.opt_params)
@@ -253,7 +266,7 @@ class StratifiedLearner(BasicLearner):
 
             # build up final network by inserting this partial result
             result_state = StandardBNState(
-                partial_result.representation.gates, partial_problem)
+                partial_result.representation.gates, partial_instance)
             accumulated_network = self.join_networks(
                 accumulated_network, result_state, i, target)
 
