@@ -216,9 +216,6 @@ def main():
 
     print('Directories initialised. Results in: ' + result_dir)
 
-    settings['learner']['inter_file_base'] = os.path.join(
-        result_dir, 'temp', 'inter_')
-
     # generate learning tasks
     configurations = config_tools.generate_configurations(settings)
     print('Done: {} configurations generated.'.format(len(configurations)))

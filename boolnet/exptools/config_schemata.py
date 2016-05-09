@@ -1,34 +1,10 @@
-import sys
-import numpy as np
-from good import (Schema, In, All, Any, Range,
-                  Type, IsDir, message, Optional,
-                  Exclusive)
-
-from boolnet.bintools.functions import scalar_function_names
+from good import (
+    Schema, In, All, Any, Range, Type, IsDir, message, Optional, Exclusive)
+import boolnet.bintools.functions as fn
 
 
-guiding_functions = scalar_function_names()
+guiding_functions = fn.scalar_function_names()
 
-
-@message('2D array expected')
-def is_2d(v):
-    if len(v.shape) != 2:
-        raise ValueError
-    return v
-
-
-@message('1D integer array expected')
-def is_1d(v):
-    if len(v.shape) != 1:
-        raise ValueError
-    return v
-
-
-@message('Integer array expected')
-def is_int_arr(v):
-    if not np.issubdtype(v.dtype, np.integer):
-        raise ValueError
-    return v
 
 data_schema_generated = Schema({
     'type':                     'generated',
@@ -135,5 +111,5 @@ config_schema = Schema({
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
     Optional('record_training_indices'):    bool,
-    Optional('seed'):                       All(int, Range(0, sys.maxsize)),
+    Optional('seed'):                       All(int, Range(min=0)),
     })

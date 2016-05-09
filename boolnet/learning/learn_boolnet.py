@@ -1,16 +1,14 @@
 import time
 import random
 import boolnet.bintools.functions as fn
-from boolnet.bintools.packing import partition_packed, sample_packed
-from boolnet.bintools.example_generator import packed_from_operator
-from boolnet.learning.networkstate import (
-    StandardBNState, chained_from_operator)
+import boolnet.bintools.packing as pk
+import boolnet.bintools.example_generator as gen
+import boolnet.learning.networkstate as netstate
 import boolnet.learning.learners as learners
 import boolnet.learning.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
 import numpy as np
 import sys
-import os
 
 
 OPTIMISERS = {
@@ -47,22 +45,15 @@ def random_network(Ng, Ni, node_funcs):
     return gates
 
 
-def setup_local_dirs(parameters):
-    # this ensures that the required temp directories exist in the event this
-    # is executed remotely on a seperate filesystem from runexp.py
-    inter_file_base = parameters['learner']['inter_file_base']
-    os.makedirs(os.path.dirname(inter_file_base), exist_ok=True)
-
-
 def build_training_set(mapping):
     if mapping['type'] == 'raw':
-        return sample_packed(mapping['matrix'], mapping['training_indices'])
+        return pk.sample_packed(mapping['matrix'], mapping['training_indices'])
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
         operator = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
-        return packed_from_operator(indices, Nb, No, operator)
+        return gen.packed_from_operator(indices, Nb, No, operator)
 
 
 def learn_bool_net(parameters):
@@ -106,10 +97,10 @@ def build_states(mapping, gates, objectives):
     if mapping['type'] == 'raw':
         M = mapping['matrix']
         indices = mapping['training_indices']
-        M_trg, M_test = partition_packed(M, indices)
+        M_trg, M_test = pk.partition_packed(M, indices)
 
-        S_trg = StandardBNState(gates, M_trg)
-        S_test = StandardBNState(gates, M_test)
+        S_trg = netstate.StandardBNState(gates, M_trg)
+        S_test = netstate.StandardBNState(gates, M_test)
 
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
@@ -118,9 +109,9 @@ def build_states(mapping, gates, objectives):
         No = mapping['No']
         window_size = mapping['window_size']
 
-        S_trg = chained_from_operator(
+        S_trg = netstate.chained_from_operator(
             gates, indices, Nb, No, operator, window_size, exclude=False)
-        S_test = chained_from_operator(
+        S_test = netstate.chained_from_operator(
             gates, indices, Nb, No, operator, window_size, exclude=True)
         # pre-add functions to avoid redundant network evaluations
         for func, order, name in objectives:
