@@ -158,11 +158,11 @@ def build_result_map(parameters, learner_result):
         'trg_error':    train_state.function_value('e1'),
         'trg_acc':      train_state.function_value('accuracy'),
         'trg_mcc':      train_state.function_value('e1_mcc'),
-        'trg_err_gf':   train_state.function_value('guiding')
+        'trg_err_gf':   train_state.function_value('guiding'),
         'test_error':   test_state.function_value('e1'),
         'test_acc':     test_state.function_value('accuracy'),
         'test_mcc':     test_state.function_value('e1_mcc'),
-        'test_err_gf':  test_state.function_value('guiding')
+        'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
         'tgt_order':    target_order
         }
