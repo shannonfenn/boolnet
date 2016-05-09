@@ -8,6 +8,9 @@ import numpy as np
 
 
 def all_minimum_feature_sets(features, target):
+    if np.all(target) or not np.any(target):
+        # constant target
+        return list(range(features.shape[1]))
     coverage = build_coverage(features, target)
     k, _ = mink(coverage)
     return all_kfs(coverage, k)
