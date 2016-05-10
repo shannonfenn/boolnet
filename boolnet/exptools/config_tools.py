@@ -188,14 +188,11 @@ def generate_tasks(configurations):
     for config, instances in configurations:
         # samples may be optionally sub-indexed
         indices = get_config_indices(instances, config)
-
-        conf_num = config['configuration_number']
-        # for each training set
+        # for each sample
         for i in indices:
             task = deepcopy(config)
             task['mapping'] = instances[i]
             task['training_set_number'] = i
-            task['learner']['inter_file_base'] += '{}_{}_'.format(conf_num, i)
             tasks.append(task)
         bar.next()
     bar.finish()

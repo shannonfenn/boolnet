@@ -78,21 +78,21 @@ class BasicLearner:
         ranks, counts = np.unique(ranks, return_counts=True)
         for rank, count in zip(ranks, counts):
             order.extend((np.random.permutation(count) + rank).tolist())
-        return order
+        return np.array(order, dtype=np.uintp)
 
     def run(self, optimiser, parameters):
         self._setup(optimiser, parameters)
 
         if self.target_order is None:
             # determine the target order by ranking feature sets
-            mfs_matrix = unpack_bool_matrix(self.input_matrix, self.Ne)
+            mfs_features = unpack_bool_matrix(self.input_matrix, self.Ne)
             mfs_targets = unpack_bool_matrix(self.target_matrix, self.Ne)
 
             # use external solver for minFS
-            rank, feature_sets = ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
+            rank, feature_sets = mfs.ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
 
             # randomly pick from top ranked targets
-            return np.choice(np.where(rank == 0)[0])
+            self.target_order = self.order_from_rank(rank)
 
         # build the network state
         gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
@@ -119,7 +119,6 @@ class StratifiedLearner(BasicLearner):
     def _setup(self, optimiser, parameters):
         super()._setup(optimiser, parameters)
         # Required
-        self.mfs_fname = parameters['inter_file_base']
         self.mfs_method = parameters['minfs_selection_method']
         self.auto_target = (parameters['target_order'] == 'auto')
         # Optional
@@ -136,19 +135,19 @@ class StratifiedLearner(BasicLearner):
             # get unlearned targets
             all_targets = np.arange(self.No, dtype=int)
             not_learned = np.setdiff1d(all_targets, self.learned_targets)
-            mfs_targets = self.target_matrix[not_learned, :]
             
             # unpack inputs to minFS solver
             mfs_features = unpack_bool_matrix(inputs, self.Ne)
-            mfs_targets = unpack_bool_matrix(mfs_target, self.Ne)
+            mfs_targets = unpack_bool_matrix(
+                self.target_matrix[not_learned, :], self.Ne)
 
             # use external solver for minFS
-            rank, feature_sets = ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
+            rank, feature_sets = mfs.ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
 
             self.feature_sets[strata, not_learned] = feature_sets
 
             # randomly pick from top ranked targets
-            return np.choice(np.where(rank == 0)[0])
+            return not_learned[np.random.choice(np.where(rank == 0)[0])]
         else:
             # get next target from given ordering
             t = self.target_order[strata]
@@ -257,7 +256,9 @@ class StratifiedLearner(BasicLearner):
             gates = self.next_gates(i, partial_instance)
             state = StandardBNState(gates, partial_instance)
             # add the guiding function to be evaluated
-            state.add_function(self.guiding_func_id, np.arange(state.No, np.uintp), self.gf_eval_name)
+            state.add_function(self.guiding_func_id,
+                               np.arange(state.No, dtype=np.uintp),
+                               self.gf_eval_name)
 
             # optimise
             partial_result = self.optimiser.run(state, self.opt_params)

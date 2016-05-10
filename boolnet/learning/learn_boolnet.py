@@ -29,10 +29,11 @@ def seed_rng(value):
     # on module import
     if value is not None:
         np.random.seed(value)
+        fastrand.seed(value)
     else:
         random.seed()
         seed = random.randint(1, sys.maxsize)
-    fastrand.seed(seed)
+        fastrand.seed(seed)
 
 
 def random_network(Ng, Ni, node_funcs):
@@ -59,7 +60,6 @@ def build_training_set(mapping):
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
-    setup_local_dirs(parameters)
     seed_rng(parameters.get('seed'))
 
     learner_params = parameters['learner']
@@ -127,14 +127,14 @@ def build_result_map(parameters, learner_result):
     learner_parameters = parameters['learner']
     optimiser_params = parameters['learner']['optimiser']
 
-    guiding_function = function_from_name(
+    guiding_function = fn.function_from_name(
         optimiser_params['guiding_function'])
 
     final_network = learner_result.network
     gates = final_network.gates
 
     # build evaluators for training and test data
-    target_order = learner_result.target_order
+    target_order = np.array(learner_result.target_order, dtype=np.uintp)
     objectives = [
         (guiding_function, target_order, 'guiding'),
         (fn.E1, target_order, 'e1'),

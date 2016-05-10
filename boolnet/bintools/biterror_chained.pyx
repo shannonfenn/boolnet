@@ -5,7 +5,7 @@ import numpy as np
 cimport numpy as np
 import cython
 from libc.math cimport sqrt
-from boolnet.bintools.biterror cimport confusion, matthews_corr_coef
+from boolnet.bintools.biterror cimport confusion, matthews_corr_coef, is_permutation
 from boolnet.bintools.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
 from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET, generate_end_mask
 from boolnet.bintools.packing import packed_type
@@ -28,7 +28,6 @@ CHAINED_EVALUATORS = {
 }
 
 
-
 cdef class ChainedEvaluator:
     def __init__(self, size_t Ne, size_t No, size_t cols, size_t[:] feature_order):
         self.Ne = Ne
@@ -36,10 +35,9 @@ cdef class ChainedEvaluator:
         self.divisor = No * Ne
         self.cols = cols
         # check feature_order is a valid permutation
-        assert len(feature_order) == No
-        assert min(feature_order) == 0
-        assert max(feature_order) == No - 1
-        assert len(np.unique(feature_order)) == No
+        if not is_permutation(feature_order, No):
+            raise ValueError('ChainedEvaluator - Error {} is not a size {} permutation!'.format(
+                np.asarray(feature_order), No))
         self.order = np.array(feature_order)
 
 

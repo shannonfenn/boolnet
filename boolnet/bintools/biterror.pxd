@@ -5,7 +5,10 @@ from boolnet.bintools.packing cimport packed_type_t
 
 cdef confusion(packed_type_t[:] errors, packed_type_t[:] target, size_t Ne,
                packed_type_t[:] TP_buf, packed_type_t[:] FP_buf, packed_type_t[:] FN_buf)
+
 cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN)
+
+cdef bint is_permutation(size_t[:] P, size_t No)
 
 
 cdef class Evaluator:

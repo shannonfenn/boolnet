@@ -1,5 +1,6 @@
 from good import (
-    Schema, In, All, Any, Range, Type, IsDir, message, Optional, Exclusive)
+    Schema, In, All, Any, Range, Type, IsDir,
+    message, Optional, Exclusive, Length)
 import boolnet.bintools.functions as fn
 
 
@@ -31,8 +32,8 @@ sampling_schema = Schema({
 
 
 # network_schema_given = Schema({
-#     'method':           'given',
-#     'initial_gates':    All(Type(np.ndarray), is_2d, is_int_arr),
+#     'method':   'given',
+#     'gates':    [All([All(int, Range(min=0))], Length(min=3, max=3))],
 #     })
 
 network_schema_generated = Schema({

@@ -46,7 +46,7 @@ def best_feature_set(features, target, method):
     if method == 'cardinality':
         feature_sets = all_minfs(features, target)
         rand_index = np.random.randint(len(feature_sets))
-        return feature_sets[rand_index, :], 0
+        return feature_sets[rand_index], 0
     elif method == 'cardinality>entropy':
         feature_sets = all_minfs(features, target)
         entropies = [feature_set_entropy(features, fs) for fs in feature_sets]
@@ -79,7 +79,7 @@ def ranked_feature_sets(features, targets, method):
                     * feature indices representing best FS for each target
                       according to given method.'''
 
-    Nt = targets.shape[0]
+    Nt = targets.shape[1]
     feature_sets = np.empty(Nt, dtype=list)
     cardinalities = np.zeros(Nt)
     secondary_scores = np.zeros(Nt)
@@ -92,10 +92,11 @@ def ranked_feature_sets(features, targets, method):
 
     # sort by first minimising cardinality and then maximising score
     # (keys are reversed in numpy lexsort)
-    order = np.lexsort((-scores, cardinalities))
+    order = np.lexsort((-secondary_scores, cardinalities))
 
     rank = order_to_ranking_with_ties(
-        order, lambda i1, i2: cardinalities[i1] == cardinalities[i2] and scores[i1] == scores[i2])
+        order, lambda i1, i2: (cardinalities[i1] == cardinalities[i2] and 
+                               secondary_scores[i1] == secondary_scores[i2]))
 
     return rank, feature_sets
     

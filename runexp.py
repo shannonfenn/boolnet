@@ -57,8 +57,6 @@ def parse_arguments():
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for '
                              'scoop).')
-    parser.add_argument('--keep-temp', action='store_true',
-                        help='provide to retain temporary FABCPP files.')
     parser.add_argument('--no-notify', action='store_true',
                         help='disable PushBullet notifications.')
     parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
@@ -85,10 +83,7 @@ def create_result_dir(base_dir, exp_name):
     # already a directory and make that new directory
     result_dir += next(str(i) for i in itertools.count()
                        if not os.path.isdir(result_dir + str(i)))
-    os.mkdir(result_dir)
-
-    # create a temp subdir
-    os.mkdir(os.path.join(result_dir, 'temp'))
+    os.makedirs(result_dir)
 
     # return the directory name for the results to go in
     return result_dir
@@ -227,10 +222,6 @@ def main():
         run_tasks(tasks, args.numprocs, results_stream)
 
     print('Runs completed.')
-
-    if not args.keep_temp:
-        print('Deleting temp directory')
-        shutil.rmtree(os.path.join(result_dir, 'temp'))
 
     total_time = time() - start_time
 

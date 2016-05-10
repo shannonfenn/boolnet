@@ -65,6 +65,9 @@ cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN):
         return TP/d * TN/d - FP/d * FN/d
 
 
+cdef bint is_permutation(size_t[:] P, size_t No):
+    return len(P) == No  and min(P) == 0  and max(P) == No - 1 and len(np.unique(P)) == No
+
 
 cdef class Evaluator:
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
@@ -76,10 +79,9 @@ cdef class Evaluator:
         self.No = No
         self.divisor = No * Ne
         # check feature_order is a valid permutation
-        assert len(feature_order) == No
-        assert min(feature_order) == 0
-        assert max(feature_order) == No - 1
-        assert len(np.unique(feature_order)) == No
+        if not is_permutation(feature_order, No):
+            raise ValueError('ChainedEvaluator - Error {} is not a size {} permutation!'.format(
+                np.asarray(feature_order), No))
         self.order = np.array(feature_order)
 
 
