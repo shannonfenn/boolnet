@@ -24,7 +24,7 @@
 	[
 		{
 			"path": ".",
-            "folder_exclude_patterns": ["build", "*.egg-info", "*.cache", "__pycache__"],
+            "folder_exclude_patterns": ["build", "*.egg-info", "*.cache", "__pycache__", "test_results"],
             "file_exclude_patterns": ["*.cpp", "*.c", ".pytest.restart"]
 		}
 	],

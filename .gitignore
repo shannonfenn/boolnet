@@ -1,5 +1,6 @@
 .cache/
 build/
+test_results/
 *.egg-info/
 *_build.log
 *.c
@@ -12,3 +13,4 @@ py*.cpp
 /boolnet.sublime-workspace
 compilelog
 *_bak.*
+
