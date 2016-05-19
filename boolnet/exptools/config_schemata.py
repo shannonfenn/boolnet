@@ -39,7 +39,7 @@ sampling_schema = Schema({
 network_schema_generated = Schema({
     'method':       'generated',
     'Ng':           All(int, Range(min=1)),
-    'node_funcs':   list
+    'node_funcs':   [All(int, Range(min=0, max=15))]
     })
 
 # network_schema = Any(network_schema_given, network_schema_generated)
