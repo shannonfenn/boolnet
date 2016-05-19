@@ -182,7 +182,7 @@ class StratifiedLearner(BasicLearner):
 
         if self.use_minfs_selection:
             # build a map for replacing sources
-            new_input_map = self.feature_sets[strata][target_index].tolist()
+            new_input_map = self.feature_sets[strata][target_index]
             # difference in input sizes plus # of non-output base gates
             # offset = base.Ni - new.Ni + base.Ng - base.No
             offset = base.Ni + base.Ng - base.No
