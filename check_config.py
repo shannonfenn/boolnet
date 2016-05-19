@@ -11,27 +11,27 @@ def main():
                                                  ' debug config file problems '
                                                  'w/o running experiments.')
 
-    parser.add_argument('file',
+    parser.add_argument('experiment',
                         type=argparse.FileType('r'),
+                        default='experiment.yaml',
                         help='experiment config filename.')
-    parser.add_argument('--data-dir', default='~/HMRI/experiments/datasets',
-                        type=str, help='test data directory.')
-    parser.add_argument('--result-dir', default='~/HMRI/experiments/results',
-                        type=str, help='test result directory.')
+    parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
+                        default='experiments/datasets/functions',
+                        help='base directory for datasets.')
+    parser.add_argument('-s', '--sample-dir', type=str, metavar='dir',
+                        default='experiments/datasets/samples',
+                        help='base directory for sampling files.')
+    parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
+                        default='experiments/results',
+                        help='directory to store results in (in own subdir).')
 
     args = parser.parse_args()
 
     # load experiment file
-    settings = yaml.load(args.file, Loader=yaml.CSafeLoader)
+    settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
-    data_dir = os.path.expanduser(args.data_dir)
-    result_dir = os.path.expanduser(args.result_dir)
-
-    # MUST FIX THIS SINCE BASE_DIR will be code, not above
-    settings['data']['dir'] = os.path.abspath(data_dir)
-
-    settings['learner']['inter_file_base'] = os.path.join(
-        result_dir, 'temp', 'inter_')
+    settings['data']['dir'] = os.path.abspath(args.data_dir)
+    settings['sampling']['dir'] = os.path.abspath(args.sample_dir)
 
     # test generation of tasks
     configurations = config_tools.generate_configurations(settings)
