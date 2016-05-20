@@ -1,7 +1,30 @@
 from good import (
     Schema, In, All, Any, Range, Type, IsDir,
-    message, Optional, Exclusive, Length)
+    message, Optional, Exclusive, Length, Entire)
 import boolnet.bintools.functions as fn
+
+
+def conditionally_required(trigger_key, trigger_val, required_key):
+    ''' if trigger_key has trigger_val then required_key must be present.'''
+    def validator(d):
+        if trigger_key in d and d[trigger_key] == trigger_val:
+            assert required_key in d, 'if \'{}\' = \'{}\' then \'{}\' is required.'.format(
+                trigger_key, trigger_val, required_key)
+        # Return the dictionary
+        return d
+    return validator
+
+
+def permutation():
+    ''' if trigger_key has trigger_val then required_key must be present.'''
+    def validator(l):
+        valid = (min(l) == 0 and
+                 max(l) == len(l) - 1 and
+                 len(set(l)) == len(l))
+        assert valid, '{} is not a permutation'.format(l)
+        # Return the list
+        return l
+    return validator
 
 
 guiding_functions = fn.scalar_function_names()
@@ -75,7 +98,7 @@ LAHC_schema = Schema({
 optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
 
 
-target_order_schema = Any('auto', 'msb', 'lsb', [All(int, Range(min=0))])
+target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation()))
 
 
 learner_schema_stratified = Schema({
@@ -94,7 +117,9 @@ learner_schema_basic = Schema({
     'network':                          network_schema,
     'optimiser':                        optimiser_schema,
     'target_order':                     target_order_schema,
-    Optional('minfs_selection_method'): str
+    Optional('minfs_selection_method'): str,
+    Entire: conditionally_required(
+        'target_order', 'auto', 'minfs_selection_method')
     })
 
 

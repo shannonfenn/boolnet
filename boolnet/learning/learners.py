@@ -49,7 +49,7 @@ class BasicLearner:
         self.guiding_func_id = fn.function_from_name(gf_name)
         self.opt_params['minimise'] = fn.is_minimiser(self.guiding_func_id)
 
-        # convert shorthands for target order 
+        # convert shorthands for target order
         if parameters['target_order'] == 'lsb':
             self.target_order = np.arange(self.No, dtype=np.uintp)
         elif parameters['target_order'] == 'msb':
