@@ -10,10 +10,13 @@ import numpy as np
 def all_minimum_feature_sets(features, target):
     if np.all(target) or not np.any(target):
         # constant target
-        return list(range(features.shape[1]))
+        return [list(range(features.shape[1]))]
     coverage = build_coverage(features, target)
     k, _ = mink(coverage)
-    return all_kfs(coverage, k)
+    if k > 0:
+        return all_kfs(coverage, k)
+    else:
+        return []
 
 
 def build_coverage(features, target):
@@ -56,15 +59,17 @@ def mink(coverage):
     solution.AddObjective(k)
 
     collector = solver.LastSolutionCollector(solution)
-    solver.Solve(solver.Phase(x + [k],
-                              solver.INT_VAR_DEFAULT,
-                              solver.INT_VALUE_DEFAULT),
-                 [collector, objective])
+    solution_found = solver.Solve(solver.Phase(x + [k],
+                                               solver.INT_VAR_DEFAULT,
+                                               solver.INT_VALUE_DEFAULT),
+                                  [collector, objective])
 
-    best_k = collector.ObjectiveValue(0)
-#    best_x = [collector.Value(0, x[f]) for f in range(Nf)]
-    best_indices = [f for f in range(Nf) if collector.Value(0, x[f]) == 1]
-    return best_k, best_indices
+    if solution_found:
+        best_k = collector.ObjectiveValue(0)
+        best_indices = [f for f in range(Nf) if collector.Value(0, x[f]) == 1]
+        return best_k, best_indices
+    else:
+        return 0, []
 
 
 def all_kfs(coverage, k):
@@ -91,12 +96,14 @@ def all_kfs(coverage, k):
     db = solver.Phase(x,
                       solver.INT_VAR_DEFAULT,
                       solver.INT_VALUE_DEFAULT)
-    solver.Solve(db, collector)
+    solution_found = solver.Solve(db, collector)
 
-    # collect all feature sets
-    numSol = collector.SolutionCount()
-#    feature_sets = [[collector.Value(i, v) for v in x] for i in range(numSol)]
-    feature_sets = [[f for f in range(Nf) if collector.Value(i, x[f]) == 1]
-                    for i in range(numSol)]
+    if solution_found:
+        # collect all feature sets
+        numSol = collector.SolutionCount()
+        feature_sets = [[f for f in range(Nf) if collector.Value(i, x[f]) == 1]
+                        for i in range(numSol)]
 
-    return feature_sets
+        return feature_sets
+    else:
+        return []
