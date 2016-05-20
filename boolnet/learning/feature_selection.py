@@ -50,19 +50,19 @@ def best_feature_set(features, target, method):
     elif method == 'cardinality>entropy':
         feature_sets = all_minfs(features, target)
         entropies = [feature_set_entropy(features, fs) for fs in feature_sets]
-        best_fs = numpy.argmax(entropies)
+        best_fs = np.argmax(entropies)
         return feature_sets[best_fs], entropies[best_fs]
     elif method == 'cardinality>feature_diversity':
         feature_sets = all_minfs(features, target)
         feature_diversities = [feature_diversity(features, fs)
                                for fs in feature_sets]
-        best_fs = numpy.argmax(feature_diversities)
+        best_fs = np.argmax(feature_diversities)
         return feature_sets[best_fs], feature_diversities[best_fs]
     elif method == 'cardinality>pattern_diversity':
         feature_sets = all_minfs(features, target)
         pattern_diversities = [pattern_diversity(features, fs)
                                for fs in feature_sets]
-        best_fs = numpy.argmax(pattern_diversities)
+        best_fs = np.argmax(pattern_diversities)
         return feature_sets[best_fs], pattern_diversities[best_fs]
     else:
         raise ValueError('Invalid method for feature selection: {}'.format(
@@ -95,11 +95,11 @@ def ranked_feature_sets(features, targets, method):
     order = np.lexsort((-secondary_scores, cardinalities))
 
     rank = order_to_ranking_with_ties(
-        order, lambda i1, i2: (cardinalities[i1] == cardinalities[i2] and 
+        order, lambda i1, i2: (cardinalities[i1] == cardinalities[i2] and
                                secondary_scores[i1] == secondary_scores[i2]))
 
     return rank, feature_sets
-    
+
 
 def inverse_permutation(permutation):
     inverse = np.zeros_like(permutation)
