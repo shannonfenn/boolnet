@@ -7,7 +7,6 @@ import os.path                      # for path manipulation
 import yaml                         # for loading experiment files
 import sys                          # for path, exit
 import shutil                       # file copying
-import subprocess                   # for git and cython compile
 import logging                      # for logging, duh
 import argparse                     # CLI
 import itertools                    # imap and count
@@ -15,22 +14,6 @@ import scoop                        # for distributed parallellism
 
 from boolnet.learning.learn_boolnet import learn_bool_net
 import boolnet.exptools.config_tools as config_tools
-
-
-def check_git(git_dir):
-    ''' Checks the git directory for uncommitted source modifications.
-        Since the experiment is tagged with a git hash it should not be
-        run while the repo is dirty.'''
-    changed_files = subprocess.check_output(
-        ['git', '-C', git_dir, 'diff', '--name-only'],
-        universal_newlines=True).splitlines()
-    if changed_files:
-        print(('Warning, the following files in git repo '
-               'have changes:\n\t{}').format('\n\t'.join(changed_files)))
-
-    return subprocess.check_output(
-        ['git', '-C', git_dir, 'rev-parse', 'HEAD'],
-        universal_newlines=True)
 
 
 def initialise_logging(settings, result_dir):
@@ -96,8 +79,6 @@ def initialise(args):
     if sys.version_info.major != 3:
         sys.exit("Requires python 3.")
 
-    git_hash = check_git(os.path.expanduser('~/HMRI/code/boolnet/'))
-
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
@@ -108,10 +89,8 @@ def initialise(args):
     # create result directory
     result_dir = create_result_dir(args.result_dir, settings['name'])
 
-    # copy experiment config and git hash into results directory
+    # copy experiment config into results directory
     shutil.copy(args.experiment.name, result_dir)
-    with open(os.path.join(result_dir, 'git_hash'), 'w') as hashfile:
-        hashfile.write(git_hash)
 
     # initialise logging
     initialise_logging(settings, result_dir)
