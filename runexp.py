@@ -137,7 +137,8 @@ def scoop_worker_wrapper(*args, **kwargs):
 
 def run_scooped(tasks, out_stream):
     ''' runs the given configurations '''
-    bar = Bar('Scooped', max=len(tasks), suffix='%(index)d/%(max)d : %(elapsed)ds')
+    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds'
+    bar = Bar('Scooped', max=len(tasks), suffix=suffix_fmt)
     bar.update()
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
