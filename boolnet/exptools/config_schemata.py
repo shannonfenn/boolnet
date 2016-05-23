@@ -1,5 +1,5 @@
 from good import (
-    Schema, In, All, Any, Range, Type, IsDir,
+    Schema, In, All, Any, Range, Type, IsDir, Msg,
     message, Optional, Exclusive, Length, Entire)
 import boolnet.bintools.functions as fn
 
@@ -8,23 +8,16 @@ def conditionally_required(trigger_key, trigger_val, required_key):
     ''' if trigger_key has trigger_val then required_key must be present.'''
     def validator(d):
         if trigger_key in d and d[trigger_key] == trigger_val:
-            assert required_key in d, 'if \'{}\' = \'{}\' then \'{}\' is required.'.format(
-                trigger_key, trigger_val, required_key)
+            assert required_key in d
         # Return the dictionary
         return d
     return validator
 
 
-def permutation():
-    ''' if trigger_key has trigger_val then required_key must be present.'''
-    def validator(l):
-        valid = (min(l) == 0 and
-                 max(l) == len(l) - 1 and
-                 len(set(l)) == len(l))
-        assert valid, '{} is not a permutation'.format(l)
-        # Return the list
-        return l
-    return validator
+@message('Must be a permutation.')
+def permutation(l):
+    assert (min(l) == 0 and max(l) == len(l) - 1 and len(set(l)) == len(l))
+    return l
 
 
 guiding_functions = fn.scalar_function_names()
@@ -98,7 +91,7 @@ LAHC_schema = Schema({
 optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
 
 
-target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation()))
+target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
 
 
 learner_schema_stratified = Schema({
@@ -118,24 +111,27 @@ learner_schema_basic = Schema({
     'optimiser':                        optimiser_schema,
     'target_order':                     target_order_schema,
     Optional('minfs_selection_method'): str,
-    Entire: conditionally_required(
-        'target_order', 'auto', 'minfs_selection_method')
+    Entire:
+        Msg(  # also override the message
+            conditionally_required('target_order', 'auto',
+                                   'minfs_selection_method'),
+        '\'target_order\' = \'auto\' requires \'minfs_selection_method\'.')
     })
 
 
 learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
 
-config_schema = Schema({
-    'name':                                 str,
-    'data':                                 Any(data_schema_file, data_schema_generated),
-    'logging':                              In(['none', 'warning', 'info', 'debug']),
-    'learner':                              learner_schema,
-    'sampling':                             sampling_schema,
-    Optional('verbose_errors'):             bool,
-    Optional('verbose_timing'):             bool,
-    Optional('record_final_net'):           bool,
-    Optional('record_intermediate_nets'):   bool,
-    Optional('record_training_indices'):    bool,
-    Optional('seed'):                       All(int, Range(min=0)),
+experiment_schema = Schema({
+    'name': str,
+    'data': Any(data_schema_file, data_schema_generated),
+    'logging': In(['none', 'warning', 'info', 'debug']),
+    'learner': learner_schema,
+    'sampling': sampling_schema,
+    Optional('verbose_errors'): bool,
+    Optional('verbose_timing'): bool,
+    Optional('record_final_net'): bool,
+    Optional('record_intermediate_nets'): bool,
+    Optional('record_training_indices'): bool,
+    Optional('seed'): All(int, Range(min=0)),
     })

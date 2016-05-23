@@ -219,10 +219,16 @@ def main():
     print('Results in: ' + result_dir + '\n')
 
     # generate learning tasks
-    configurations = config_tools.generate_configurations(settings)
-    print('Done: {} configurations generated.'.format(len(configurations)))
-    tasks = config_tools.generate_tasks(configurations)
-    print('Done: {} tasks generated.\n'.format(len(tasks)))
+    try:
+        configurations = config_tools.generate_configurations(settings)
+        print('Done: {} configurations generated.'.format(len(configurations)))
+        tasks = config_tools.generate_tasks(configurations)
+        print('Done: {} tasks generated.\n'.format(len(tasks)))
+    except config_tools.ValidationError as err:
+        print(err)
+        print('\nExperiment aborted.')
+        print('Result directory will still exist: {}'.format(result_dir))
+        return
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # Run the actual learning as a parallel process

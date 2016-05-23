@@ -3,12 +3,19 @@ from collections import MutableMapping
 from os import fsync
 from os.path import join, splitext
 from progress.bar import Bar
+from good import Invalid
 import numpy as np
 import json
 
 from boolnet.bintools.packing import BitPackedMatrix
 from boolnet.bintools.operator_iterator import operator_from_name, num_operands
-from boolnet.exptools.config_schemata import config_schema
+from boolnet.exptools.config_schemata import experiment_schema
+
+
+# to signal schema validation failure
+# (with custom message formatting)
+class ValidationError(Exception):
+    pass
 
 
 class ExperimentJSONEncoder(json.JSONEncoder):
@@ -142,6 +149,21 @@ def get_config_indices(instances, config_settings):
     return config_indices
 
 
+def validate_schema(config, schema):
+    # TODO: maybe this should be in config_schemata.py on a per-schema basis?
+    try:
+        schema(config)
+    except Invalid as err:
+        msg = ('Invalid experiment config:\n' +
+               '  msg: {}\n'.format(err.message) +
+               '  expected: {}\n'.format(err.expected) +
+               '  provided: {}\n'.format(err.provided) +
+               '  key path: {}\n'.format(err.path) +
+               '  validator: {}\n'.format(err.validator) +
+               'Config generation aborted.')
+        raise ValidationError(msg)
+
+
 def generate_configurations(settings):
     # the configurations approach involves essentially having
     # a new settings dict for each configuration and updating
@@ -157,24 +179,26 @@ def generate_configurations(settings):
     bar = Bar('Generating configurations', max=len(variable_sets),
               suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
-    for config_no, variables in enumerate(variable_sets):
-        # keep each configuration isolated
-        config_settings = deepcopy(settings)
-        # update the settings dict with the values for this configuration
-        update_nested(config_settings, variables)
+    try:
+        for config_no, variables in enumerate(variable_sets):
+            # keep each configuration isolated
+            config_settings = deepcopy(settings)
+            # update the settings dict with the values for this configuration
+            update_nested(config_settings, variables)
+            # check the given config is a valid experiment
+            validate_schema(config_settings, experiment_schema)            
+            # record the config number for debugging
+            config_settings['configuration_number'] = config_no
+            # !!REMOVED!! load initial network from file if required
+            # handle_initial_network(config_settings)
+            # load the data for this configuration
+            instances = load_dataset(config_settings)
 
-        config_schema(config_settings)
-
-        # record the config number for debugging
-        config_settings['configuration_number'] = config_no
-        # !!REMOVED!! load initial network from file if required
-        # handle_initial_network(config_settings)
-        # load the data for this configuration
-        instances = load_dataset(config_settings)
-
-        configurations.append((config_settings, instances))
-        bar.next()
-    bar.finish()
+            configurations.append((config_settings, instances))
+            bar.next()
+    finally:
+        # clean up progress bar before printing anything else
+        bar.finish()
     return configurations
 
 
@@ -185,15 +209,18 @@ def generate_tasks(configurations):
     bar = Bar('Generating training tasks', max=len(configurations),
               suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
-    for config, instances in configurations:
-        # samples may be optionally sub-indexed
-        indices = get_config_indices(instances, config)
-        # for each sample
-        for i in indices:
-            task = deepcopy(config)
-            task['mapping'] = instances[i]
-            task['training_set_number'] = i
-            tasks.append(task)
-        bar.next()
-    bar.finish()
+    try:
+        for config, instances in configurations:
+            # samples may be optionally sub-indexed
+            indices = get_config_indices(instances, config)
+            # for each sample
+            for i in indices:
+                task = deepcopy(config)
+                task['mapping'] = instances[i]
+                task['training_set_number'] = i
+                tasks.append(task)
+            bar.next()
+    finally:
+        # clean up progress bar before printing anything else
+        bar.finish()
     return tasks

@@ -34,10 +34,16 @@ def main():
     settings['sampling']['dir'] = os.path.abspath(args.sample_dir)
 
     # test generation of tasks
-    configurations = config_tools.generate_configurations(settings)
-    print('{} configurations.'.format(len(configurations)))
-    tasks = config_tools.generate_tasks(configurations)
-    print('{} tasks.'.format(len(tasks)))
+    try:
+        configurations = config_tools.generate_configurations(settings)
+        print('{} configurations.'.format(len(configurations)))
+        tasks = config_tools.generate_tasks(configurations)
+        print('{} tasks.'.format(len(tasks)))
+    except config_tools.ValidationError as err:
+        print(err)
+        print('\nExperiment config is NOT valid.')
+        return
+    print('\nExperiment config is valid.')
 
 
 if __name__ == '__main__':
