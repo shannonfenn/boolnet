@@ -167,6 +167,14 @@ def build_result_map(parameters, learner_result):
         'tgt_order':    target_order
         }
 
+    # optional parameters
+    if 'minfs_selection_method' in parameters['learner']:
+        results['fs_sel_method'] = parameters['learner']['minfs_selection_method'],
+    if 'minfs_masking' in parameters['learner']:
+        results['fs_masking'] = parameters['learner']['minfs_masking'],
+    if 'target_order' in parameters['learner']:
+        results['given_tgt_order'] = parameters['learner']['target_order'],
+
     if parameters.get('record_training_indices', True):
         results['trg_indices'] = parameters['mapping']['training_indices']
 
