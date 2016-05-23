@@ -30,6 +30,48 @@ def initialise_logging(settings, result_dir):
                         level=log_level)
 
 
+def initialise_notifications(args):
+    if args.notify:
+        try:
+            import requests
+            import instapush
+            try:
+                with open(args.ip_config) as f:
+                    ip_settings = yaml.load(f, Loader=yaml.CSafeLoader)
+                appid = ip_settings['appid']
+                secret = ip_settings['secret']
+                return instapush.App(appid=appid, secret=secret)
+            except FileNotFoundError:
+                print('Instapush config not found: {}'.format(args.ip_config))
+            except yaml.YAMLError as err:
+                print('Invalid instapush config: {}'.format(err))
+            except requests.exceptions.RequestException as err:
+                print('Failed to initialise notifications: {}'.format(err))
+        except ImportError:
+            print('Failed to import notification APIs: {}'.format(err))
+        # disable notifications in the event of any errors
+        print('Notifications disabled.\n')
+        return None
+    else:
+        return None
+
+
+def notify(notifier, settings, total_time, notes='none'):
+    if notifier is not None:
+        import requests
+        try:
+            message = {'name': str(settings['name']),
+                       'time': str(total_time),
+                       'num warnings': str(0),  # not implemented
+                       'notes': str(notes)}
+            ret = notifier.notify(event_name='experiment_complete',
+                                  trackers=message)
+            if ret.get('error', False):
+                print('Notification error: {}'.format(ret))
+        except requests.exceptions.RequestException as err:
+            print('Failed to send notification: {}.'.format(err))
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('experiment',
@@ -40,8 +82,11 @@ def parse_arguments():
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for '
                              'scoop).')
-    parser.add_argument('--no-notify', action='store_true',
-                        help='disable PushBullet notifications.')
+    parser.add_argument('--notify', action='store_true',
+                        help='enable push notifications.')
+    parser.add_argument('--ip-config', type=str,
+                        default='instapush.cfg',
+                        help='instapush config file path (for notifications).')
     parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
                         default='experiments/datasets/functions',
                         help='base directory for datasets.')
@@ -160,56 +205,34 @@ def run_sequential(tasks, out_stream):
     bar.finish()
 
 
-def notify(pb_handle, exp_name, result_dirname, time):
-    result_dirname = str(result_dirname)
-    print('Experiment completed in {} seconds. Results in \"{}\"'.
-          format(time, result_dirname))
-    if pb_handle:
-        pb_handle.push_note(
-            'Experiment complete.', 'name: {} time: {} results: {}'.
-            format(exp_name, time, result_dirname))
-
-
 # ############################## MAIN ####################################### #
 def main():
     start_time = time()
 
     args = parse_arguments()
 
-    if not args.no_notify:
-        try:
-            from pushbullet import PushBullet, PushbulletError
-            pb = PushBullet('on6qP2blHZbxs5h0xhDRcnfxHLoIc9Jo')
-        except ImportError:
-            print('Failed to import PushBullet.')
-            pb = None
-        except PushbulletError:
-            print('Failed to generate PushBullet interface.')
-            pb = None
+    notifier = initialise_notifications(args)
 
     settings, result_dir = initialise(args)
 
-    print('Directories initialised. Results in: ' + result_dir)
+    print('Directories initialised.')
+    print('Results in: ' + result_dir + '\n')
 
     # generate learning tasks
     configurations = config_tools.generate_configurations(settings)
     print('Done: {} configurations generated.'.format(len(configurations)))
     tasks = config_tools.generate_tasks(configurations)
-    print('Done: {} tasks generated.'.format(len(tasks)))
+    print('Done: {} tasks generated.\n'.format(len(tasks)))
 
     with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
         # Run the actual learning as a parallel process
         run_tasks(tasks, args.numprocs, results_stream)
 
-    print('Runs completed.')
-
     total_time = time() - start_time
 
-    if not args.no_notify:
-        try:
-            notify(pb, settings['name'], result_dir, total_time)
-        except PushbulletError as err:
-            print('Failed to send PushBullet notification: {}.'.format(err))
+    print('Runs completed in {}s.'.format(total_time))
+
+    notify(notifier, settings, total_time)
 
 if __name__ == '__main__':
     main()
