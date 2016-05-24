@@ -40,6 +40,7 @@ def main():
         tasks = config_tools.generate_tasks(configurations)
         print('{} tasks.'.format(len(tasks)))
     except config_tools.ValidationError as err:
+        print()
         print(err)
         print('\nExperiment config is NOT valid.')
         return
