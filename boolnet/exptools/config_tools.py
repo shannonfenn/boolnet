@@ -3,7 +3,7 @@ from collections import MutableMapping
 from os import fsync
 from os.path import join, splitext
 from progress.bar import Bar
-from good import Invalid
+from voluptuous import MultipleInvalid
 import numpy as np
 import json
 
@@ -149,18 +149,20 @@ def get_config_indices(instances, config_settings):
     return config_indices
 
 
-def validate_schema(config, schema):
-    # TODO: maybe this should be in config_schemata.py on a per-schema basis?
+def validate_schema(config, schema, config_num, msg):
     try:
         schema(config)
-    except Invalid as err:
-        msg = ('Invalid experiment config:\n' +
-               '  msg: {}\n'.format(err.message) +
-               '  expected: {}\n'.format(err.expected) +
-               '  provided: {}\n'.format(err.provided) +
-               '  key path: {}\n'.format(err.path) +
-               '  validator: {}\n'.format(err.validator) +
-               'Config generation aborted.')
+    except MultipleInvalid as err:
+        # msg = ('Experiment config {} invalid:\n'.format(config_num) +
+        #        '  msg: {}\n'.format(err.message) +
+        #        '  expected: {}\n'.format(err.expected) +
+        #        '  provided: {}\n'.format(err.provided) +
+        #        '  key path: {}\n'.format(err.path) +
+        #        '  validator: {}\n'.format(err.validator) +
+        #        'Config generation aborted.')
+        msg = ('Experiment config {} invalid: {}\nerror: {}\npath: {}\n'
+               '\nConfig generation aborted.').format(
+            config_num + 1, msg, err.error_message, err.path)
         raise ValidationError(msg)
 
 
@@ -180,15 +182,16 @@ def generate_configurations(settings):
               suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
     try:
-        for config_no, variables in enumerate(variable_sets):
+        for config_num, variables in enumerate(variable_sets):
             # keep each configuration isolated
             config_settings = deepcopy(settings)
             # update the settings dict with the values for this configuration
             update_nested(config_settings, variables)
             # check the given config is a valid experiment
-            validate_schema(config_settings, experiment_schema)            
+            validate_schema(config_settings, experiment_schema,
+                            config_num, variables)
             # record the config number for debugging
-            config_settings['configuration_number'] = config_no
+            config_settings['configuration_number'] = config_num
             # !!REMOVED!! load initial network from file if required
             # handle_initial_network(config_settings)
             # load the data for this configuration
