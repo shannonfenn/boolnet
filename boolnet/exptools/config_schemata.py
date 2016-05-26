@@ -5,7 +5,7 @@ import boolnet.bintools.functions as fn
 
 
 def conditionally_required(trigger_key, trigger_val, required_key):
-    ''' if trigger_key has trigger_val then required_key must be present.'''
+    ''' if trigger_key = trigger_val then required_key must be present.'''
     def validator(d):
         required = (trigger_key in d and d[trigger_key] == trigger_val)
         if required and required_key not in d:
@@ -17,7 +17,7 @@ def conditionally_required(trigger_key, trigger_val, required_key):
 
 
 def conditionally_forbidden(trigger_key, trigger_val, required_key):
-    ''' if trigger_key has trigger_val then required_key must NOT be present.'''
+    ''' if trigger_key = trigger_val then required_key must NOT be present.'''
     def validator(d):
         required = (trigger_key in d and d[trigger_key] == trigger_val)
         if required and required_key in d:
@@ -115,7 +115,7 @@ optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
 target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
 
 
-#learner_schema_basic = Schema(
+# learner_schema_basic = Schema(
 #    All(
 #        {
 #            'name':                             'basic',
@@ -130,7 +130,7 @@ target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
 #    required=True)
 
 
-#learner_schema_stratified = Schema({
+# learner_schema_stratified = Schema({
 #    'name':                         'stratified',
 #    'network':                      network_schema,
 #    'optimiser':                    optimiser_schema,
@@ -142,6 +142,9 @@ target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
 #    required=True)
 
 
+# learner_schema = Any(learner_schema_basic, learner_schema_stratified)
+
+
 learner_schema = Schema(
     All(
         Schema({
@@ -151,18 +154,18 @@ learner_schema = Schema(
             'target_order':                     target_order_schema,
             Optional('minfs_selection_method'): str,
             Optional('minfs_masking'):          bool
-        },
-        required=True),
-    # if target_order = auto then minfs_selection_method must be set
-    conditionally_required('target_order', 'auto', 'minfs_selection_method'),
-    # if minfs_masking = True then minfs_selection_method must be set
-    conditionally_required('minfs_masking', True, 'minfs_selection_method'),
-    # if name = basic then minfs_masking is not allowed
-    conditionally_forbidden('name', 'basic', 'minfs_masking')
+            },
+            required=True),
+        # if target_order = auto then minfs_selection_method must be set
+        conditionally_required(
+            'target_order', 'auto', 'minfs_selection_method'),
+        # if minfs_masking = True then minfs_selection_method must be set
+        conditionally_required(
+            'minfs_masking', True, 'minfs_selection_method'),
+        # if name = basic then minfs_masking is not allowed
+        conditionally_forbidden(
+            'name', 'basic', 'minfs_masking')
     ))
-
-
-#learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
 
 experiment_schema = Schema({
