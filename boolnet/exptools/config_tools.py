@@ -3,7 +3,7 @@ from collections import MutableMapping
 from os import fsync
 from os.path import join, splitext
 from progress.bar import Bar
-from voluptuous import MultipleInvalid
+import voluptuous as vol
 import numpy as np
 import json
 
@@ -152,7 +152,7 @@ def get_config_indices(instances, config_settings):
 def validate_schema(config, schema, config_num, msg):
     try:
         schema(config)
-    except MultipleInvalid as err:
+    except vol.MultipleInvalid as err:
         # msg = ('Experiment config {} invalid:\n'.format(config_num) +
         #        '  msg: {}\n'.format(err.message) +
         #        '  expected: {}\n'.format(err.expected) +
@@ -166,15 +166,74 @@ def validate_schema(config, schema, config_num, msg):
         raise ValidationError(msg)
 
 
+def list_experiment(sequence):
+    # we expect a list of dicts
+    schema = vol.All(vol.Schema([{}], extra=vol.ALLOW_EXTRA),
+                     vol.Length(min=1))
+    try:
+        schema(sequence)
+    except vol.MultipleInvalid:
+        raise ValidationError(
+            '\'configurations\' must be a sequence of mappings.')
+    return sequence
+
+
+def product_experiment(products):
+    # we expect a pair of list
+    schema = vol.All([vol.All(vol.Schema([{}], extra=vol.ALLOW_EXTRA),
+                              vol.Length(min=1))],
+                     vol.Length(min=2, max=2))
+    try:
+        schema(products)
+    except vol.MultipleInvalid:
+        raise ValidationError(
+            '\'products\' must be a length 2 sequence of mappings.')
+
+    # check there are no common keys
+    keys_0 = set().union(*[d.keys() for d in products[0]])
+    keys_1 = set().union(*[d.keys() for d in products[1]])
+    if keys_0.isdisjoint(keys_1):
+        # build merged mappings for each pair from products
+        # no need to worry about key clashes since we have tested for them
+        # thanks to PEP 448 this works in python 3.5 and is allegedly fast:
+        #     https://gist.github.com/treyhunner/f35292e676efa0be1728
+        return [[{**d1, **d2} for d2 in products[1]] for d1 in products[0]]
+    else:
+        raise ValidationError(
+            '\'products\' has mappings with common keys: {}.'.format(
+                keys_0.intersection(keys_1)))
+
+
+def split_variables_from_base(settings):
+    settings = deepcopy(settings)
+
+    if 'configurations' in settings and 'product' in settings:
+        raise ValidationError(
+            'Only one of \'configurations\' and \'product\' may be present.')
+    elif 'configurations' in settings:
+        variable_sets = list_experiment(settings['configurations'])
+        # no need to keep this sub-dict around
+        settings.pop('configurations')
+    elif 'product' in settings:
+        variable_sets = product_experiment(settings['product'])
+
+        # no need to keep this sub-dict around
+        settings.pop('product')
+    else:
+        print(('Warning: no configuration list or product found, running as '
+               'single configuration'))
+        variable_sets = {}
+
+    return variable_sets, settings
+
+
 def generate_configurations(settings):
     # the configurations approach involves essentially having
     # a new settings dict for each configuration and updating
     # it with values in each dict in the configurations list
-    settings = deepcopy(settings)
 
-    variable_sets = settings['configurations']
-    # no need to keep this sub-dict around
-    settings.pop('configurations')
+    variable_sets, base_settings = split_variables_from_base(settings)
+
     # Build up the configuration list
     configurations = []
 
@@ -184,7 +243,7 @@ def generate_configurations(settings):
     try:
         for config_num, variables in enumerate(variable_sets):
             # keep each configuration isolated
-            config_settings = deepcopy(settings)
+            config_settings = deepcopy(base_settings)
             # update the settings dict with the values for this configuration
             update_nested(config_settings, variables)
             # check the given config is a valid experiment
