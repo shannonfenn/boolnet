@@ -7,9 +7,9 @@ import voluptuous as vol
 import numpy as np
 import json
 
-from boolnet.bintools.packing import BitPackedMatrix
-from boolnet.bintools.operator_iterator import operator_from_name, num_operands
-from boolnet.exptools.config_schemata import experiment_schema
+import boolnet.exptools.config_schemata as sch
+import boolnet.bintools.packing as pk
+import boolnet.bintools.operator_iterator as op
 
 
 # to signal schema validation failure
@@ -95,7 +95,7 @@ def file_instance(data_settings, sampling_settings):
     # build list of train/test set instances
     instances = [{
         'type': 'raw',
-        'matrix': BitPackedMatrix(data, Ne, Ni),
+        'matrix': pk.BitPackedMatrix(data, Ne, Ni),
         'training_indices': training_indices[i, :]
         } for i in range(training_indices.shape[0])]
 
@@ -104,9 +104,9 @@ def file_instance(data_settings, sampling_settings):
 
 def generated_instance(data_settings, sampling_settings):
     Nb = data_settings['bits']
-    op = operator_from_name(data_settings['operator'])
+    operator = op.operator_from_name(data_settings['operator'])
 
-    Ni = num_operands(op) * Nb
+    Ni = op.num_operands(operator) * Nb
     N = 2**Ni
 
     # by default the output width is the operand width
@@ -115,18 +115,16 @@ def generated_instance(data_settings, sampling_settings):
     window_size = data_settings.get('window_size', 4)
 
     training_indices = load_samples(sampling_settings, N, Ni)
-    Ns, Ne = training_indices.shape
 
-    # Parameters
     # build list of train/test set instances
     instances = [{
         'type': 'operator',
-        'operator': op,
+        'operator': operator,
         'Nb': Nb,
         'No': No,
         'window_size': window_size,
         'training_indices': training_indices[i, :]
-        } for i in range(Ns)]
+        } for i in range(training_indices.shape[0])]
     return instances
 
 
@@ -164,69 +162,42 @@ def validate_schema(config, schema, config_num, msg):
         #        '  key path: {}\n'.format(err.path) +
         #        '  validator: {}\n'.format(err.validator) +
         #        'Config generation aborted.')
-        msg = ('Experiment config {} invalid: {}\nerror: {}\npath: {}\n'
+        msg = ('Experiment instance {} invalid: {}\nerror: {}\npath: {}\n'
                '\nConfig generation aborted.').format(
             config_num + 1, msg, err.error_message, err.path)
         raise ValidationError(msg)
 
 
-def list_experiment(sequence):
-    # we expect a list of dicts
-    schema = vol.All(vol.Schema([{}], extra=vol.ALLOW_EXTRA),
-                     vol.Length(min=1))
-    try:
-        schema(sequence)
-    except vol.MultipleInvalid:
-        raise ValidationError(
-            '\'configurations\' must be a sequence of mappings.')
-    return sequence
-
-
-def product_experiment(products):
-    # we expect a pair of list
-    schema = vol.All([vol.All(vol.Schema([{}], extra=vol.ALLOW_EXTRA),
-                              vol.Length(min=1))],
-                     vol.Length(min=2, max=2))
-    try:
-        schema(products)
-    except vol.MultipleInvalid:
-        raise ValidationError(
-            '\'products\' must be a length 2 sequence of mappings.')
-
-    # build merged mappings for each pair from products
-    return [update_nested(deepcopy(d1), d2)
-            for d2 in products[1]
-            for d1 in products[0]]
-
-
 def split_variables_from_base(settings):
     settings = deepcopy(settings)
 
-    if 'configurations' in settings and 'product' in settings:
-        raise ValidationError(
-            'Only one of \'configurations\' and \'product\' may be present.')
-    elif 'configurations' in settings:
-        variable_sets = list_experiment(settings['configurations'])
-        # no need to keep this sub-dict around
-        settings.pop('configurations')
-    elif 'product' in settings:
-        variable_sets = product_experiment(settings['product'])
-
-        # no need to keep this sub-dict around
-        settings.pop('product')
-    else:
-        print(('Warning: no configuration list or product found, running as '
-               'single configuration'))
-        variable_sets = [{}]
+    # configuration sub-dicts are popped
+    try:
+        variable_sets = settings.pop('list')
+    except KeyError:
+        try:
+            products = settings.pop('product')
+            # build merged mappings for each pair from products
+            variable_sets = [update_nested(deepcopy(d1), d2)
+                             for d2 in products[1]
+                             for d1 in products[0]]
+        except KeyError:
+            print('Warning: only base configuration found.')
+            variable_sets = [{}]
 
     return variable_sets, settings
 
 
-def generate_configurations(settings):
-    # the configurations approach involves essentially having
-    # a new settings dict for each configuration and updating
-    # it with values in each dict in the configurations list
+def generate_configurations(settings, data_dir, sampling_dir):
+    # validate the given schema
+    sch.experiment_schema(settings)
 
+    # insert given values into base config
+    settings['base_config']['data']['dir'] = data_dir
+    settings['base_config']['sampling']['dir'] = sampling_dir
+
+    # the configurations approach involves having a multiple config dicts and
+    # updating them with each element of the configurations list or product
     variable_sets, base_settings = split_variables_from_base(settings)
 
     # Build up the configuration list
@@ -242,7 +213,7 @@ def generate_configurations(settings):
             # update the settings dict with the values for this configuration
             update_nested(config_settings, variables)
             # check the given config is a valid experiment
-            validate_schema(config_settings, experiment_schema,
+            validate_schema(config_settings, sch.instance_schema,
                             config_num, variables)
             # record the config number for debugging
             config_settings['configuration_number'] = config_num
