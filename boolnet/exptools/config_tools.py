@@ -50,16 +50,18 @@ def update_nested(d, u):
 
 def load_dataset(settings):
     data_settings = settings['data']
-    sampling_settings = settings['sampling']
 
     if data_settings['type'] == 'file':
-        return file_instance(data_settings, sampling_settings)
+        instance, N, Ni = file_instance(data_settings)
     elif data_settings['type'] == 'generated':
-        return generated_instance(data_settings, sampling_settings)
+        instance, N, Ni = generated_instance(data_settings)
     else:
         raise ValueError('Invalid dataset type {}'.
                          format(data_settings['type']))
 
+    training_indices = load_samples(settings['sampling'], N, Ni)
+
+    return [{**instance, 'training_indices': ind} for ind in training_indices]
 
 
 ## RANDOM SAMPLING WITH GIVEN SEED
@@ -79,7 +81,7 @@ def load_samples(params, N, Ni):
     return training_indices
 
 
-def file_instance(data_settings, sampling_settings):
+def file_instance(data_settings):
     # load data set from file
     dataset_filename = join(data_settings['dir'],
                             data_settings['filename'])
@@ -90,42 +92,29 @@ def file_instance(data_settings, sampling_settings):
         Ne = dataset['Ne']
         Ni = dataset['Ni']
 
-    training_indices = load_samples(
-        sampling_settings, data.shape[0], Ni)
     # build list of train/test set instances
-    instances = [{
+    instance = {
         'type': 'raw',
-        'matrix': pk.BitPackedMatrix(data, Ne, Ni),
-        'training_indices': training_indices[i, :]
-        } for i in range(training_indices.shape[0])]
+        'matrix': pk.BitPackedMatrix(data, Ne, Ni)
+        }
 
-    return instances
+    return instance, data.shape[0], Ni
 
 
-def generated_instance(data_settings, sampling_settings):
+def generated_instance(data_settings):
     Nb = data_settings['bits']
     operator = op.operator_from_name(data_settings['operator'])
 
-    Ni = op.num_operands(operator) * Nb
-    N = 2**Ni
-
-    # by default the output width is the operand width
-    No = data_settings.get('out_width', Nb)
-    # default window size of 4 (arbitrary at this point)
-    window_size = data_settings.get('window_size', 4)
-
-    training_indices = load_samples(sampling_settings, N, Ni)
-
-    # build list of train/test set instances
-    instances = [{
+    instance = {
         'type': 'operator',
         'operator': operator,
         'Nb': Nb,
-        'No': No,
-        'window_size': window_size,
-        'training_indices': training_indices[i, :]
-        } for i in range(training_indices.shape[0])]
-    return instances
+        'No': data_settings.get('out_width', Nb),  # defaults to operand width
+        'window_size': data_settings.get('window_size', 4)  # arbitrary default
+    }
+    Ni = op.num_operands(operator) * Nb
+
+    return instance, 2**Ni, Ni
 
 
 # def handle_initial_network(settings):
