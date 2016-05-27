@@ -6,6 +6,7 @@ from progress.bar import Bar
 import voluptuous as vol
 import numpy as np
 import json
+import random
 
 import boolnet.exptools.config_schemata as sch
 import boolnet.bintools.packing as pk
@@ -48,6 +49,29 @@ def update_nested(d, u):
     return d
 
 
+def load_samples(params, N, Ni):
+    Ns = params['Ns']
+    Ne = params['Ne']
+    if params['type'] == 'file':
+        # prepare filename
+        sample_filename = params.get('file_name', '')
+        if not sample_filename:
+            # no given filename, generate from data settings
+            directory = params['dir']
+            suffix = params.get('file_suffix', '')
+            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
+            sample_filename = join(directory, base_name)
+        # load sample indices
+        training_indices = np.load(sample_filename)
+    elif params['type'] == 'generated':
+        # this provided seed allows us to generate the same set
+        # of training indices across multiple configurations
+        seed = params['seed']
+        np.random.seed(seed)
+        training_indices = np.random.choice(N, size=(Ns, Ne), replace=False)
+    return training_indices
+
+
 def load_dataset(settings):
     data_settings = settings['data']
 
@@ -55,30 +79,10 @@ def load_dataset(settings):
         instance, N, Ni = file_instance(data_settings)
     elif data_settings['type'] == 'generated':
         instance, N, Ni = generated_instance(data_settings)
-    else:
-        raise ValueError('Invalid dataset type {}'.
-                         format(data_settings['type']))
 
     training_indices = load_samples(settings['sampling'], N, Ni)
 
     return [{**instance, 'training_indices': ind} for ind in training_indices]
-
-
-## RANDOM SAMPLING WITH GIVEN SEED
-
-def load_samples(params, N, Ni):
-    # load samples from file
-    # prepare filename
-    Ns = params['Ns']
-    Ne = params['Ne']
-    directory = params['dir']
-    suffix = params.get('file_suffix', '')
-    base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
-
-    # load sample indices
-    sample_filename = join(directory, base_name)
-    training_indices = np.load(sample_filename)
-    return training_indices
 
 
 def file_instance(data_settings):
@@ -144,46 +148,55 @@ def validate_schema(config, schema, config_num, msg):
     try:
         schema(config)
     except vol.MultipleInvalid as err:
-        # msg = ('Experiment config {} invalid:\n'.format(config_num) +
-        #        '  msg: {}\n'.format(err.message) +
-        #        '  expected: {}\n'.format(err.expected) +
-        #        '  provided: {}\n'.format(err.provided) +
-        #        '  key path: {}\n'.format(err.path) +
-        #        '  validator: {}\n'.format(err.validator) +
-        #        'Config generation aborted.')
         msg = ('Experiment instance {} invalid: {}\nerror: {}\npath: {}\n'
                '\nConfig generation aborted.').format(
-            config_num + 1, msg, err.error_message, err.path)
+            config_num + 1, err, err.error_message, err.path)
         raise ValidationError(msg)
 
 
 def split_variables_from_base(settings):
-    settings = deepcopy(settings)
-
     # configuration sub-dicts are popped
     try:
-        variable_sets = settings.pop('list')
+        variable_sets = settings['list']
     except KeyError:
         try:
-            products = settings.pop('product')
+            products = settings['product']
             # build merged mappings for each pair from products
             variable_sets = [update_nested(deepcopy(d1), d2)
                              for d2 in products[1]
                              for d1 in products[0]]
         except KeyError:
-            print('Warning: only base configuration found.')
+            print('Warning: no variable configuration found.')
             variable_sets = [{}]
 
-    return variable_sets, settings
+    return variable_sets, settings['base_config']
+
+
+def update_seeding(settings):
+    for context in ['sampling', 'learner']:
+        seed = settings['seeding'][context]
+        if seed == 'shared':
+            random.seed()  # use default randomness source to get a seed
+            seed = random.randint(1, 2**32-1)
+        elif seed == 'unique':
+            seed = None  # this will cause seed() to reload for each instance
+        settings['base_config'][context]['seed'] = seed
 
 
 def generate_configurations(settings, data_dir, sampling_dir):
     # validate the given schema
-    sch.experiment_schema(settings)
+    try:
+        sch.experiment_schema(settings)
+    except vol.MultipleInvalid as err:
+        raise ValidationError(
+            'Top-level config invalid: {}\nerror: {}\npath: {}'.format(
+                err, err.error_message, err.path))
 
     # insert given values into base config
     settings['base_config']['data']['dir'] = data_dir
     settings['base_config']['sampling']['dir'] = sampling_dir
+    # insert seed values into base config
+    update_seeding(settings)
 
     # the configurations approach involves having a multiple config dicts and
     # updating them with each element of the configurations list or product
@@ -197,21 +210,21 @@ def generate_configurations(settings, data_dir, sampling_dir):
     bar.update()
     try:
         for config_num, variables in enumerate(variable_sets):
-            # keep each configuration isolated
-            config_settings = deepcopy(base_settings)
+            # keep contexts isolated
+            context = deepcopy(base_settings)
             # update the settings dict with the values for this configuration
-            update_nested(config_settings, variables)
+            update_nested(context, variables)
             # check the given config is a valid experiment
-            validate_schema(config_settings, sch.instance_schema,
+            validate_schema(context, sch.instance_schema,
                             config_num, variables)
             # record the config number for debugging
-            config_settings['configuration_number'] = config_num
+            context['configuration_number'] = config_num
             # !!REMOVED!! load initial network from file if required
-            # handle_initial_network(config_settings)
+            # handle_initial_network(context)
             # load the data for this configuration
-            instances = load_dataset(config_settings)
+            instances = load_dataset(context)
 
-            configurations.append((config_settings, instances))
+            configurations.append((context, instances))
             bar.next()
     finally:
         # clean up progress bar before printing anything else
@@ -227,12 +240,12 @@ def generate_tasks(configurations):
               suffix='%(index)d/%(max)d : %(eta)ds')
     bar.update()
     try:
-        for config, instances in configurations:
+        for context, instances in configurations:
             # samples may be optionally sub-indexed
-            indices = get_config_indices(instances, config)
+            indices = get_config_indices(instances, context)
             # for each sample
             for i in indices:
-                task = deepcopy(config)
+                task = deepcopy(context)
                 task['mapping'] = instances[i]
                 task['training_set_number'] = i
                 tasks.append(task)

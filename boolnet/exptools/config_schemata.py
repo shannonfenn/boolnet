@@ -61,18 +61,23 @@ sampling_schema = Any(
     # randomly generated
     Schema({
         'type': 'generated',
+        'dir':  IsDir(),
         'Ns':   All(int, Range(min=1)),
         'Ne':   All(int, Range(min=1)),
+        'seed': All(int, Range(min=0))
         },
         required=True),
     # read from file
     Schema({
-        'type':                     'file',
-        'dir':                      IsDir(),
-        'Ns':                       All(int, Range(min=1)),
-        'Ne':                       All(int, Range(min=1)),
-        Optional('indices'):        [All(int, Range(min=0))],
-        Optional('file_suffix'):    str
+        'type':                 'file',
+        'dir':                  IsDir(),
+        'Ns':                   All(int, Range(min=1)),
+        'Ne':                   All(int, Range(min=1)),
+        'seed':                 Any(None, All(int, Range(min=0))),
+        Optional('indices'):    [All(int, Range(min=0))],
+        # exclusive file name keys
+        Exclusive('file_suffix', 'file'):   str,
+        Exclusive('file_name', 'file'):     str
         },
         required=True)
     )
@@ -130,10 +135,11 @@ target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
 learner_schema = Schema(
     All(
         Schema({
-            'name':                             Any('basic', 'stratified'),
-            'network':                          network_schema,
-            'optimiser':                        optimiser_schema,
-            'target_order':                     target_order_schema,
+            'name':         Any('basic', 'stratified'),
+            'network':      network_schema,
+            'optimiser':    optimiser_schema,
+            'target_order': target_order_schema,
+            'seed':         Any(None, All(int, Range(min=0))),
             Optional('minfs_selection_method'): str,
             Optional('minfs_masking'):          bool
             },
@@ -155,8 +161,6 @@ instance_schema = Schema({
     'data':     data_schema,
     'learner':  learner_schema,
     'sampling': sampling_schema,
-    'seed':     {'sampling':     All(int, Range(min=0)),
-                 'optimisation': All(int, Range(min=0))},
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
@@ -171,8 +175,8 @@ instance_schema = Schema({
 
 seeding_schema = Schema({
     # may be 'shared', 'unique' or any non-negative integer
-    'sampling':     Any('shared', 'unique', All(int, Range(min=0))),
-    'optimisation': Any('shared', 'unique', All(int, Range(min=0)))
+    'sampling': Any('shared', 'unique', All(int, Range(min=0))),
+    'learner':  Any('shared', 'unique', All(int, Range(min=0)))
     })
 
 
@@ -180,7 +184,7 @@ list_msg = '\'list\' must be a sequence of mappings.'
 prod_msg = '\'product\' must be a length 2 sequence of sequences of mappings.'
 experiment_schema = Schema({
     'name':                     str,
-    'seeding':                  All(int, Range(min=0)),
+    'seeding':                  seeding_schema,
     # Must be any dict
     'base_config':              Schema({}, extra=ALLOW_EXTRA),
     # only one of 'list_config' or 'product_config' are allowed

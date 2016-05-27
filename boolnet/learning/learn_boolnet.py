@@ -25,15 +25,11 @@ LEARNERS = {
 
 
 def seed_rng(value):
-    # seed fast random number generator using system rng which auto seeds
-    # on module import
-    if value is not None:
-        np.random.seed(value)
-        fastrand.seed(value)
-    else:
-        random.seed()
-        seed = random.randint(1, sys.maxsize)
-        fastrand.seed(seed)
+    # if value is None this will use OS randomness source
+    random.seed(value)
+    seed = random.randint(1, 2**32)
+    np.random.seed(seed)
+    fastrand.seed(seed)
 
 
 def random_network(Ng, Ni, node_funcs):
@@ -60,7 +56,7 @@ def build_training_set(mapping):
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
-    seed_rng(parameters.get('seed'))
+    seed_rng(parameters['learner']['seed'])
 
     learner_params = parameters['learner']
     optimiser_params = parameters['learner']['optimiser']
