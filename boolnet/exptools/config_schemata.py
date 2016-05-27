@@ -1,5 +1,5 @@
 from voluptuous import (
-    Schema, In, All, Any, Range, IsDir, Msg,
+    Schema, In, All, Any, Range, IsDir, Msg, ALLOW_EXTRA,
     message, Optional, Exclusive, Length, Invalid)
 import boolnet.bintools.functions as fn
 
@@ -37,112 +37,94 @@ def permutation(l):
 guiding_functions = fn.scalar_function_names()
 
 
-data_schema_generated = Schema({
-    'type':                     'generated',
-    'dir':                      IsDir(),
-    'operator':                 str,
-    'bits':                     All(int, Range(min=1)),
-    Optional('out_width'):      All(int, Range(min=1)),
-    Optional('window_size'):    All(int, Range(min=1))
-    },
-    required=True)
+data_schema = All(
+    # generated from operator
+    Schema({
+        'type':                     'generated',
+        'dir':                      IsDir(),
+        'operator':                 str,
+        'bits':                     All(int, Range(min=1)),
+        Optional('out_width'):      All(int, Range(min=1)),
+        Optional('window_size'):    All(int, Range(min=1))
+        },
+        required=True),
+    # read from file
+    Schema({
+        'type':     'file',
+        'dir':      IsDir(),
+        'filename': str
+        },
+        required=True)
+    )
 
-data_schema_file = Schema({
-    'type':     'file',
-    'dir':      IsDir(),
-    'filename': str
-    },
-    required=True)
-
-sampling_schema = Schema({
-    'dir':                      IsDir(),
-    'Ns':                       All(int, Range(min=1)),
-    'Ne':                       All(int, Range(min=1)),
-    Optional('indices'):        [All(int, Range(min=0))],
-    Optional('file_suffix'):    str
-    },
-    required=True)
-
-
-# network_schema_given = Schema({
-#     'method':   'given',
-#     'gates':    [All([All(int, Range(min=0))], Length(min=3, max=3))],
-#     })
-
-network_schema_generated = Schema({
-    'method':       'generated',
-    'Ng':           All(int, Range(min=1)),
-    'node_funcs':   [All(int, Range(min=0, max=15))]
-    },
-    required=True)
-
-# network_schema = Any(network_schema_given, network_schema_generated)
-network_schema = network_schema_generated
+sampling_schema = Any(
+    # randomly generated
+    Schema({
+        'type': 'generated',
+        'Ns':   All(int, Range(min=1)),
+        'Ne':   All(int, Range(min=1)),
+        },
+        required=True),
+    # read from file
+    Schema({
+        'type':                     'file',
+        'dir':                      IsDir(),
+        'Ns':                       All(int, Range(min=1)),
+        'Ne':                       All(int, Range(min=1)),
+        Optional('indices'):        [All(int, Range(min=0))],
+        Optional('file_suffix'):    str
+        },
+        required=True)
+    )
 
 
-SA_schema = Schema({
-    'name':                     'SA',
-    'num_temps':                All(int, Range(min=1)),
-    'init_temp':                Range(min=0.0),
-    'temp_rate':                Range(min=0.0, max=1.0),
-    'steps_per_temp':           All(int, Range(min=1)),
-    'guiding_function':         In(guiding_functions),
-    Optional('max_restarts'):   All(int, Range(min=0))
-    },
-    required=True)
-
-HC_schema = Schema({
-    'name':                     'HC',
-    'max_iterations':           All(int, Range(min=1)),
-    'guiding_function':         In(guiding_functions),
-    Optional('max_restarts'):   All(int, Range(min=0))
-    },
-    required=True)
-
-LAHC_schema = Schema({
-    'name':                     'LAHC',
-    'cost_list_length':         All(int, Range(min=1)),
-    'max_iterations':           All(int, Range(min=1)),
-    'guiding_function':         In(guiding_functions),
-    Optional('max_restarts'):   All(int, Range(min=0))
-    },
-    required=True)
+network_schema = All(
+    Schema({
+        'method':       'generated',
+        'Ng':           All(int, Range(min=1)),
+        'node_funcs':   [All(int, Range(min=0, max=15))]
+        },
+        required=True),
+    # Schema({
+    #     'method':   'given',
+    #     'gates':    [All([All(int, Range(min=0))], Length(min=3, max=3))],
+    #     })
+    )
 
 
-optimiser_schema = Any(SA_schema, HC_schema, LAHC_schema)
+optimiser_schema = Any(
+    # Simulated Annealing
+    Schema({
+        'name':                     'SA',
+        'num_temps':                All(int, Range(min=1)),
+        'init_temp':                Range(min=0.0),
+        'temp_rate':                Range(min=0.0, max=1.0),
+        'steps_per_temp':           All(int, Range(min=1)),
+        'guiding_function':         In(guiding_functions),
+        Optional('max_restarts'):   All(int, Range(min=0))
+        },
+        required=True),
+    # Hill Climbing
+    Schema({
+        'name':                     'HC',
+        'max_iterations':           All(int, Range(min=1)),
+        'guiding_function':         In(guiding_functions),
+        Optional('max_restarts'):   All(int, Range(min=0))
+        },
+        required=True),
+    # Late-Acceptance Hill Climbing
+    Schema({
+        'name':                     'LAHC',
+        'cost_list_length':         All(int, Range(min=1)),
+        'max_iterations':           All(int, Range(min=1)),
+        'guiding_function':         In(guiding_functions),
+        Optional('max_restarts'):   All(int, Range(min=0))
+        },
+        required=True)
+    )
 
 
 target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
-
-
-# learner_schema_basic = Schema(
-#    All(
-#        {
-#            'name':                             'basic',
-#            'network':                          network_schema,
-#            'optimiser':                        optimiser_schema,
-#            'target_order':                     target_order_schema,
-#            Optional('minfs_selection_method'): str
-#        },
-#    # if target_order = auto then minfs_selection_method must be set
-#    conditionally_required('target_order', 'auto', 'minfs_selection_method')
-#    ),
-#    required=True)
-
-
-# learner_schema_stratified = Schema({
-#    'name':                         'stratified',
-#    'network':                      network_schema,
-#    'optimiser':                    optimiser_schema,
-#    'target_order':                 target_order_schema,
-#    'minfs_selection_method':       str,
-#    Optional('minfs_masking'):      bool,
-#    Optional('keep_files'):         bool,
-#    },
-#    required=True)
-
-
-# learner_schema = Any(learner_schema_basic, learner_schema_stratified)
 
 
 learner_schema = Schema(
@@ -165,20 +147,53 @@ learner_schema = Schema(
         # if name = basic then minfs_masking is not allowed
         conditionally_forbidden(
             'name', 'basic', 'minfs_masking')
-    ))
+        )
+    )
 
 
-experiment_schema = Schema({
-    'name': str,
-    'data': Any(data_schema_file, data_schema_generated),
-    'logging': In(['none', 'warning', 'info', 'debug']),
-    'learner': learner_schema,
+instance_schema = Schema({
+    'data':     data_schema,
+    'learner':  learner_schema,
     'sampling': sampling_schema,
-    Optional('verbose_errors'): bool,
-    Optional('verbose_timing'): bool,
-    Optional('record_final_net'): bool,
-    Optional('record_intermediate_nets'): bool,
-    Optional('record_training_indices'): bool,
-    Optional('seed'): All(int, Range(min=0)),
+    'seed':     {'sampling':     All(int, Range(min=0)),
+                 'optimisation': All(int, Range(min=0))},
+    Optional('verbose_errors'):             bool,
+    Optional('verbose_timing'):             bool,
+    Optional('record_final_net'):           bool,
+    Optional('record_intermediate_nets'):   bool,
+    Optional('record_training_indices'):    bool,
+    },
+    required=True)
+
+
+# ########## Schemata for base configs ########## #
+
+
+seeding_schema = Schema({
+    # may be 'shared', 'unique' or any non-negative integer
+    'sampling':     Any('shared', 'unique', All(int, Range(min=0))),
+    'optimisation': Any('shared', 'unique', All(int, Range(min=0)))
+    })
+
+
+list_msg = '\'list\' must be a sequence of mappings.'
+prod_msg = '\'product\' must be a length 2 sequence of sequences of mappings.'
+experiment_schema = Schema({
+    'name':                     str,
+    'seeding':                  All(int, Range(min=0)),
+    # Must be any dict
+    'base_config':              Schema({}, extra=ALLOW_EXTRA),
+    # only one of 'list_config' or 'product_config' are allowed
+    # Must be a list of dicts
+    Exclusive('list', 'config', msg=list_msg):    All(
+        Schema([{}], extra=ALLOW_EXTRA), Length(min=1)),
+    # Must be a length 2 list of lists of dicts
+    Exclusive('product', 'config', msg=prod_msg): All([
+        All(Schema([{}], extra=ALLOW_EXTRA), Length(min=1))],
+                                    Length(min=2, max=2)),
+    # optional logging of schema keys
+    Optional('log_keys'):           [str],
+    # optional level of debug logging
+    Optional('debug_level'):        In(['none', 'warning', 'info', 'debug']),
     },
     required=True)
