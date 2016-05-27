@@ -30,12 +30,14 @@ def main():
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
-    settings['data']['dir'] = os.path.abspath(args.data_dir)
-    settings['sampling']['dir'] = os.path.abspath(args.sample_dir)
+    # resolve paths
+    args.data_dir = os.path.abspath(args.data_dir)
+    args.sample_dir = os.path.abspath(args.sample_dir)
 
     # test generation of tasks
     try:
-        configurations = config_tools.generate_configurations(settings)
+        configurations = config_tools.generate_configurations(
+            settings, args.data_dir, args.sample_dir)
         print('{} configurations.'.format(len(configurations)))
         tasks = config_tools.generate_tasks(configurations)
         print('{} tasks.'.format(len(tasks)))

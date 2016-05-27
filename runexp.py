@@ -13,7 +13,7 @@ import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
 from boolnet.learning.learn_boolnet import learn_bool_net
-import boolnet.exptools.config_tools as config_tools
+import boolnet.exptools.config_tools as cfg
 
 
 def initialise_logging(settings, result_dir):
@@ -125,10 +125,6 @@ def initialise(args):
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
 
-    settings['data']['dir'] = os.path.abspath(args.data_dir)
-
-    settings['sampling']['dir'] = os.path.abspath(args.sample_dir)
-
     # create result directory
     result_dir = create_result_dir(args.result_dir, settings['name'])
 
@@ -161,7 +157,7 @@ def run_parallel(tasks, num_processes, out_stream):
         bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
-            config_tools.dump_results_partial(result, out_stream, i == 0)
+            cfg.dump_results_partial(result, out_stream, i == 0)
             bar.next()
         bar.finish()
 
@@ -186,7 +182,7 @@ def run_scooped(tasks, out_stream):
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
             scoop_worker_wrapper, tasks)):
-        config_tools.dump_results_partial(result, out_stream, i == 0)
+        cfg.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
 
@@ -198,7 +194,7 @@ def run_sequential(tasks, out_stream):
     bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
-        config_tools.dump_results_partial(result, out_stream, i == 0)
+        cfg.dump_results_partial(result, out_stream, i == 0)
         bar.next()
     bar.finish()
 
@@ -213,16 +209,21 @@ def main():
 
     settings, result_dir = initialise(args)
 
+    # resolve paths
+    args.data_dir = os.path.abspath(args.data_dir)
+    args.sample_dir = os.path.abspath(args.sample_dir)
+
     print('Directories initialised.')
     print('Results in: ' + result_dir + '\n')
 
     # generate learning tasks
     try:
-        configurations = config_tools.generate_configurations(settings)
+        configurations = cfg.generate_configurations(settings, args.data_dir,
+                                                     args.sample_dir)
         print('Done: {} configurations generated.'.format(len(configurations)))
-        tasks = config_tools.generate_tasks(configurations)
+        tasks = cfg.generate_tasks(configurations)
         print('Done: {} tasks generated.\n'.format(len(tasks)))
-    except config_tools.ValidationError as err:
+    except cfg.ValidationError as err:
         print(err)
         print('\nExperiment aborted.')
         print('Result directory will still exist: {}'.format(result_dir))
