@@ -43,6 +43,7 @@ def update_nested(d, u):
             r = update_nested(d.get(k, {}), v)
             d[k] = r
         else:
+            # preference to second mapping if k exists in d
             d[k] = u[k]
     return d
 
@@ -59,6 +60,9 @@ def load_dataset(settings):
         raise ValueError('Invalid dataset type {}'.
                          format(data_settings['type']))
 
+
+
+## RANDOM SAMPLING WITH GIVEN SEED
 
 def load_samples(params, N, Ni):
     # load samples from file
@@ -189,19 +193,10 @@ def product_experiment(products):
         raise ValidationError(
             '\'products\' must be a length 2 sequence of mappings.')
 
-    # check there are no common keys
-    keys_0 = set().union(*[d.keys() for d in products[0]])
-    keys_1 = set().union(*[d.keys() for d in products[1]])
-    if keys_0.isdisjoint(keys_1):
-        # build merged mappings for each pair from products
-        # no need to worry about key clashes since we have tested for them
-        # thanks to PEP 448 this works in python 3.5 and is allegedly fast:
-        #     https://gist.github.com/treyhunner/f35292e676efa0be1728
-        return [[{**d1, **d2} for d2 in products[1]] for d1 in products[0]]
-    else:
-        raise ValidationError(
-            '\'products\' has mappings with common keys: {}.'.format(
-                keys_0.intersection(keys_1)))
+    # build merged mappings for each pair from products
+    return [update_nested(deepcopy(d1), d2)
+            for d2 in products[1]
+            for d1 in products[0]]
 
 
 def split_variables_from_base(settings):
@@ -222,7 +217,7 @@ def split_variables_from_base(settings):
     else:
         print(('Warning: no configuration list or product found, running as '
                'single configuration'))
-        variable_sets = {}
+        variable_sets = [{}]
 
     return variable_sets, settings
 
