@@ -37,7 +37,7 @@ def permutation(l):
 guiding_functions = fn.scalar_function_names()
 
 
-data_schema = All(
+data_schema = Any(
     # generated from operator
     Schema({
         'type':                     'generated',
