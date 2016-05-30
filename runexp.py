@@ -23,7 +23,7 @@ def initialise_logging(settings, result_dir):
                   'debug': logging.DEBUG,
                   'none': logging.ERROR}
     # default to 'none'
-    log_level = level_dict[settings.get('logging_level', 'none')]
+    log_level = level_dict[settings.get('debug_level', 'none')]
     logging.basicConfig(filename=os.path.join(result_dir, 'log'),
                         level=log_level)
 
