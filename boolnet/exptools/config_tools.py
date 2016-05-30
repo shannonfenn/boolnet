@@ -72,7 +72,9 @@ def load_samples(params, N, Ni):
         # of training indices across multiple configurations
         seed = params['seed']
         np.random.seed(seed)
-        training_indices = np.random.choice(N, size=(Ns, Ne), replace=False)
+
+        training_indices = np.array([
+            np.random.choice(N, size=Ne, replace=False) for i in range(Ns)])
     return training_indices
 
 
