@@ -15,6 +15,7 @@ def main():
                         type=argparse.FileType('r'),
                         default='experiment.yaml',
                         help='experiment config filename.')
+    parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
                         default='experiments/datasets/functions',
                         help='base directory for datasets.')
@@ -46,7 +47,15 @@ def main():
         print(err)
         print('\nExperiment config is NOT valid.')
         return
+
     print('\nExperiment config is valid.')
+
+    if args.verbose:
+        print('\nConfigurations:')
+        for cfg in configurations:
+            print()
+            print(cfg)
+
 
 
 if __name__ == '__main__':
