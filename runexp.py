@@ -86,10 +86,8 @@ def parse_arguments():
                         default='instapush.cfg',
                         help='instapush config file path (for notifications).')
     parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
-                        default='experiments/datasets/functions',
                         help='base directory for datasets.')
     parser.add_argument('-s', '--sample-dir', type=str, metavar='dir',
-                        default='experiments/datasets/samples',
                         help='base directory for sampling files.')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
@@ -208,10 +206,6 @@ def main():
     notifier = initialise_notifications(args)
 
     settings, result_dir = initialise(args)
-
-    # resolve paths
-    args.data_dir = os.path.abspath(args.data_dir)
-    args.sample_dir = os.path.abspath(args.sample_dir)
 
     print('Directories initialised.')
     print('Results in: ' + result_dir + '\n')

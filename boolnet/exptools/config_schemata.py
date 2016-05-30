@@ -46,14 +46,14 @@ data_schema = Any(
         Optional('out_width'):      All(int, Range(min=1)),
         Optional('window_size'):    All(int, Range(min=1)),
         # allow for now, but don't force
-        Optional('dir'):            str
+        Optional('dir'):            Any(None, str)
         },
         required=True),
     # read from file
     Schema({
         'type':     'file',
-        'dir':      IsDir(),
-        'filename': str
+        'filename': str,
+        Optional('dir'):      Any(None, IsDir()),
         },
         required=True)
     )
@@ -64,13 +64,16 @@ sampling_schema = Any(
         'type': 'generated',
         'Ns':   All(int, Range(min=1)),
         'Ne':   All(int, Range(min=1)),
-        'seed': All(int, Range(min=0))
+        'seed': All(int, Range(min=0)),
+        # allow for now, but don't force
+        Optional('dir'): Any(None, str)
         },
         required=True),
     # read from file
     Schema({
-        'type':         'file',
-        'file_name':    str,
+        'type':             'file',
+        'filename':        str,
+        Optional('dir'):    Any(None, IsDir()),
         # allow for now, but don't force
         Optional('seed'):   Any(None, All(int, Range(min=0))),
         },

@@ -1,10 +1,9 @@
 from copy import deepcopy
 from collections import MutableMapping
-from os import fsync
-from os.path import join, splitext
 from progress.bar import Bar
 import voluptuous as vol
 import numpy as np
+import os
 import json
 import random
 
@@ -33,7 +32,7 @@ def dump_results_partial(results, stream, first):
     stream.write('\n')
     # ensure data is written to disk immediately
     stream.flush()
-    fsync(stream.fileno())
+    os.fsync(stream.fileno())
 
 
 def update_nested(d, u):
@@ -49,11 +48,25 @@ def update_nested(d, u):
     return d
 
 
+def build_filename(params, extension):
+    ''' complicated filename helper.'''
+    filename = params['filename']
+    location = params.get('dir', None)
+    # if 'filename' is absolute then ignore 'dir'
+    if location and not os.path.isabs(params['filename']):
+        filename = os.path.join(location, params['filename'])
+    # add extension if missing
+    if os.path.splitext(filename)[-1] == '':
+        filename += extension
+    return filename
+
+
 def load_samples(params, N, Ni):
     Ns = params['Ns']
     Ne = params['Ne']
     if params['type'] == 'file':
-        training_indices = np.load(params['file_name'])
+        filename = build_filename(params, '.npy')
+        training_indices = np.load(filename)
     elif params['type'] == 'generated':
         # this provided seed allows us to generate the same set
         # of training indices across multiple configurations
@@ -76,13 +89,9 @@ def load_dataset(settings):
     return [{**instance, 'training_indices': ind} for ind in training_indices]
 
 
-def file_instance(data_settings):
-    # load data set from file
-    dataset_filename = join(data_settings['dir'],
-                            data_settings['filename'])
-    if splitext(dataset_filename)[-1] == '':
-        dataset_filename += '.npz'
-    with np.load(dataset_filename) as dataset:
+def file_instance(params):
+    filename = build_filename(params, '.npz')
+    with np.load(filename) as dataset:
         data = dataset['matrix']
         Ne = dataset['Ne']
         Ni = dataset['Ni']
@@ -96,16 +105,16 @@ def file_instance(data_settings):
     return instance, data.shape[0], Ni
 
 
-def generated_instance(data_settings):
-    Nb = data_settings['bits']
-    operator = op.operator_from_name(data_settings['operator'])
+def generated_instance(params):
+    Nb = params['bits']
+    operator = op.operator_from_name(params['operator'])
 
     instance = {
         'type': 'operator',
         'operator': operator,
         'Nb': Nb,
-        'No': data_settings.get('out_width', Nb),  # defaults to operand width
-        'window_size': data_settings.get('window_size', 4)  # arbitrary default
+        'No': params.get('out_width', Nb),  # defaults to operand width
+        'window_size': params.get('window_size', 4)  # arbitrary default
     }
     Ni = op.num_operands(operator) * Nb
 
@@ -122,17 +131,6 @@ def generated_instance(data_settings):
 #         with open(join(data_dir, filename)) as f:
 #             gates = np.array(json.load(f)[index], dtype=np.uint32)
 #             net_settings['initial_gates'] = gates
-
-
-def get_config_indices(instances, config_settings):
-    # samples may be optionally sub-indexed
-    if 'indices' in config_settings['sampling']:
-        config_indices = config_settings['sampling']['indices']
-        if any(i >= len(instances) for i in config_indices):
-            raise ValueError('sampling indices has elements larger than Ns')
-    else:
-        config_indices = range(len(instances))
-    return config_indices
 
 
 def validate_schema(config, schema, config_num, msg):
@@ -174,7 +172,7 @@ def update_seeding(settings):
         settings['base_config'][context]['seed'] = seed
 
 
-def generate_configurations(settings, data_dir, sampling_dir):
+def generate_configurations(settings, data_dir=None, sampling_dir=None):
     # validate the given schema
     try:
         sch.experiment_schema(settings)
@@ -232,12 +230,10 @@ def generate_tasks(configurations):
     bar.update()
     try:
         for context, instances in configurations:
-            # samples may be optionally sub-indexed
-            indices = get_config_indices(instances, context)
             # for each sample
-            for i in indices:
+            for i, instance in enumerate(instances):
                 task = deepcopy(context)
-                task['mapping'] = instances[i]
+                task['mapping'] = instance
                 task['training_set_number'] = i
                 tasks.append(task)
             bar.next()

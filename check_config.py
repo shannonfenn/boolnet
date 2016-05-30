@@ -17,10 +17,8 @@ def main():
                         help='experiment config filename.')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
-                        default='experiments/datasets/functions',
                         help='base directory for datasets.')
     parser.add_argument('-s', '--sample-dir', type=str, metavar='dir',
-                        default='experiments/datasets/samples',
                         help='base directory for sampling files.')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
@@ -30,10 +28,6 @@ def main():
 
     # load experiment file
     settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
-
-    # resolve paths
-    args.data_dir = os.path.abspath(args.data_dir)
-    args.sample_dir = os.path.abspath(args.sample_dir)
 
     # test generation of tasks
     try:
