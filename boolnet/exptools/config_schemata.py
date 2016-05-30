@@ -41,11 +41,12 @@ data_schema = Any(
     # generated from operator
     Schema({
         'type':                     'generated',
-        'dir':                      IsDir(),
         'operator':                 str,
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
-        Optional('window_size'):    All(int, Range(min=1))
+        Optional('window_size'):    All(int, Range(min=1)),
+        # allow for now, but don't force
+        Optional('dir'):            str
         },
         required=True),
     # read from file
@@ -61,10 +62,11 @@ sampling_schema = Any(
     # randomly generated
     Schema({
         'type': 'generated',
-        'dir':  IsDir(),
         'Ns':   All(int, Range(min=1)),
         'Ne':   All(int, Range(min=1)),
-        'seed': All(int, Range(min=0))
+        'seed': All(int, Range(min=0)),
+        # allow for now, but don't force
+        Optional('dir'): str
         },
         required=True),
     # read from file
