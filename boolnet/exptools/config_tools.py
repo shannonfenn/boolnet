@@ -53,16 +53,7 @@ def load_samples(params, N, Ni):
     Ns = params['Ns']
     Ne = params['Ne']
     if params['type'] == 'file':
-        # prepare filename
-        sample_filename = params.get('file_name', '')
-        if not sample_filename:
-            # no given filename, generate from data settings
-            directory = params['dir']
-            suffix = params.get('file_suffix', '')
-            base_name = '{}_{}_{}{}.npy'.format(Ni, Ns, Ne, suffix)
-            sample_filename = join(directory, base_name)
-        # load sample indices
-        training_indices = np.load(sample_filename)
+        training_indices = np.load(params['file_name'])
     elif params['type'] == 'generated':
         # this provided seed allows us to generate the same set
         # of training indices across multiple configurations

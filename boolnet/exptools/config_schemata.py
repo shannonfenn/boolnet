@@ -64,22 +64,15 @@ sampling_schema = Any(
         'type': 'generated',
         'Ns':   All(int, Range(min=1)),
         'Ne':   All(int, Range(min=1)),
-        'seed': All(int, Range(min=0)),
-        # allow for now, but don't force
-        Optional('dir'): str
+        'seed': All(int, Range(min=0))
         },
         required=True),
     # read from file
     Schema({
-        'type':                 'file',
-        'dir':                  IsDir(),
-        'Ns':                   All(int, Range(min=1)),
-        'Ne':                   All(int, Range(min=1)),
-        'seed':                 Any(None, All(int, Range(min=0))),
-        Optional('indices'):    [All(int, Range(min=0))],
-        # exclusive file name keys
-        Exclusive('file_suffix', 'file'):   str,
-        Exclusive('file_name', 'file'):     str
+        'type':         'file',
+        'file_name':    str,
+        # allow for now, but don't force
+        Optional('seed'):   Any(None, All(int, Range(min=0))),
         },
         required=True)
     )
