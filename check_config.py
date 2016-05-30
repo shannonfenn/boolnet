@@ -16,10 +16,6 @@ def main():
                         default='experiment.yaml',
                         help='experiment config filename.')
     parser.add_argument('-v', '--verbose', action='store_true')
-    parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
-                        help='base directory for datasets.')
-    parser.add_argument('-s', '--sample-dir', type=str, metavar='dir',
-                        help='base directory for sampling files.')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
                         help='directory to store results in (in own subdir).')
@@ -31,8 +27,7 @@ def main():
 
     # test generation of tasks
     try:
-        configurations = config_tools.generate_configurations(
-            settings, args.data_dir, args.sample_dir)
+        configurations = config_tools.generate_configurations(settings)
         print('{} configurations.'.format(len(configurations)))
         tasks = config_tools.generate_tasks(configurations)
         print('{} tasks.'.format(len(tasks)))

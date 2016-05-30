@@ -85,10 +85,6 @@ def parse_arguments():
     parser.add_argument('--ip-config', type=str,
                         default='instapush.cfg',
                         help='instapush config file path (for notifications).')
-    parser.add_argument('-d', '--data-dir', type=str, metavar='dir',
-                        help='base directory for datasets.')
-    parser.add_argument('-s', '--sample-dir', type=str, metavar='dir',
-                        help='base directory for sampling files.')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
                         help='directory to store results in (in own subdir).')
@@ -212,8 +208,7 @@ def main():
 
     # generate learning tasks
     try:
-        configurations = cfg.generate_configurations(settings, args.data_dir,
-                                                     args.sample_dir)
+        configurations = cfg.generate_configurations(settings)
         print('Done: {} configurations generated.'.format(len(configurations)))
         tasks = cfg.generate_tasks(configurations)
         print('Done: {} tasks generated.\n'.format(len(tasks)))

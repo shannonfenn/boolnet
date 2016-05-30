@@ -172,7 +172,7 @@ def update_seeding(settings):
         settings['base_config'][context]['seed'] = seed
 
 
-def generate_configurations(settings, data_dir=None, sampling_dir=None):
+def generate_configurations(settings):
     # validate the given schema
     try:
         sch.experiment_schema(settings)
@@ -181,9 +181,6 @@ def generate_configurations(settings, data_dir=None, sampling_dir=None):
             'Top-level config invalid: {}\nerror: {}\npath: {}'.format(
                 err, err.error_message, err.path))
 
-    # insert given values into base config
-    settings['base_config']['data']['dir'] = data_dir
-    settings['base_config']['sampling']['dir'] = sampling_dir
     # insert seed values into base config
     update_seeding(settings)
 
