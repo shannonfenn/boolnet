@@ -76,13 +76,13 @@ def parse_arguments():
                         type=argparse.FileType('r'),
                         default='experiment.yaml',
                         help='experiment config filename.')
-    parser.add_argument('--numprocs', '-n', metavar='N', type=int,
+    parser.add_argument('-n', '--numprocs', metavar='N', type=int,
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for '
                              'scoop).')
-    parser.add_argument('--notify', action='store_true',
+    parser.add_argument('-p', '--notify', action='store_true',
                         help='enable push notifications.')
-    parser.add_argument('--ip-config', type=str,
+    parser.add_argument('-c', '--ip-config', metavar='file', type=str,
                         default='instapush.cfg',
                         help='instapush config file path (for notifications).')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
