@@ -58,12 +58,15 @@ class BasicLearner:
             # this key is only required if auto-targetting
             self.mfs_method = parameters['minfs_selection_method']
         else:
-            self.target_order = np.array(parameters['target_order'], dtype=np.uintp)
+            self.target_order = np.array(parameters['target_order'],
+                                         dtype=np.uintp)
 
-        # add functors for evaluating the guiding function and stopping criteria
+        # add functors for evaluating the guiding func and stop criteria
         self.gf_eval_name = 'guiding'
-        self.opt_params['guiding_function'] = lambda x: x.function_value(self.gf_eval_name)
-        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(self.guiding_func_id)
+        self.opt_params['guiding_function'] = lambda x: x.function_value(
+            self.gf_eval_name)
+        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(
+            self.guiding_func_id)
 
         if self.guiding_func_id not in fn.scalar_functions():
             raise ValueError('Invalid guiding function: {}'.format(gf_name))
@@ -72,7 +75,8 @@ class BasicLearner:
                              format(self.node_funcs))
 
     def order_from_rank(self, ranks):
-        ''' Converts a ranking with ties into an ordering, breaking ties with uniform probability.'''
+        ''' Converts a ranking with ties into an ordering,
+            breaking ties with uniform probability.'''
         order = []
         ranks, counts = np.unique(ranks, return_counts=True)
         for rank, count in zip(ranks, counts):
@@ -88,7 +92,8 @@ class BasicLearner:
             mfs_targets = unpack_bool_matrix(self.target_matrix, self.Ne)
 
             # use external solver for minFS
-            rank, feature_sets = mfs.ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
+            rank, feature_sets = mfs.ranked_feature_sets(
+                mfs_features, mfs_targets, self.mfs_method)
 
             # randomly pick from top ranked targets
             self.target_order = self.order_from_rank(rank)
@@ -97,7 +102,8 @@ class BasicLearner:
         gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
         state = StandardBNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
-        state.add_function(self.guiding_func_id, self.target_order, self.gf_eval_name)
+        state.add_function(self.guiding_func_id, self.target_order,
+                           self.gf_eval_name)
 
         # run the optimiser
         opt_result = self.optimiser.run(state, self.opt_params)
@@ -134,14 +140,15 @@ class StratifiedLearner(BasicLearner):
             # get unlearned targets
             all_targets = np.arange(self.No, dtype=int)
             not_learned = np.setdiff1d(all_targets, self.learned_targets)
-            
+
             # unpack inputs to minFS solver
             mfs_features = unpack_bool_matrix(inputs, self.Ne)
             mfs_targets = unpack_bool_matrix(
                 self.target_matrix[not_learned, :], self.Ne)
 
             # use external solver for minFS
-            rank, feature_sets = mfs.ranked_feature_sets(mfs_features, mfs_targets, self.mfs_method)
+            rank, feature_sets = mfs.ranked_feature_sets(
+                mfs_features, mfs_targets, self.mfs_method)
 
             self.feature_sets[strata, not_learned] = feature_sets
 
@@ -154,7 +161,8 @@ class StratifiedLearner(BasicLearner):
                 # unpack inputs to minFS solver
                 mfs_features = unpack_bool_matrix(inputs, self.Ne)
                 mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
-                fs = mfs.best_feature_set(mfs_matrix, mfs_target, self.mfs_method)
+                fs = mfs.best_feature_set(mfs_features, mfs_target,
+                                          self.mfs_method)
                 self.feature_sets[strata, t] = fs
             return t
 
