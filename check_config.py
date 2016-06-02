@@ -1,5 +1,3 @@
-import os                           # for mkdir
-import os.path                      # for path manipulation
 import yaml                         # for loading experiment files
 import argparse                     # CLI
 
@@ -44,7 +42,6 @@ def main():
         for cfg in configurations:
             print()
             print(cfg)
-
 
 
 if __name__ == '__main__':

@@ -1,6 +1,5 @@
 from copy import copy
 from collections import namedtuple
-import logging
 import numpy as np
 import boolnet.bintools.functions as fn
 from boolnet.bintools.packing import (
