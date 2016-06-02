@@ -155,6 +155,7 @@ instance_schema = Schema({
     'data':     data_schema,
     'learner':  learner_schema,
     'sampling': sampling_schema,
+    'log_keys': Schema({}, extra=ALLOW_EXTRA),
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
@@ -189,8 +190,6 @@ experiment_schema = Schema({
     Exclusive('product', 'config', msg=prod_msg): All([
         All(Schema([{}], extra=ALLOW_EXTRA), Length(min=1))],
                                     Length(min=2, max=2)),
-    # optional logging of schema keys
-    Optional('log_keys'):           [str],
     # optional level of debug logging
     Optional('debug_level'):        In(['none', 'warning', 'info', 'debug']),
     },
