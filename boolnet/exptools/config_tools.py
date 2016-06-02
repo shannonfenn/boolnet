@@ -173,6 +173,27 @@ def update_seeding(settings):
         settings['base_config'][context]['seed'] = seed
 
 
+def insert_default_log_keys(settings):
+    defaults = {
+        'learner':          (True, ['learner', 'name']),
+        'sample_seed':      (True, ['sampling', 'seed']),
+        'learner_seed':     (True, ['learner', 'seed']),
+        'config_num':       (True, ['configuration_number']),
+        'trg_set_num':      (True, ['training_set_number']),
+        'tfs':              (True, ['learner', 'network', 'node_funcs']),
+        'guiding_function': (True, ['learner', 'optimiser',
+                                    'guiding_function']),
+        'given_tgt_order':  (True, ['learner', 'target_order']),
+        'fs_sel_method':    (False, ['learner', 'minfs_selection_method']),
+        'fs_masking':       (False, ['learner', 'minfs_masking']),
+        'opt_{}':           (False, ['learner', 'optimiser', '.*']),
+    }
+    # give preference to user log_keys
+    defaults.update(settings['base_config'].get('log_keys', {}))
+    settings['base_config']['log_keys'] = defaults
+    return settings
+
+
 def generate_configurations(settings):
     # validate the given schema
     try:
@@ -184,6 +205,8 @@ def generate_configurations(settings):
 
     # insert seed values into base config
     update_seeding(settings)
+    # insert default log_keys values into base config
+    insert_default_log_keys(settings)
 
     # the configurations approach involves having a multiple config dicts and
     # updating them with each element of the configurations list or product
