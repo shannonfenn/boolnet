@@ -203,30 +203,36 @@ def main():
 
     settings, result_dir = initialise(args)
 
-    print('Directories initialised.')
-    print('Results in: ' + result_dir + '\n')
-
-    # generate learning tasks
     try:
-        configurations = cfg.generate_configurations(settings)
-        print('Done: {} configurations generated.'.format(len(configurations)))
-        tasks = cfg.generate_tasks(configurations)
-        print('Done: {} tasks generated.\n'.format(len(tasks)))
-    except cfg.ValidationError as err:
-        print(err)
-        print('\nExperiment aborted.')
-        print('Result directory will still exist: {}'.format(result_dir))
-        return
+        print('Directories initialised.')
+        print('Results in: ' + result_dir + '\n')
 
-    with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
-        # Run the actual learning as a parallel process
-        run_tasks(tasks, args.numprocs, results_stream)
+        # generate learning tasks
+        try:
+            configurations = cfg.generate_configurations(settings)
+            print('Done: {} configurations generated.'.format(
+                len(configurations)))
+            tasks = cfg.generate_tasks(configurations)
+            print('Done: {} tasks generated.\n'.format(len(tasks)))
+        except cfg.ValidationError as err:
+            print(err)
+            print('\nExperiment aborted.')
+            print('Result directory will still exist: {}'.format(result_dir))
+            logging.shutdown()
+            return
 
-    total_time = time() - start_time
+        with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
+            # Run the actual learning as a parallel process
+            run_tasks(tasks, args.numprocs, results_stream)
 
-    print('Runs completed in {}s.'.format(total_time))
+        total_time = time() - start_time
 
-    notify(notifier, settings, total_time)
+        print('Runs completed in {}s.'.format(total_time))
+
+        notify(notifier, settings, total_time)
+
+    finally:
+        logging.shutdown()
 
 if __name__ == '__main__':
     main()
