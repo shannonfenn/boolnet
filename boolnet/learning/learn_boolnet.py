@@ -1,5 +1,8 @@
 import time
 import random
+import logging
+import re
+import numpy as np
 import boolnet.bintools.functions as fn
 import boolnet.bintools.packing as pk
 import boolnet.bintools.example_generator as gen
@@ -7,8 +10,7 @@ import boolnet.learning.networkstate as netstate
 import boolnet.learning.learners as learners
 import boolnet.learning.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
-import numpy as np
-import sys
+import boolnet.exptools.config_filtering as cf
 
 
 OPTIMISERS = {
@@ -120,18 +122,16 @@ def build_states(mapping, gates, objectives):
 
 
 def build_result_map(parameters, learner_result):
-    learner_parameters = parameters['learner']
-    optimiser_params = parameters['learner']['optimiser']
 
     guiding_function = fn.function_from_name(
-        optimiser_params['guiding_function'])
+        parameters['learner']['optimiser']['guiding_function'])
 
     final_network = learner_result.network
     gates = final_network.gates
 
     # build evaluators for training and test data
     target_order = np.array(learner_result.target_order, dtype=np.uintp)
-    objectives = [
+    objective_functions = [
         (guiding_function, target_order, 'guiding'),
         (fn.E1, target_order, 'e1'),
         (fn.E1_MCC, target_order, 'e1_mcc'),
@@ -139,16 +139,13 @@ def build_result_map(parameters, learner_result):
         (fn.PER_OUTPUT_ERROR, target_order, 'per_output_error'),
         (fn.PER_OUTPUT_MCC, target_order, 'per_output_mcc')]
 
-    train_state, test_state = build_states(parameters['mapping'], gates, objectives)
+    train_state, test_state = build_states(
+        parameters['mapping'], gates, objective_functions)
 
     results = {
         'Ni':           final_network.Ni,
         'No':           final_network.No,
         'Ng':           final_network.Ng,
-        'learner':      learner_parameters['name'],
-        'config_num':   parameters['configuration_number'],
-        'trg_set_num':  parameters['training_set_number'],
-        'tfs':          parameters['learner']['network']['node_funcs'],
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
         'trg_error':    train_state.function_value('e1'),
@@ -163,17 +160,7 @@ def build_result_map(parameters, learner_result):
         'tgt_order':    target_order
         }
 
-    # optional parameters
-    if 'minfs_selection_method' in parameters['learner']:
-        results['fs_sel_method'] = parameters['learner']['minfs_selection_method'],
-    if 'minfs_masking' in parameters['learner']:
-        results['fs_masking'] = parameters['learner']['minfs_masking'],
-    if 'target_order' in parameters['learner']:
-        results['given_tgt_order'] = parameters['learner']['target_order'],
-
-    if parameters.get('record_training_indices', True):
-        results['trg_indices'] = parameters['mapping']['training_indices']
-
+    # Optional results
     if parameters.get('record_final_net', True):
         results['final_net'] = np.array(final_network.gates)
 
@@ -182,22 +169,18 @@ def build_result_map(parameters, learner_result):
             key = 'net_{}'.format(i)
             results[key] = np.array(net.gates)
 
-    # add ' minfs' on the end of the learner name in the result dict if required
-    if learner_parameters.get('minfs'):
-        results['learner'] += ' minfs'
-
     if learner_result.feature_sets is not None:
         for strata, strata_f_sets in enumerate(learner_result.feature_sets):
-            for target, v in enumerate(strata_f_sets):
+            for target, fs in enumerate(strata_f_sets):
                 # only record FSes if they exist
-                if v is not None:
+                if fs is not None:
                     key = 'fs_s{}_t{}'.format(strata, target)
-                    results[key] = v
+                    results[key] = fs
 
     if learner_result.restarts is not None:
         results['restarts'] = learner_result.restarts
 
-    # multi-key results
+    # multi-part results
     for bit, v in enumerate(train_state.function_value('per_output_error')):
         key = 'trg_err_tgt_{}'.format(bit)
         results[key] = v
@@ -213,10 +196,35 @@ def build_result_map(parameters, learner_result):
     for bit, v in enumerate(final_network.max_node_depths()):
         key = 'max_depth_tgt_{}'.format(bit)
         results[key] = v
-    for k, v in optimiser_params.items():
-        if k == 'guiding_function':
-            results[k] = v
-        else:
-            results['opt_' + k] = v
 
-    return results
+    # handle requests to log keys
+    log_keys = parameters.get('log_keys', {})
+
+    # strip out warning flags
+    log_keys_just_paths = {k: v[1] for k, v in log_keys.items()}
+
+    # match dict paths to given patterns and pull out corresponding values
+    passed_through_params = cf.filter_keys(parameters, log_keys_just_paths)
+
+    # Generate warnings for reserved keys - needs to run before merging dicts
+    for key in log_keys:
+        if key in results:
+            logging.warning(
+                'log_keys: %s ignored - reserved for results.', key)
+
+    # Generating warnings for missing but required patterns
+    for key, (required, pattern) in log_keys.items():
+        # handle keys that contain insert positions
+        if '{}' in key:
+            checker = re.compile(key.format('.*')).fullmatch
+        else:
+            checker = re.compile(key).fullmatch
+        # check at least one key in the result dict matches the given key
+        if required and all(checker(k) is None for k in passed_through_params):
+            logging.warning(('log_keys: %s is required but does not match any '
+                             'path in the configuration.'), pattern)
+
+    # merge dictionaries, giving preference to results ahead of parameters
+    passed_through_params.update(results)
+
+    return passed_through_params
