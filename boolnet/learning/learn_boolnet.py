@@ -32,6 +32,7 @@ def seed_rng(value):
     seed = random.randint(1, 2**32)
     np.random.seed(seed)
     fastrand.seed(seed)
+    return seed
 
 
 def random_network(Ng, Ni, node_funcs):
@@ -58,7 +59,9 @@ def build_training_set(mapping):
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
-    seed_rng(parameters['learner']['seed'])
+    seed = seed_rng(parameters['learner']['seed'])
+    # if no given seed then store to allow reporting in results
+    parameters['learner']['seed'] = seed
 
     learner_params = parameters['learner']
     optimiser_params = parameters['learner']['optimiser']
