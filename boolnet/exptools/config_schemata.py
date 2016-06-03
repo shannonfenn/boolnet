@@ -1,5 +1,5 @@
 from voluptuous import (
-    Schema, In, All, Any, Range, IsDir, Msg, ALLOW_EXTRA,
+    Schema, In, All, Any, Range, IsDir, ALLOW_EXTRA,
     message, Optional, Exclusive, Length, Invalid)
 import boolnet.bintools.functions as fn
 
@@ -160,7 +160,6 @@ instance_schema = Schema({
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
-    Optional('record_training_indices'):    bool,
     },
     required=True)
 

@@ -4,7 +4,6 @@ from copy import copy
 from itertools import chain, repeat
 from collections import deque, namedtuple
 import operator as op
-import boolnet.bintools.functions as fn
 import sys
 import logging
 
