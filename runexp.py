@@ -45,7 +45,7 @@ def initialise_notifications(args):
                 print('Invalid instapush config: {}'.format(err))
             except requests.exceptions.RequestException as err:
                 print('Failed to initialise notifications: {}'.format(err))
-        except ImportError:
+        except ImportError as err:
             print('Failed to import notification APIs: {}'.format(err))
         # disable notifications in the event of any errors
         print('Notifications disabled.\n')
