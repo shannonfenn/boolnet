@@ -26,10 +26,11 @@ LEARNERS = {
     }
 
 
-def seed_rng(value):
-    # if value is None this will use OS randomness source
-    random.seed(value)
-    seed = random.randint(1, 2**32)
+def seed_rng(seed):
+    # if seed is None this will use OS randomness source to generate a seed
+    if seed is None:
+        random.seed()
+        seed = random.randint(1, 2**32)
     np.random.seed(seed)
     fastrand.seed(seed)
     return seed
