@@ -9,6 +9,7 @@ UNI_SERVER=darwin15
 printf "building ${GRN}locally${NC}\n"
 python setup.py clean > local_build.log 2>&1
 python setup.py build_ext --inplace >> local_build.log 2>&1
+pip install -e . 
 tail -n 1 local_build.log
 
 printf "building on ${GRN}$CIBM_SERVER${NC}\n"
