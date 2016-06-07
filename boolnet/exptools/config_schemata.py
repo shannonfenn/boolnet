@@ -73,6 +73,14 @@ sampling_schema = Any(
         # allow for now, but don't force
         Optional('seed'):   Any(None, All(int, Range(min=0))),
         },
+        required=True),
+    # given in config file
+    Schema({
+        'type':             'given',
+        'indices':          [[All(int, Range(min=0))]],
+        # allow for now, but don't force
+        Optional('seed'):   Any(None, All(int, Range(min=0))),
+        },
         required=True)
     )
 
