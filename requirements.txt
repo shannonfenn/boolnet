@@ -1,8 +1,9 @@
 Cython
 gmpy2 
-good
+voluptuous
 numpy
+scipy
 progress
-pushbullet.py
+instapush
 pyyaml
 scoop
