@@ -22,9 +22,10 @@ def initialise_logging(settings, result_dir):
                   'info': logging.INFO,
                   'debug': logging.DEBUG,
                   'none': logging.ERROR}
+    log_filename = os.path.join(result_dir, 'log')
     # default to 'none'
     log_level = level_dict[settings.get('debug_level', 'warning')]
-    logging.basicConfig(filename=os.path.join(result_dir, 'log'),
+    logging.basicConfig(filename=log_filename,
                         level=log_level)
 
 
@@ -125,9 +126,6 @@ def initialise(args):
     # copy experiment config into results directory
     shutil.copy(args.experiment.name, result_dir)
 
-    # initialise logging
-    initialise_logging(settings, result_dir)
-
     return settings, result_dir
 
 
@@ -203,6 +201,9 @@ def main():
 
     settings, result_dir = initialise(args)
 
+    # initialise logging
+    initialise_logging(settings, result_dir)
+
     try:
         print('Directories initialised.')
         print('Results in: ' + result_dir + '\n')
@@ -221,7 +222,8 @@ def main():
             logging.shutdown()
             return
 
-        with open(os.path.join(result_dir, 'results.json'), 'w') as results_stream:
+        result_filename = os.path.join(result_dir, 'results.json')
+        with open(result_filename, 'w') as results_stream:
             # Run the actual learning as a parallel process
             run_tasks(tasks, args.numprocs, results_stream)
 

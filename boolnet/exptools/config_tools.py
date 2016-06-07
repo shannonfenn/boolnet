@@ -158,7 +158,7 @@ def split_variables_from_base(settings):
                              for d2 in products[1]
                              for d1 in products[0]]
         except KeyError:
-            print('Warning: no variable configuration found.')
+            print('Warning: no variable configuration found.\n')
             variable_sets = [{}]
 
     return variable_sets, settings['base_config']
@@ -193,7 +193,6 @@ def insert_default_log_keys(settings):
     # give preference to user log_keys
     defaults.update(settings['base_config'].get('log_keys', {}))
     settings['base_config']['log_keys'] = defaults
-    print(settings['base_config']['log_keys'])
     return settings
 
 
