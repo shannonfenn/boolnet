@@ -115,12 +115,13 @@ def build_states(mapping, gates, objectives):
             gates, indices, Nb, No, operator, window_size, exclude=False)
         S_test = netstate.chained_from_operator(
             gates, indices, Nb, No, operator, window_size, exclude=True)
-        # pre-add functions to avoid redundant network evaluations
-        for func, order, name in objectives:
-            S_trg.add_function(func, order, name)
-            S_test.add_function(func, order, name)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
+
+    # add functions to be later called by name
+    for func, order, name in objectives:
+        S_trg.add_function(func, order, name)
+        S_test.add_function(func, order, name)
 
     return S_trg, S_test
 
