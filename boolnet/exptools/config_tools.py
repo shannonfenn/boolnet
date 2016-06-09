@@ -95,17 +95,19 @@ def load_dataset(settings):
 def file_instance(params):
     filename = build_filename(params, '.npz')
     with np.load(filename) as dataset:
-        data = dataset['matrix']
-        Ne = dataset['Ne']
+        Mp = dataset['matrix']
+        # Ne in the dataset is the full number of examples which we are
+        # referring to herein as 'N' to differentiate from the sample size
+        N = dataset['Ne']
         Ni = dataset['Ni']
 
     # build list of train/test set instances
     instance = {
         'type': 'raw',
-        'matrix': pk.BitPackedMatrix(data, Ne, Ni)
+        'matrix': pk.BitPackedMatrix(Mp, N, Ni)
         }
 
-    return instance, data.shape[0], Ni
+    return instance, N, Ni
 
 
 def generated_instance(params):
