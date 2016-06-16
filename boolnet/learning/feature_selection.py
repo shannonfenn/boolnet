@@ -2,7 +2,8 @@ import numpy as np
 from itertools import combinations
 from collections import defaultdict
 from scipy.stats import entropy
-from boolnet.learning.fs_solver_numberjack import all_minimum_feature_sets as all_minfs
+# from boolnet.learning.fs_solver_numberjack import all_minimum_feature_sets as all_minfs
+from boolnet.learning.fs_solver_ortools import all_minimum_feature_sets as all_minfs
 
 
 def diversity(patterns):

@@ -12,11 +12,7 @@ def all_minimum_feature_sets(features, target):
         # constant target
         return [list(range(features.shape[1]))]
     coverage = build_coverage(features, target)
-    k, _ = mink(coverage)
-    if k > 0:
-        return all_kfs(coverage, k)
-    else:
-        return []
+    return all_minfs(coverage)
 
 
 def build_coverage(features, target):
@@ -107,3 +103,54 @@ def all_kfs(coverage, k):
         return feature_sets
     else:
         return []
+
+
+def all_minfs(coverage):
+    Np, Nf = coverage.shape
+    solver = pywrapcp.Solver("all_minfs")
+
+    # decision variable
+    x = [solver.IntVar(0, 1, 'x[{}]'.format(f)) for f in range(Nf)]
+
+    # constraints
+    # all pairs must be covered by at least one feature
+    for p in range(Np):
+        b = [x[f] for f in range(Nf) if coverage[p][f]]
+        solver.Add(solver.SumGreaterOrEqual(b, 1))
+
+    # objective
+    # minimise number of features
+    k = solver.Sum(x)
+    objective = solver.Minimize(k, 1)
+
+    # find min k
+    solution = solver.Assignment()
+    solution.Add(x)
+    solution.AddObjective(k)
+
+    collector = solver.LastSolutionCollector(solution)
+    db = solver.Phase(x + [k], solver.INT_VAR_DEFAULT, solver.INT_VALUE_DEFAULT)
+    solution_found = solver.Solve(db, [collector, objective])
+
+    if not solution_found:
+        return []
+
+    # find all kfs
+    # only k features may be selected
+    min_k = collector.ObjectiveValue(0)
+    solver.Add(solver.SumEquality(x, min_k))
+
+    # solution and search
+    collector = solver.AllSolutionCollector(solution)
+    db = solver.Phase(x, solver.INT_VAR_DEFAULT, solver.INT_VALUE_DEFAULT)
+    solution_found = solver.Solve(db, collector)
+
+    if not solution_found:
+        return []
+
+    # collect all feature sets
+    numSol = collector.SolutionCount()
+    feature_sets = [[f for f in range(Nf) if collector.Value(i, x[f]) == 1]
+                    for i in range(numSol)]
+
+    return feature_sets
