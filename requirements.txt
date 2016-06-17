@@ -1,4 +1,4 @@
-Cython
+Cython==0.23.5
 gmpy2 
 voluptuous
 numpy

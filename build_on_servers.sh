@@ -14,7 +14,7 @@ tail -n 1 local_build.log
 
 printf "building on ${GRN}$CIBM_SERVER${NC}\n"
 {
-	ssh -T $CIBM_SERVER << EOF
+  ssh -T $CIBM_SERVER << EOF
   source scoop_setup.sh
   cd /home/cibm01/shannon/HMRI/code_sf/boolnet
   git pull
@@ -27,7 +27,7 @@ tail -n 1 cibm_server_build.log
 
 printf "building on ${GRN}$UNI_SERVER${NC}\n"
 {
-ssh -T $UNI_SERVER << EOF
+  ssh -T $UNI_SERVER << EOF
   source scoop_setup.sh
   cd /home/cibm01/shannon/HMRI/code_dar/boolnet
   git pull
