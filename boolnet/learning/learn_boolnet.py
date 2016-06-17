@@ -228,9 +228,6 @@ def build_result_map(parameters, learner_result):
         if required and all(checker(k) is None for k in passed_through_params):
             logging.warning(('log_keys: %s is required but does not match any '
                              'path in the configuration.'), pattern)
-            print(parameters)
-            print(log_keys_just_paths)
-            print(passed_through_params)
 
     # merge dictionaries, giving preference to results ahead of parameters
     passed_through_params.update(results)
