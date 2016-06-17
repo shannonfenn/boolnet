@@ -159,11 +159,16 @@ learner_schema = Schema(
     )
 
 
+log_keys_schema = Schema(
+    [All(Schema([], extra=ALLOW_EXTRA), Length(min=3, max=3))]
+    )
+
+
 instance_schema = Schema({
     'data':     data_schema,
     'learner':  learner_schema,
     'sampling': sampling_schema,
-    'log_keys': Schema({}, extra=ALLOW_EXTRA),
+    'log_keys': log_keys_schema,
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,

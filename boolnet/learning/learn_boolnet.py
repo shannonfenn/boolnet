@@ -203,22 +203,22 @@ def build_result_map(parameters, learner_result):
         results[key] = v
 
     # handle requests to log keys
-    log_keys = parameters.get('log_keys', {})
+    log_keys = parameters.get('log_keys', [])
 
     # strip out warning flags
-    log_keys_just_paths = {k: v[1] for k, v in log_keys.items()}
+    log_keys_just_paths = [[k, v] for k, _, v in log_keys]
 
     # match dict paths to given patterns and pull out corresponding values
     passed_through_params = cf.filter_keys(parameters, log_keys_just_paths)
 
     # Generate warnings for reserved keys - needs to run before merging dicts
-    for key in log_keys:
+    for key, _, _ in log_keys:
         if key in results:
             logging.warning(
                 'log_keys: %s ignored - reserved for results.', key)
 
     # Generating warnings for missing but required patterns
-    for key, (required, pattern) in log_keys.items():
+    for key, required, pattern in log_keys:
         # handle keys that contain insert positions
         if '{}' in key:
             checker = re.compile(key.format('.*')).fullmatch
@@ -228,6 +228,9 @@ def build_result_map(parameters, learner_result):
         if required and all(checker(k) is None for k in passed_through_params):
             logging.warning(('log_keys: %s is required but does not match any '
                              'path in the configuration.'), pattern)
+            print(parameters)
+            print(log_keys_just_paths)
+            print(passed_through_params)
 
     # merge dictionaries, giving preference to results ahead of parameters
     passed_through_params.update(results)
