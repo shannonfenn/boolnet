@@ -1,5 +1,5 @@
 # from boolnet.learning.feature_selection import abk_file, minimum_feature_set
-from boolnet.learning.fs_solver_numberjack import all_minimum_feature_sets
+from boolnet.learning.fs_solver_ortools import all_minimum_feature_sets
 import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import fixture
