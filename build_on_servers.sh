@@ -16,7 +16,7 @@ printf "building on ${GRN}$CIBM_SERVER${NC}\n"
 {
   ssh -T $CIBM_SERVER << EOF
   source scoop_setup.sh
-  cd /home/cibm01/shannon/HMRI/code_sf/boolnet
+  cd /home/cibm01/shannon/sf/HMRI/code/boolnet
   git pull
   python setup.py clean
   python setup.py build_ext --inplace
@@ -29,7 +29,7 @@ printf "building on ${GRN}$UNI_SERVER${NC}\n"
 {
   ssh -T $UNI_SERVER << EOF
   source scoop_setup.sh
-  cd /home/cibm01/shannon/HMRI/code_dar/boolnet
+  cd /home/cibm01/shannon/dar/HMRI/code/boolnet
   git pull
   python setup.py clean
   scl enable devtoolset-3 "python setup.py build_ext --inplace"
