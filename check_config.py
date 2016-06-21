@@ -11,7 +11,6 @@ def main():
 
     parser.add_argument('experiment',
                         type=argparse.FileType('r'),
-                        default='experiment.yaml',
                         help='experiment config filename.')
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',

@@ -75,7 +75,6 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('experiment',
                         type=argparse.FileType('r'),
-                        default='experiment.yaml',
                         help='experiment config filename.')
     parser.add_argument('-n', '--numprocs', metavar='N', type=int,
                         default=8, choices=range(0, 17),
