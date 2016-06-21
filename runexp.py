@@ -86,7 +86,7 @@ def parse_arguments():
                         default='instapush.cfg',
                         help='instapush config file path (for notifications).')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
-                        default='experiments/results',
+                        default='HMRI/experiments/results',
                         help='directory to store results in (in own subdir).')
 
     return parser.parse_args()
