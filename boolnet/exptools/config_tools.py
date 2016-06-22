@@ -73,9 +73,9 @@ def load_samples(params, N, Ni):
         Ns = params['Ns']
         Ne = params['Ne']
         seed = params['seed']
-        np.random.seed(seed)
+        random.seed(seed)
         training_indices = np.array([
-            np.random.choice(N, size=Ne, replace=False) for i in range(Ns)])
+            random.sample(range(N), Ne) for i in range(Ns)])
     return training_indices
 
 
@@ -186,7 +186,7 @@ def insert_default_log_keys(settings):
         ['trg_set_num', True, ['training_set_number']],
         ['tfs', True, ['learner', 'network', 'node_funcs']],
         ['guiding_function', True, ['learner', 'optimiser',
-                                     'guiding_function']],
+                                    'guiding_function']],
         ['given_tgt_order', True, ['learner', 'target_order']],
         ['fs_sel_method', False, ['learner', 'minfs_selection_method']],
         ['fs_masking', False, ['learner', 'minfs_masking']],
