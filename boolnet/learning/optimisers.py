@@ -127,7 +127,6 @@ class HC(RestartLocalSearch):
             restarts=None)
 
     def accept(self, new_error, current_error):
-        oldest_error = self.costs.popleft()
         if self.is_as_good(new_error, current_error):
             return True
 
