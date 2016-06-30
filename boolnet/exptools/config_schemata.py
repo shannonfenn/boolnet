@@ -34,6 +34,15 @@ def permutation(l):
     return l
 
 
+def integer_multiplier_string(msg=None):
+    def f(v):
+        if re.fullmatch("[1-9][0-9]*n", str(v)):
+            return str(v)
+        else:
+            raise Invalid(msg or ("invalid integer multiplier string"))
+    return f
+
+
 guiding_functions = fn.scalar_function_names()
 
 
@@ -88,7 +97,8 @@ sampling_schema = Any(
 network_schema = All(
     Schema({
         'method':       'generated',
-        'Ng':           All(int, Range(min=1)),
+        'Ng':           Any(All(int, Range(min=1)),
+                            integer_multiplier_string()),
         'node_funcs':   [All(int, Range(min=0, max=15))]
         },
         required=True),

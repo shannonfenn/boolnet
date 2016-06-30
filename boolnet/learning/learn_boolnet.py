@@ -67,8 +67,15 @@ def learn_bool_net(parameters):
     learner_params = parameters['learner']
     optimiser_params = parameters['learner']['optimiser']
 
-    learner_params['training_set'] = build_training_set(parameters['mapping'])
+    training_set = build_training_set(parameters['mapping'])
+    learner_params['training_set'] = training_set
     learner_params['gate_generator'] = random_network
+
+    # Handle flexible network size
+    if str(learner_params['network']['Ng']).endswith('n'):
+        n = int(str(learner_params['network']['Ng'])[:-1])
+        Ng = n * training_set.No
+        learner_params['network']['Ng'] = Ng
 
     learner = LEARNERS[learner_params['name']]
     optimiser = OPTIMISERS[optimiser_params['name']]
