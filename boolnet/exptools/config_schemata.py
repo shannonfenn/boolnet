@@ -2,6 +2,7 @@ from voluptuous import (
     Schema, In, All, Any, Range, IsDir, ALLOW_EXTRA,
     message, Optional, Exclusive, Length, Invalid)
 import boolnet.bintools.functions as fn
+import re
 
 
 def conditionally_required(trigger_key, trigger_val, required_key):
