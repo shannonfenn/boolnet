@@ -37,7 +37,7 @@ class BasicLearner:
         # Instance
         self.problem_matrix = parameters['training_set']
         self.Ni = self.problem_matrix.Ni
-        self.No = self.problem_matrix.shape[0] - self.Ni
+        self.No = self.problem_matrix.No
         self.input_matrix, self.target_matrix = np.split(
             self.problem_matrix, [self.Ni])
         self.Ne = self.problem_matrix.Ne

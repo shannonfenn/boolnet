@@ -29,6 +29,10 @@ class BitPackedMatrix(np.ndarray):
         self.Ne = getattr(obj, 'Ne', None)
         self.Ni = getattr(obj, 'Ni', None)
 
+    @property
+    def No(self):
+        return self.shape[0] - self.Ni
+
     def __reduce__(self):
         # Get the parent's __reduce__ tuple
         pickled_state = super(BitPackedMatrix, self).__reduce__()
