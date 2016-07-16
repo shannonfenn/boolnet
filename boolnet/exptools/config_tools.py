@@ -168,13 +168,15 @@ def split_variables_from_base(settings):
 
 def update_seeding(settings):
     for context in ['sampling', 'learner']:
-        seed = settings['seeding'][context]
-        if seed == 'shared':
-            random.seed()  # use default randomness source to get a seed
-            seed = random.randint(1, 2**32-1)
-        elif seed == 'unique':
-            seed = None  # this will cause seed() to reload for each instance
-        settings['base_config'][context]['seed'] = seed
+        # only override if not set lower down
+        if 'seed' not in settings['base_config'][context]:
+            seed = settings['seeding'][context]
+            if seed == 'shared':
+                random.seed()  # use default randomness source to get a seed
+                seed = random.randint(1, 2**32-1)
+            elif seed == 'unique':
+                seed = None  # this will cause seed() to reload for each instance
+            settings['base_config'][context]['seed'] = seed
 
 
 def insert_default_log_keys(settings):
