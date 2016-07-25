@@ -147,7 +147,7 @@ def build_result_map(parameters, learner_result):
         (guiding_function, target_order, 'guiding'),
         (fn.E1, target_order, 'e1'),
         (fn.E1_MCC, target_order, 'e1_mcc'),
-        (fn.ACCURACY, target_order, 'accuracy'),
+        (fn.CORRECTNESS, target_order, 'correctness'),
         (fn.PER_OUTPUT_ERROR, target_order, 'per_output_error'),
         (fn.PER_OUTPUT_MCC, target_order, 'per_output_mcc')]
 
@@ -161,11 +161,11 @@ def build_result_map(parameters, learner_result):
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
         'trg_error':    train_state.function_value('e1'),
-        'trg_acc':      train_state.function_value('accuracy'),
+        'trg_cor':      train_state.function_value('correctness'),
         'trg_mcc':      train_state.function_value('e1_mcc'),
         'trg_err_gf':   train_state.function_value('guiding'),
         'test_error':   test_state.function_value('e1'),
-        'test_acc':     test_state.function_value('accuracy'),
+        'test_cor':     test_state.function_value('correctness'),
         'test_mcc':     test_state.function_value('e1_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,

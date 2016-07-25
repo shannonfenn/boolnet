@@ -7,7 +7,7 @@ def all_functions():
 
 def scalar_functions():
     return [E1, E2, E3, E4, E5, E6, E7,
-            ACCURACY, E1_MCC, E2_MCC, E6_MCC]
+            CORRECTNESS, E1_MCC, E2_MCC, E6_MCC]
 
 
 def per_output_functions():
@@ -34,7 +34,7 @@ def function_from_name(name):
     elif name == 'e5':                  return E5
     elif name == 'e6':                  return E6
     elif name == 'e7':                  return E7
-    elif name == 'accuracy':            return ACCURACY
+    elif name == 'correctness':         return CORRECTNESS
     elif name == 'e1_mcc':              return E1_MCC
     elif name == 'e2_mcc':              return E2_MCC
     elif name == 'e6_mcc':              return E6_MCC
@@ -51,7 +51,7 @@ def function_name(function_id):
     elif function_id == E5:                 return 'e5'
     elif function_id == E6:                 return 'e6'
     elif function_id == E7:                 return 'e7'
-    elif function_id == ACCURACY:           return 'accuracy'
+    elif function_id == CORRECTNESS:        return 'correctness'
     elif function_id == E1_MCC:             return 'e1_mcc'
     elif function_id == E2_MCC:             return 'e2_mcc'
     elif function_id == E6_MCC:             return 'e6_mcc'
@@ -63,7 +63,7 @@ def function_name(function_id):
 def is_minimiser(function_id):
     if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR]:
         return True
-    elif function_id in [ACCURACY, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
+    elif function_id in [CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return False
     else:
         raise ValueError('No function id \'{}\''.format(function_id))
@@ -72,7 +72,7 @@ def is_minimiser(function_id):
 def optimum(function_id):
     if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR]:
         return 0.0
-    elif function_id in [ACCURACY, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
+    elif function_id in [CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return 1.0
     else:
         raise ValueError('No function id \'{}\''.format(function_id))

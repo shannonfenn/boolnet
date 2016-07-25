@@ -22,7 +22,7 @@ CHAINED_EVALUATORS = {
     fn.E1_MCC: ChainedMeanMCC,
     fn.E2_MCC: ChainedE2MCC,
     fn.E6_MCC: ChainedE6MCC,
-    fn.ACCURACY: ChainedAccuracy,
+    fn.CORRECTNESS: ChainedCorrectness,
     fn.PER_OUTPUT_ERROR: ChainedPerOutputMean,
     fn.PER_OUTPUT_MCC: ChainedPerOutputMCC
 }
@@ -41,7 +41,7 @@ cdef class ChainedEvaluator:
         self.order = np.array(feature_order)
 
 
-cdef class ChainedAccuracy(ChainedEvaluator):
+cdef class ChainedCorrectness(ChainedEvaluator):
     def __init__(self, size_t Ne, size_t No, size_t cols, size_t[:] feature_order):
         super().__init__(Ne, No, cols, feature_order)
         self.divisor = Ne

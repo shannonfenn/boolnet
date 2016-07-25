@@ -31,7 +31,7 @@ cdef class ChainedPerOutputMean(ChainedEvaluator):
     cpdef double[:] final_evaluation(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class ChainedAccuracy(ChainedEvaluator):
+cdef class ChainedCorrectness(ChainedEvaluator):
     cdef:
         packed_type_t[:] row_disjunction
         np.uint64_t accumulator

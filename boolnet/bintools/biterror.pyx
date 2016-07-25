@@ -20,7 +20,7 @@ EVALUATORS = {
     fn.E1_MCC: MeanMCC,
     fn.E2_MCC: StandardE2MCC,
     fn.E6_MCC: StandardE6MCC,
-    fn.ACCURACY: Accuracy,
+    fn.CORRECTNESS: Correctness,
     fn.PER_OUTPUT_ERROR: PerOutputMean,
     fn.PER_OUTPUT_MCC: PerOutputMCC
 }
@@ -132,7 +132,7 @@ cdef class MeanMCC(Evaluator):
         return sum(self.per_output_evaluator.evaluate(E, T)) / <double>self.No
 
 
-cdef class Accuracy(Evaluator):
+cdef class Correctness(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
         self.row_disjunction = np.zeros(self.cols, dtype=packed_type)

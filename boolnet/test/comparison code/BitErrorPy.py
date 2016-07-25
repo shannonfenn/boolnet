@@ -17,7 +17,7 @@ class Function(Enum):
     E6L = 13,
     E7M = 6,     # worst example
     E7L = 7,
-    ACCURACY = 14,
+    CORRECTNESS = 14,
     PER_OUTPUT = 15,
 
     def __str__(self):
@@ -43,7 +43,7 @@ E6M = Function.E6M
 E6L = Function.E6L
 E7M = Function.E7M
 E7L = Function.E7L
-ACCURACY = Function.ACCURACY
+CORRECTNESS = Function.CORRECTNESS
 PER_OUTPUT = Function.PER_OUTPUT
 
 
@@ -100,7 +100,7 @@ def function_value(error_matrix, metric):
     if metric == E2L:
         return np.dot(error_matrix, lsb_vector).mean() / weight_denominator
 
-    if metric == ACCURACY:
+    if metric == CORRECTNESS:
         return 1.0 - np.mean(np.any(error_matrix, axis=1))
 
     if metric == E3M:
