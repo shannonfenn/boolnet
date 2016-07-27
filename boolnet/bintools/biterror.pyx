@@ -66,7 +66,7 @@ cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN):
 
 
 cdef bint is_permutation(size_t[:] P, size_t No):
-    return len(P) == No  and min(P) == 0  and max(P) == No - 1 and len(np.unique(P)) == No
+    return len(P) == No and min(P) == 0 and max(P) == No - 1 and len(np.unique(P)) == No
 
 
 cdef class Evaluator:
