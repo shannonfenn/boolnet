@@ -153,7 +153,11 @@ learner_schema = Schema(
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
             'seed':         Any(None, All(int, Range(min=0))),
-            Optional('minfs_selection_method'): str,
+            Optional('minfs_selection_method'): Any(
+                'cardinality>first', 'cardinality>random',
+                'cardinality>entropy',
+                'cardinality>feature_diversity',
+                'cardinality>pattern_diversity'),
             Optional('minfs_masking'):          bool
             },
             required=True),

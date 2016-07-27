@@ -3,7 +3,7 @@ from itertools import combinations
 from collections import defaultdict
 from scipy.stats import entropy
 # from boolnet.learning.fs_solver_numberjack import all_minimum_feature_sets as all_minfs
-from boolnet.learning.fs_solver_ortools import all_minimum_feature_sets as all_minfs
+import boolnet.learning.fs_solver_ortools as fss
 
 
 def diversity(patterns):
@@ -44,23 +44,25 @@ def best_feature_set(features, target, method):
     method      - <string> which method to use to pick best feature set.
     returns     - <1D numpy array> feature indices representing best FS
                   according to given method.'''
-    if method == 'cardinality':
-        feature_sets = all_minfs(features, target)
+    if method == 'cardinality>first':
+        return fss.single_minimum_feature_set(features, target)
+    elif method == 'cardinality>random':
+        feature_sets = fss.all_minimum_feature_sets(features, target)
         rand_index = np.random.randint(len(feature_sets))
         return feature_sets[rand_index], 0
     elif method == 'cardinality>entropy':
-        feature_sets = all_minfs(features, target)
+        feature_sets = fss.all_minimum_feature_sets(features, target)
         entropies = [feature_set_entropy(features, fs) for fs in feature_sets]
         best_fs = np.argmax(entropies)
         return feature_sets[best_fs], entropies[best_fs]
     elif method == 'cardinality>feature_diversity':
-        feature_sets = all_minfs(features, target)
+        feature_sets = fss.all_minimum_feature_sets(features, target)
         feature_diversities = [feature_diversity(features, fs)
                                for fs in feature_sets]
         best_fs = np.argmax(feature_diversities)
         return feature_sets[best_fs], feature_diversities[best_fs]
     elif method == 'cardinality>pattern_diversity':
-        feature_sets = all_minfs(features, target)
+        feature_sets = fss.all_minimum_feature_sets(features, target)
         pattern_diversities = [pattern_diversity(features, fs)
                                for fs in feature_sets]
         best_fs = np.argmax(pattern_diversities)
