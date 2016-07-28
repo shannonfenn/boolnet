@@ -34,22 +34,22 @@ learner:
 ...''')
 
 
-log_keys = {
-    'learner':          (True,  ['learner', 'name']),
-    'config_num':       (True,  ['configuration_number']),
-    'trg_set_num':      (True,  ['training_set_number']),
-    'tfs':              (True,  ['learner', 'network', 'node_funcs']),
-    'trg_indices':      (True,  ['mapping', 'training_indices']),
-    'guiding_function': (True,  ['learner', 'optimiser', 'guiding_function']),
-    'fs_sel_method':    (False, ['learner', 'minfs_selection_method']),
-    'fs_masking':       (False, ['learner', 'minfs_masking']),
-    'given_tgt_order':  (False, ['learner', 'target_order']),
-    'opt_{}':           (False, ['learner', 'optimiser', '.*']),
-}
-log_keys_just_paths = {k: v[1] for k, v in log_keys.items()}
+log_keys = [
+    ('learner', True,  ['learner', 'name']),
+    ('config_num', True,  ['configuration_number']),
+    ('trg_set_num', True,  ['training_set_number']),
+    ('tfs', True,  ['learner', 'network', 'node_funcs']),
+    ('trg_indices', True,  ['mapping', 'training_indices']),
+    ('guiding_function', True,  ['learner', 'optimiser', 'guiding_function']),
+    ('fs_sel_method', False, ['learner', 'minfs_selection_method']),
+    ('fs_masking', False, ['learner', 'minfs_masking']),
+    ('given_tgt_order', False, ['learner', 'target_order']),
+    ('opt_{}', False, ['learner', 'optimiser', '.*']),
+]
+log_keys_just_paths = [(entry[0], entry[2]) for entry in log_keys]
 
 
-def test_paths_with_values():
+def test_path_value_pairs():
     expected = sorted([
         (['data', 'bits'], 4),
         (['data', 'operator'], 'add'),
@@ -68,7 +68,7 @@ def test_paths_with_values():
         (['learner', 'optimiser', 'name'], 'LAHC'),
         (['learner', 'name'], 'basic'),
         (['name'], 'varNe_add4_all_short')])
-    actual = sorted(cf.paths_with_values(config))
+    actual = sorted(cf.path_value_pairs(config))
     assert expected == actual
 
 

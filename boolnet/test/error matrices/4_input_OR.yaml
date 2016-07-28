@@ -14,7 +14,7 @@ tests:
   - {order: 'msb', function: 'e6', value: 0.9375}
   - {order: 'lsb', function: 'e7', value: 1.0}
   - {order: 'msb', function: 'e7', value: 1.0}
-  - {order: 'lsb', function: 'accuracy', value: 0.0625}
+  - {order: 'lsb', function: 'correctness', value: 0.0625}
   - {order: 'lsb', function: 'e1_mcc', value: -0.875}
   - {order: 'lsb', function: 'e2_mcc', value: -0.875}
   - {order: 'msb', function: 'e2_mcc', value: -0.875}

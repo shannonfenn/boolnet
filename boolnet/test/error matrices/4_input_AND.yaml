@@ -19,6 +19,6 @@ tests:
   - {order: 'msb', function: 'e2_mcc', value: 0.875}
   - {order: 'lsb', function: 'e6_mcc', value: 0.875}
   - {order: 'msb', function: 'e6_mcc', value: 0.875}
-  - {order: 'lsb', function: 'accuracy', value: 0.9375}
+  - {order: 'lsb', function: 'correctness', value: 0.9375}
   - {order: 'lsb', function: 'per_output_error', value: [0.0625]}
   - {order: 'lsb', function: 'per_output_mcc', value: [0.875]}
