@@ -124,10 +124,10 @@ class StratifiedLearner(BasicLearner):
     def _setup(self, optimiser, parameters):
         super()._setup(optimiser, parameters)
         # Required
-        self.mfs_method = parameters['minfs_selection_method']
         self.auto_target = (parameters['target_order'] == 'auto')
         # Optional
         self.use_minfs_selection = parameters.get('minfs_masking', False)
+        self.mfs_method = parameters.get('minfs_selection_method', None)
         # Initialise
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
