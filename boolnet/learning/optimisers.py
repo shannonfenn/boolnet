@@ -199,14 +199,12 @@ class LAHC(RestartLocalSearch):
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()
-        if self.is_as_good(new_error, current_error):
+        if (self.is_as_good(new_error, current_error) or
+           self.is_better(new_error, oldest_error)):
             self.costs.append(new_error)
             return True
-        elif self.is_better(new_error, oldest_error):
-            self.costs.append(min(new_error, self.costs[-1]))
-            return True
         else:
-            self.costs.append(min(oldest_error, self.costs[-1]))
+            self.costs.append(current_error)
             return False
 
 
