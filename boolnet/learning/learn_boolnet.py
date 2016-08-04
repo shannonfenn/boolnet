@@ -60,7 +60,7 @@ def build_training_set(mapping):
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
-    seed = seed_rng(parameters['learner']['seed'])
+    seed = seed_rng(parameters['learner'].get('seed', None))
     # if no given seed then store to allow reporting in results
     parameters['learner']['seed'] = seed
 
