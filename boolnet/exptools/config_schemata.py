@@ -47,6 +47,8 @@ def integer_multiplier_string(msg=None):
 guiding_functions = fn.scalar_function_names()
 
 
+seed_schema = Any(None, str, All(int, Range(min=0)))
+
 data_schema = Any(
     # generated from operator
     Schema({
@@ -72,7 +74,7 @@ sampling_schema = Any(
         'type': 'generated',
         'Ns':   All(int, Range(min=1)),
         'Ne':   All(int, Range(min=1)),
-        'seed': All(int, Range(min=0))
+        'seed': seed_schema
         },
         required=True),
     # read from file
@@ -81,7 +83,7 @@ sampling_schema = Any(
         'filename':         str,
         Optional('dir'):    IsDir(),
         # allow for now, but don't force
-        Optional('seed'):   Any(None, All(int, Range(min=0))),
+        Optional('seed'):   seed_schema,
         },
         required=True),
     # given in config file
@@ -89,7 +91,7 @@ sampling_schema = Any(
         'type':             'given',
         'indices':          [[All(int, Range(min=0))]],
         # allow for now, but don't force
-        Optional('seed'):   Any(None, All(int, Range(min=0))),
+        Optional('seed'):   seed_schema,
         },
         required=True)
     )
@@ -193,20 +195,10 @@ instance_schema = Schema({
 
 
 # ########## Schemata for base configs ########## #
-
-
-seeding_schema = Schema({
-    # may be 'shared', 'unique' or any non-negative integer
-    'sampling': Any('shared', 'unique', All(int, Range(min=0))),
-    'learner':  Any('shared', 'unique', All(int, Range(min=0)))
-    })
-
-
 list_msg = '\'list\' must be a sequence of mappings.'
 prod_msg = '\'product\' must be a length 2 sequence of sequences of mappings.'
 experiment_schema = Schema({
     'name':                     str,
-    'seeding':                  seeding_schema,
     # Must be any dict
     'base_config':              Schema({}, extra=ALLOW_EXTRA),
     # only one of 'list_config' or 'product_config' are allowed

@@ -12,6 +12,21 @@ import boolnet.bintools.packing as pk
 import boolnet.bintools.operator_iterator as op
 
 
+def get_seed(key):
+    ''' Keeps a registry of seeds for each key, if given a new
+        key get_seed() generates a new seed for that key, but if
+        given an existing key it returns that seed. Allows any number
+        of named seeds.'''
+    if 'registry' not in get_seed.__dict__:
+        # first call, create the registry
+        get_seed.registry = {}
+    if key not in get_seed.registry:
+        # non-existant key, generate a seed
+        random.seed()  # use default randomness source to get a seed
+        get_seed.registry[key] = random.randint(1, 2**32-1)
+    return get_seed.registry[key]
+
+
 # to signal schema validation failure
 # (with custom message formatting)
 class ValidationError(Exception):
@@ -72,8 +87,11 @@ def load_samples(params, N, Ni):
         # of training indices across multiple configurations
         Ns = params['Ns']
         Ne = params['Ne']
-        seed = params['seed']
-        random.seed(seed)
+        s = params['seed']
+        if isinstance(s, str):
+            # s is actually a name
+            s = get_seed(s)
+        random.seed(s)
         training_indices = np.array([
             random.sample(range(N), Ne) for i in range(Ns)])
     return training_indices
@@ -166,19 +184,6 @@ def split_variables_from_base(settings):
     return variable_sets, settings['base_config']
 
 
-def update_seeding(settings):
-    for context in ['sampling', 'learner']:
-        # only override if not set lower down
-        if 'seed' not in settings['base_config'][context]:
-            seed = settings['seeding'][context]
-            if seed == 'shared':
-                random.seed()  # use default randomness source to get a seed
-                seed = random.randint(1, 2**32-1)
-            elif seed == 'unique':
-                seed = None  # this will cause seed() to reload for each instance
-            settings['base_config'][context]['seed'] = seed
-
-
 def insert_default_log_keys(settings):
     defaults = [
         ['learner', True, ['learner', 'name']],
@@ -209,8 +214,6 @@ def generate_configurations(settings):
             'Top-level config invalid: {}\nerror: {}\npath: {}'.format(
                 err, err.error_message, err.path))
 
-    # insert seed values into base config
-    update_seeding(settings)
     # insert default log_keys values into base config
     insert_default_log_keys(settings)
 
