@@ -45,7 +45,7 @@ def best_feature_set(features, target, method):
     returns     - <1D numpy array> feature indices representing best FS
                   according to given method.'''
     if method == 'cardinality>first':
-        return fss.single_minimum_feature_set(features, target)
+        return fss.single_minimum_feature_set(features, target), 0
     elif method == 'cardinality>random':
         feature_sets = fss.all_minimum_feature_sets(features, target)
         rand_index = np.random.randint(len(feature_sets))
