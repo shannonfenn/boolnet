@@ -1,6 +1,6 @@
 from voluptuous import (
-    Schema, In, All, Any, Range, IsDir, ALLOW_EXTRA,
-    message, Optional, Exclusive, Length, Invalid)
+    Schema, message, All, Any, Range, IsDir, ALLOW_EXTRA,
+    In, Optional, Required, Exclusive, Length, Invalid)
 import boolnet.bintools.functions as fn
 import re
 
@@ -154,7 +154,8 @@ learner_schema = Schema(
             'network':      network_schema,
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
-            'seed':         Any(None, All(int, Range(min=0))),
+            Required('seed', default=None): Any(
+                None, All(int, Range(min=0))),
             Optional('minfs_selection_method'): Any(
                 'cardinality>first', 'cardinality>random',
                 'cardinality>entropy',
