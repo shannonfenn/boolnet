@@ -91,6 +91,7 @@ def load_samples(params, N, Ni):
         if isinstance(s, str):
             # s is actually a name
             s = get_seed(s)
+            params['seed'] = s
         random.seed(s)
         training_indices = np.array([
             random.sample(range(N), Ne) for i in range(Ns)])
