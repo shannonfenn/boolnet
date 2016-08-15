@@ -110,6 +110,12 @@ cdef class BNState:
             # conversion to list prevents silly copy bugs
             return list(self.err_evaluators.keys())
 
+    cpdef connected_gates(self):
+        return self.network.connected_gates()
+
+    cpdef connected_sources(self):
+        return self.network.connected_sources()
+
     cpdef add_function(self, Function function, size_t[:] order, name=''):
        pass
 
