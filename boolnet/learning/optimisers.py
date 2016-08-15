@@ -233,9 +233,9 @@ class LAHC_perc(LAHC):
 
     def _percolate(self, state):
         Ni, No = state.Ni, state.No
-        gates = state.gates
+        gates = np.array(state.gates)
         G = self._build_digraph(state)
-        connected = state.connected_sources()
+        connected = np.array(state.connected_sources())
 
         # build a network with only the connected nodes remaining
         G.remove_nodes_from(np.flatnonzero(connected == 0))
@@ -247,21 +247,22 @@ class LAHC_perc(LAHC):
                 percolated_nodes[i].append(percolated_nodes[i][0])
         percolated_internal_nodes = percolated_nodes[Ni:-No]
         percolated_output_nodes = percolated_nodes[-No:]
-        new_gates = np.full_like(gates, -1)
+        new_gates = np.array(gates)
 
         Ng_prc_internal = len(percolated_internal_nodes)
 
         # swap the the activation functions around
-        prc_gate_idxs = np.flatnonzero(connected[Ni:])
-        oth_gate_idxs = np.flatnonzero(connected[Ni:] == 0)
+        prc_gate_idxs = np.flatnonzero(connected[Ni:-No])
+        oth_gate_idxs = np.flatnonzero(connected[Ni:-No] == 0)
         new_gates[:Ng_prc_internal, 2] = gates[prc_gate_idxs, 2]
-        new_gates[:Ng_prc_internal, 2] = gates[oth_gate_idxs, 2]
+        new_gates[Ng_prc_internal:-No, 2] = gates[oth_gate_idxs, 2]
+        new_gates[Ng_prc_internal:-No, 2] = gates[oth_gate_idxs, 2]
 
         # copy the internal percolated nodes into the first block
         new_gates[:Ng_prc_internal, :2] = np.array(percolated_internal_nodes)
         # copy the percolated outputs back into the last No positions
         new_gates[-No:, :2] = np.array(percolated_output_nodes)
-
+       
         state.set_gates(new_gates)
 
     def _optimise(self, state):
