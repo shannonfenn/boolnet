@@ -210,7 +210,7 @@ class LAHC(RestartLocalSearch):
             return False
 
 
-class percLAHC(LAHC):
+class LAHC_perc(LAHC):
 
     def initialise(self, parameters):
         super().initialise(parameters)
