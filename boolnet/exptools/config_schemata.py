@@ -140,6 +140,16 @@ optimiser_schema = Any(
         'guiding_function':         In(guiding_functions),
         Optional('max_restarts'):   All(int, Range(min=0))
         },
+        required=True),
+    # LAHC with periodic percolation
+    Schema({
+        'name':                     'LAHC_perc',
+        'cost_list_length':         All(int, Range(min=1)),
+        'max_iterations':           All(int, Range(min=1)),
+        'percolation_period':       All(int, Range(min=1)),
+        'guiding_function':         In(guiding_functions),
+        Optional('max_restarts'):   All(int, Range(min=0))
+        },
         required=True)
     )
 

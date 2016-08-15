@@ -4,6 +4,8 @@ from copy import copy
 from itertools import chain, repeat
 from collections import deque, namedtuple
 import operator as op
+import numpy as np
+import networkx as nx
 import sys
 import logging
 
@@ -164,6 +166,130 @@ class LAHC(RestartLocalSearch):
 
         # optimisation loop
         for iteration in range(self.max_iterations):
+            # perform random move
+            self.move(state)
+            # calculate error for new state
+            new_error = self.guiding_function(state)
+
+            # Keep best state seen
+            if new_error < best_error:
+                best_error = new_error
+                best_representation = copy(state.representation)
+                best_iteration = iteration
+
+            # Determine whether to accept the new state
+            if self.accept(new_error, error):
+                error = new_error
+            else:
+                self.undo_move(state)
+
+            # Clear the move history to save memory and prevent accidentally
+            # undoing accepted moves later
+            state.clear_history()
+
+            # Stop on user defined condition
+            if self.stopping_criterion(state, best_error):
+                self.reached_stopping_criterion = True
+                break
+
+        return OptimiserResult(
+            representation=best_representation,
+            error=best_error,
+            best_iteration=best_iteration,
+            iteration=iteration,
+            restarts=None)
+
+    def accept(self, new_error, current_error):
+        oldest_error = self.costs.popleft()
+        if (self.is_as_good(new_error, current_error) or
+           self.is_better(new_error, oldest_error)):
+            self.costs.append(new_error)
+            return True
+        else:
+            self.costs.append(current_error)
+            return False
+
+
+class percLAHC(LAHC):
+
+    def initialise(self, parameters):
+        super().initialise(parameters)
+        try:
+            self.perc_period = parameters['percolation_period']
+        except KeyError:
+            print('Optimiser parameters missing!', file=sys.stderr)
+            raise
+
+    def _build_digraph(self, state):
+        G = nx.DiGraph()
+        Ni = state.Ni
+        G.add_nodes_from(range(Ni))
+        edges = []
+        for g, gate in enumerate(state.gates):
+            edges.append((gate[0], g + Ni))
+            edges.append((gate[1], g + Ni))
+        G.add_edges_from(edges)
+        return G
+
+    def _percolate(self, state):
+        Ni, No = state.Ni, state.No
+        gates = state.gates
+        G = self._build_digraph(state)
+        connected = state.connected_sources()
+
+        # build a network with only the connected nodes remaining
+        G.remove_nodes_from(np.flatnonzero(connected == 0))
+        G_percolated = nx.convert_node_labels_to_integers(G)
+        percolated_nodes = G_percolated.reverse().adjacency_list()
+        # double any singleton entries
+        for i in range(len(percolated_nodes)):
+            if len(percolated_nodes[i]) == 1:
+                percolated_nodes[i].append(percolated_nodes[i][0])
+        percolated_internal_nodes = percolated_nodes[Ni:-No]
+        percolated_output_nodes = percolated_nodes[-No:]
+        new_gates = np.full_like(gates, -1)
+
+        Ng_prc_internal = len(percolated_internal_nodes)
+
+        # swap the the activation functions around
+        prc_gate_idxs = np.flatnonzero(connected[Ni:])
+        oth_gate_idxs = np.flatnonzero(connected[Ni:] == 0)
+        new_gates[:Ng_prc_internal, 2] = gates[prc_gate_idxs, 2]
+        new_gates[:Ng_prc_internal, 2] = gates[oth_gate_idxs, 2]
+
+        # copy the internal percolated nodes into the first block
+        new_gates[:Ng_prc_internal, :2] = np.array(percolated_internal_nodes)
+        # copy the percolated outputs back into the last No positions
+        new_gates[-No:, :2] = np.array(percolated_output_nodes)
+
+        state.set_gates(new_gates)
+
+    def _optimise(self, state):
+        # Calculate initial error
+        error = self.guiding_function(state)
+
+        # set up aspiration criteria
+        best_error = error
+        best_representation = copy(state.representation)
+        best_iteration = 0
+
+        # initialise cost list
+        self.costs = deque(repeat(error, self.cost_list_len))
+
+        if self.stopping_criterion(state, best_error):
+            self.reached_stopping_criterion = True
+            return OptimiserResult(
+                representation=best_representation, error=best_error,
+                best_iteration=0, iteration=0, restarts=None)
+        else:
+            self.reached_stopping_criterion = False
+
+        # optimisation loop
+        for iteration in range(self.max_iterations):
+
+            if iteration % self.perc_period == self.perc_period - 1:
+                self._percolate(state)
+
             # perform random move
             self.move(state)
             # calculate error for new state
