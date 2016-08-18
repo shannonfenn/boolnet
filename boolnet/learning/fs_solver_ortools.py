@@ -10,7 +10,7 @@ import numpy as np
 def single_minimum_feature_set(features, target):
     if np.all(target) or not np.any(target):
         # constant target
-        return [list(range(features.shape[1]))]
+        return list(range(features.shape[1]))
     coverage = build_coverage(features, target)
     _, solution = mink(coverage)
     return solution
