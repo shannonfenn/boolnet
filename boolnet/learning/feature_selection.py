@@ -46,30 +46,31 @@ def best_feature_set(features, target, method):
                   according to given method.'''
     if method == 'cardinality>first':
         return fss.single_minimum_feature_set(features, target), 0
-    elif method == 'cardinality>random':
-        feature_sets = fss.all_minimum_feature_sets(features, target)
-        rand_index = np.random.randint(len(feature_sets))
-        return feature_sets[rand_index], 0
-    elif method == 'cardinality>entropy':
-        feature_sets = fss.all_minimum_feature_sets(features, target)
-        entropies = [feature_set_entropy(features, fs) for fs in feature_sets]
-        best_fs = np.argmax(entropies)
-        return feature_sets[best_fs], entropies[best_fs]
-    elif method == 'cardinality>feature_diversity':
-        feature_sets = fss.all_minimum_feature_sets(features, target)
-        feature_diversities = [feature_diversity(features, fs)
-                               for fs in feature_sets]
-        best_fs = np.argmax(feature_diversities)
-        return feature_sets[best_fs], feature_diversities[best_fs]
-    elif method == 'cardinality>pattern_diversity':
-        feature_sets = fss.all_minimum_feature_sets(features, target)
-        pattern_diversities = [pattern_diversity(features, fs)
-                               for fs in feature_sets]
-        best_fs = np.argmax(pattern_diversities)
-        return feature_sets[best_fs], pattern_diversities[best_fs]
     else:
-        raise ValueError('Invalid method for feature selection: {}'.format(
-            method))
+        feature_sets = fss.all_minimum_feature_sets(features, target)
+        if len(feature_sets) == 0:
+            # No feature sets exist - likely due to constant target
+            return [], None
+        elif method == 'cardinality>random':
+            rand_index = np.random.randint(len(feature_sets))
+            return feature_sets[rand_index], 0
+        elif method == 'cardinality>entropy':
+            entropies = [feature_set_entropy(features, fs) for fs in feature_sets]
+            best_fs = np.argmax(entropies)
+            return feature_sets[best_fs], entropies[best_fs]
+        elif method == 'cardinality>feature_diversity':
+            feature_diversities = [feature_diversity(features, fs)
+                                   for fs in feature_sets]
+            best_fs = np.argmax(feature_diversities)
+            return feature_sets[best_fs], feature_diversities[best_fs]
+        elif method == 'cardinality>pattern_diversity':
+            pattern_diversities = [pattern_diversity(features, fs)
+                                   for fs in feature_sets]
+            best_fs = np.argmax(pattern_diversities)
+            return feature_sets[best_fs], pattern_diversities[best_fs]
+        else:
+            raise ValueError('Invalid method for feature selection: {}'.format(
+                method))
 
 
 def ranked_feature_sets(features, targets, method):
