@@ -55,7 +55,8 @@ def best_feature_set(features, target, method):
             rand_index = np.random.randint(len(feature_sets))
             return feature_sets[rand_index], 0
         elif method == 'cardinality>entropy':
-            entropies = [feature_set_entropy(features, fs) for fs in feature_sets]
+            entropies = [feature_set_entropy(features, fs)
+                         for fs in feature_sets]
             best_fs = np.argmax(entropies)
             return feature_sets[best_fs], entropies[best_fs]
         elif method == 'cardinality>feature_diversity':

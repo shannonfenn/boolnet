@@ -213,7 +213,7 @@ class StratifiedLearner(BasicLearner):
                         raise e
                     except IndexError as e:
                         print(i, gate, gate[i], sources_map)
-                        raise e                        
+                        raise e
 
             accumulated_gates = np.vstack((base.gates[:-base.No, :],
                                            remapped_new_gates[:-new.No, :],

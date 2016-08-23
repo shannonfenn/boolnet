@@ -262,7 +262,7 @@ class LAHC_perc(LAHC):
         new_gates[:Ng_prc_internal, :2] = np.array(percolated_internal_nodes)
         # copy the percolated outputs back into the last No positions
         new_gates[-No:, :2] = np.array(percolated_output_nodes)
-       
+
         state.set_gates(new_gates)
 
     def _optimise(self, state):
