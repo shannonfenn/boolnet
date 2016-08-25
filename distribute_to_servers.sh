@@ -7,26 +7,20 @@ CIBM_SERVER=fisher
 UNI_SERVER=darwin15
 
 printf "distributing to ${GRN}$CIBM_SERVER${NC}\n"
-{
-  ssh -T $CIBM_SERVER << EOF
-  source scoop_setup.sh
-  cd /home/cibm01/shannon/sf/HMRI/code/boolnet
-  git pull
-  pip install -e .
+ssh -T $CIBM_SERVER << EOF
+source scoop_setup.sh
+cd /home/cibm01/shannon/sf/HMRI/code/boolnet
+git pull
+pip install -e .
 EOF
-} > cibm_server_build.log 2>&1
-tail -n 1 cibm_server_build.log
 
 printf "distributing to ${GRN}$UNI_SERVER${NC}\n"
-{
-  ssh -T $UNI_SERVER << EOF
-  source scoop_setup.sh
-  cd /home/cibm01/shannon/dar/HMRI/code/boolnet
-  git pull
-  pip install -e .
+ssh -T $UNI_SERVER << EOF
+source scoop_setup.sh
+cd /home/cibm01/shannon/dar/HMRI/code/boolnet
+git pull
+pip install -e .
 EOF
-} > uni_server_build.log 2>&1
-tail -n 1 uni_server_build.log
 
 printf "distributing ${MAG}runexp.py${NC}\n"
 scp runexp.py fisher:HMRI/scripts/
