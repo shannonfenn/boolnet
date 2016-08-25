@@ -150,6 +150,11 @@ class StratifiedLearner(BasicLearner):
             rank, feature_sets = mfs.ranked_feature_sets(
                 mfs_features, mfs_targets, self.mfs_method)
 
+            # replace empty feature sets
+            for i in range(len(feature_sets)):
+                if len(feature_sets[i]) == 0:
+                    feature_sets[i] = list(range(inputs.shape[0]))
+
             self.feature_sets[strata, not_learned] = feature_sets
 
             # randomly pick from top ranked targets
@@ -163,6 +168,9 @@ class StratifiedLearner(BasicLearner):
                 mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
                 fs = mfs.best_feature_set(mfs_features, mfs_target,
                                           self.mfs_method)
+                if len(fs) == 0:
+                    fs = list(range(inputs.shape[0]))
+
                 self.feature_sets[strata, t] = fs
             return t
 
