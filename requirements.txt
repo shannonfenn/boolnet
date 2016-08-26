@@ -7,3 +7,4 @@ progress
 instapush
 pyyaml
 scoop
+networkx
