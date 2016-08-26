@@ -218,15 +218,15 @@ class TestFunctionality:
         self.assert_feedforward(net)
 
     @mark.parametrize('repeats', range(3))
-    def test_shape_after_randomise(self, repeats, any_network):
-        net = copy(any_network['net'])
+    def test_shape_after_randomise(self, repeats, random_network):
+        net = copy(random_network)
         expected = net.gates.shape
         net.randomise()
         assert net.gates.shape == expected
 
     @mark.parametrize('repeats', range(3))
-    def test_different_after_randomise(self, repeats, any_network):
-        net = copy(any_network['net'])
+    def test_different_after_randomise(self, repeats, random_network):
+        net = copy(random_network)
         old_gates = np.array(net.gates)
         net.randomise()
         assert not np.array_equal(old_gates, net.gates)

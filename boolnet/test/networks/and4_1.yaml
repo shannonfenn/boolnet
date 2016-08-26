@@ -85,7 +85,7 @@ instances:
          - {function: e5, order: lsb, value: 0.0}
          - {function: e6, order: msb, value: 0.0}
          - {function: e6, order: lsb, value: 0.0}
-         - {function: accuracy, order: lsb, value: 1.0}
+         - {function: correctness, order: lsb, value: 1.0}
          - {function: e1_mcc, order: lsb, value: 1.0}
          - {function: per_output_error, order: lsb, value: [0.0]}
          - {function: per_output_mcc, order: lsb, value: [1.0]}
@@ -103,7 +103,7 @@ instances:
          - {function: e5, order: lsb, value: 0.0}
          - {function: e6, order: msb, value: 0.0}
          - {function: e6, order: lsb, value: 0.0}
-         - {function: accuracy, order: lsb, value: 1.0}
+         - {function: correctness, order: lsb, value: 1.0}
          - {function: e1_mcc, order: lsb, value: 1.0}
          - {function: per_output_error, order: lsb, value: [0.0]}
          - {function: per_output_mcc, order: lsb, value: [1.0]}
@@ -121,7 +121,7 @@ instances:
          - {function: e5, order: lsb, value: 0.0}
          - {function: e6, order: msb, value: 0.0}
          - {function: e6, order: lsb, value: 0.0}
-         - {function: accuracy, order: lsb, value: 1.0}
+         - {function: correctness, order: lsb, value: 1.0}
          - {function: e1_mcc, order: lsb, value: 1.0}
          - {function: per_output_error, order: lsb, value: [0.0]}
          - {function: per_output_mcc, order: lsb, value: [1.0]}

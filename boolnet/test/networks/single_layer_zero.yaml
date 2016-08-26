@@ -51,7 +51,7 @@ instances:
          - {function: e5, order: msb, value: 1.0}
          - {function: e6, order: lsb, value: 0.9375}
          - {function: e6, order: msb, value: 0.875}
-         - {function: accuracy, order: lsb, value: 0.125}
+         - {function: correctness, order: lsb, value: 0.125}
          - {function: e1_mcc, order: lsb, value: -0.625}
          - {function: per_output_error, order: lsb, value: [0.875, 0.75]}
          - {function: per_output_mcc, order: lsb, value: [-0.75, -0.5]}
@@ -69,7 +69,7 @@ instances:
          - {function: e5, order: msb, value: 1.0}
          - {function: e6, order: lsb, value: 0.8125}
          - {function: e6, order: msb, value: 0.875}
-         - {function: accuracy, order: lsb, value: 0.0}
+         - {function: correctness, order: lsb, value: 0.0}
          - {function: e1_mcc, order: lsb, value: -0.375}
          - {function: per_output_error, order: lsb, value: [0.625, 0.75]}
          - {function: per_output_mcc, order: lsb, value: [-0.25, -0.5]}
@@ -87,7 +87,7 @@ instances:
          - {function: e5, order: msb, value: 1.0}
          - {function: e6, order: lsb, value: 0.875}
          - {function: e6, order: msb, value: 0.875}
-         - {function: accuracy, order: lsb, value: 0.0625}
+         - {function: correctness, order: lsb, value: 0.0625}
          - {function: e1_mcc, order: lsb, value: -0.5}
          - {function: per_output_error, order: lsb, value: [0.75, 0.75]}
          - {function: per_output_mcc, order: lsb, value: [-0.5, -0.5]}
