@@ -108,7 +108,13 @@ def load_dataset(settings):
 
     training_indices = load_samples(settings['sampling'], N, Ni)
 
-    return [{**instance, 'training_indices': ind} for ind in training_indices]
+    contexts = []
+    for ind in training_indices:
+        context = instance.copy()
+        context.update({'training_indices': ind})
+        contexts.append(context)
+
+    return contexts
 
 
 def file_instance(params):
