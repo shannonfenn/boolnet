@@ -56,7 +56,7 @@ def mink(coverage):
     obj_coefficients = [1] * Nf
     lbounds = [0] * Nf
     ubounds = [1] * Nf
-    types = 'C' * Nf
+    types = 'I' * Nf
     feature_ids = list(range(Nf))
 
     sense = 'G' * Np
