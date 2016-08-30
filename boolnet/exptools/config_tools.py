@@ -212,7 +212,7 @@ def insert_default_log_keys(settings):
     return settings
 
 
-def generate_configurations(settings):
+def generate_configurations(settings, batch_mode):
     # validate the given schema
     try:
         sch.experiment_schema(settings)
@@ -231,9 +231,10 @@ def generate_configurations(settings):
     # Build up the configuration list
     configurations = []
 
-    bar = Bar('Generating configurations', max=len(variable_sets),
-              suffix='%(index)d/%(max)d : %(eta)ds')
-    bar.update()
+    if not batch_mode:
+        bar = Bar('Generating configurations', max=len(variable_sets),
+                  suffix='%(index)d/%(max)d : %(eta)ds')
+        bar.update()
     try:
         for config_num, variables in enumerate(variable_sets):
             # keep contexts isolated
@@ -251,20 +252,23 @@ def generate_configurations(settings):
             instances = load_dataset(context)
 
             configurations.append((context, instances))
-            bar.next()
+            if not batch_mode:
+                bar.next()
     finally:
         # clean up progress bar before printing anything else
-        bar.finish()
+        if not batch_mode:
+            bar.finish()
     return configurations
 
 
-def generate_tasks(configurations):
+def generate_tasks(configurations, batch_mode):
     # Build up the task list
     tasks = []
 
-    bar = Bar('Generating training tasks', max=len(configurations),
-              suffix='%(index)d/%(max)d : %(eta)ds')
-    bar.update()
+    if not batch_mode:
+        bar = Bar('Generating training tasks', max=len(configurations),
+                  suffix='%(index)d/%(max)d : %(eta)ds')
+        bar.update()
     try:
         for context, instances in configurations:
             # for each sample
@@ -273,8 +277,10 @@ def generate_tasks(configurations):
                 task['mapping'] = instance
                 task['training_set_number'] = i
                 tasks.append(task)
-            bar.next()
+            if not batch_mode:
+                bar.next()
     finally:
         # clean up progress bar before printing anything else
-        bar.finish()
+        if not batch_mode:
+            bar.finish()
     return tasks

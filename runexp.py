@@ -88,6 +88,8 @@ def parse_arguments():
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='HMRI/experiments/results',
                         help='directory to store results in (in own subdir).')
+    parser.add_argument('-b', '--batch-mode', action='store_true',
+                        help='suppress progress bars.')
 
     return parser.parse_args()
 
@@ -128,29 +130,33 @@ def initialise(args):
     return settings, result_dir
 
 
-def run_tasks(tasks, num_processes, out_stream):
+def run_tasks(tasks, num_processes, out_stream, batch_mode):
     out_stream.write('[')
     if num_processes == 1:
-        run_sequential(tasks, out_stream)
+        run_sequential(tasks, out_stream, batch_mode)
     elif num_processes < 1:
-        run_scooped(tasks, out_stream)
+        run_scooped(tasks, out_stream, batch_mode)
     else:
         # Run the actual learning as a parallel process
-        run_parallel(tasks, num_processes, out_stream)
+        run_parallel(tasks, num_processes, out_stream, batch_mode)
     out_stream.write(']')
 
 
-def run_parallel(tasks, num_processes, out_stream):
+def run_parallel(tasks, num_processes, out_stream, batch_mode):
     ''' runs the given configurations '''
     with Pool(processes=num_processes) as pool:
-        bar = Bar('Parallelised ({})'.format(num_processes),
-                  max=len(tasks), suffix='%(index)d/%(max)d : %(elapsed)ds')
-        bar.update()
+        if not batch_mode:
+            bar = Bar('Parallelised ({})'.format(num_processes),
+                      max=len(tasks),
+                      suffix='%(index)d/%(max)d : %(elapsed)ds')
+            bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
             cfg.dump_results_partial(result, out_stream, i == 0)
-            bar.next()
-        bar.finish()
+            if not batch_mode:
+                bar.next()
+        if not batch_mode:
+            bar.finish()
 
 
 def scoop_worker_wrapper(*args, **kwargs):
@@ -165,29 +171,35 @@ def scoop_worker_wrapper(*args, **kwargs):
         raise
 
 
-def run_scooped(tasks, out_stream):
+def run_scooped(tasks, out_stream, batch_mode):
     ''' runs the given configurations '''
     suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds'
-    bar = Bar('Scooped', max=len(tasks), suffix=suffix_fmt)
-    bar.update()
+    if not batch_mode:
+        bar = Bar('Scooped', max=len(tasks), suffix=suffix_fmt)
+        bar.update()
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
             scoop_worker_wrapper, tasks)):
         cfg.dump_results_partial(result, out_stream, i == 0)
-        bar.next()
-    bar.finish()
+        if not batch_mode:
+            bar.next()
+    if not batch_mode:
+        bar.finish()
 
 
-def run_sequential(tasks, out_stream):
+def run_sequential(tasks, out_stream, batch_mode):
     ''' runs the given configurations '''
-    bar = Bar('Sequential', max=len(tasks),
-              suffix='%(index)d/%(max)d : %(elapsed)ds')
-    bar.update()
+    if not batch_mode:
+        bar = Bar('Sequential', max=len(tasks),
+                  suffix='%(index)d/%(max)d : %(elapsed)ds')
+        bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
         cfg.dump_results_partial(result, out_stream, i == 0)
-        bar.next()
-    bar.finish()
+        if not batch_mode:
+            bar.next()
+    if not batch_mode:
+        bar.finish()
 
 
 # ############################## MAIN ####################################### #
@@ -209,10 +221,11 @@ def main():
 
         # generate learning tasks
         try:
-            configurations = cfg.generate_configurations(settings)
+            configurations = cfg.generate_configurations(settings,
+                                                         args.batch_mode)
             print('Done: {} configurations generated.'.format(
                 len(configurations)))
-            tasks = cfg.generate_tasks(configurations)
+            tasks = cfg.generate_tasks(configurations, args.batch_mode)
             print('Done: {} tasks generated.\n'.format(len(tasks)))
         except cfg.ValidationError as err:
             print(err)
@@ -224,7 +237,7 @@ def main():
         result_filename = os.path.join(result_dir, 'results.json')
         with open(result_filename, 'w') as results_stream:
             # Run the actual learning as a parallel process
-            run_tasks(tasks, args.numprocs, results_stream)
+            run_tasks(tasks, args.numprocs, results_stream, args.batch_mode)
 
         total_time = time() - start_time
 
