@@ -128,7 +128,7 @@ def file_instance(params):
 
     # build list of train/test set instances
     instance = {
-        'type': 'raw',
+        'type': 'raw_unsplit',
         'matrix': pk.BitPackedMatrix(Mp, N, Ni)
         }
 

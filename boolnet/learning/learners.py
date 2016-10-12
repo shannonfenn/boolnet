@@ -13,12 +13,13 @@ LearnerResult = namedtuple('LearnerResult', [
     'final_iterations', 'target_order', 'feature_sets', 'restarts'])
 
 
-def guiding_func_stop_criterion(func_id):
-    optimum = fn.optimum(func_id)
+def guiding_func_stop_criterion(func_id, limit=None):
+    if limit is None:
+        limit = fn.optimum(func_id)
     if fn.is_minimiser(func_id):
-        return lambda _, error: error <= optimum
+        return lambda _, error: error <= limit
     else:
-        return lambda _, error: error >= optimum
+        return lambda _, error: error >= limit
 
 
 def inverse_permutation(permutation):
@@ -65,8 +66,10 @@ class BasicLearner:
         self.gf_eval_name = 'guiding'
         self.opt_params['guiding_function'] = lambda x: x.function_value(
             self.gf_eval_name)
+        # Check if user supplied cutoff point
+        limit = parameters.get('stopping_error', None)
         self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(
-            self.guiding_func_id)
+            self.guiding_func_id, limit)
 
         if self.guiding_func_id not in fn.scalar_functions():
             raise ValueError('Invalid guiding function: {}'.format(gf_name))

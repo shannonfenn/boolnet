@@ -171,7 +171,8 @@ learner_schema = Schema(
                 'cardinality>entropy',
                 'cardinality>feature_diversity',
                 'cardinality>pattern_diversity'),
-            Optional('minfs_masking'):          bool
+            Optional('minfs_masking'):          bool,
+            Optional('stopping_error'):         float
             },
             required=True),
         # if target_order = auto then minfs_selection_method must be set

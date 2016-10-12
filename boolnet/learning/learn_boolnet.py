@@ -48,7 +48,9 @@ def random_network(Ng, Ni, node_funcs):
 
 
 def build_training_set(mapping):
-    if mapping['type'] == 'raw':
+    if mapping['type'] == 'raw_split':
+        return mapping['training_set']
+    elif mapping['type'] == 'raw_unsplit':
         return pk.sample_packed(mapping['matrix'], mapping['training_indices'])
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
@@ -104,21 +106,23 @@ def learn_bool_net(parameters):
 
 def build_states(mapping, gates, objectives):
     ''' objectives should be a list of (func_id, ordering, name) tuples.'''
-    if mapping['type'] == 'raw':
+    if mapping['type'] == 'raw_split':
+        M_trg = mapping['training_set']
+        M_test = mapping['test_set']
+        S_trg = netstate.StandardBNState(gates, M_trg)
+        S_test = netstate.StandardBNState(gates, M_test)
+    elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
         indices = mapping['training_indices']
         M_trg, M_test = pk.partition_packed(M, indices)
-
         S_trg = netstate.StandardBNState(gates, M_trg)
         S_test = netstate.StandardBNState(gates, M_test)
-
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
         operator = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
         window_size = mapping['window_size']
-
         S_trg = netstate.chained_from_operator(
             gates, indices, Nb, No, operator, window_size, exclude=False)
         S_test = netstate.chained_from_operator(
