@@ -60,6 +60,29 @@ def build_training_set(mapping):
         return gen.packed_from_operator(indices, Nb, No, operator)
 
 
+def add_noise(mapping, rate):
+    Ne, No = mapping.Ne, mapping.No
+
+    num_flips = int(np.round(mapping.Ne * rate))
+
+    if num_flips == 0:
+        # rather than complicating code to handle 0 flips
+        return 0
+    effective_rate = num_flips / Ne
+
+    noise_mask = np.zeros((Ne, No), dtype=np.uint8)
+    noise_mask[-num_flips:, :] = 1
+
+    for i in range(No):
+        np.random.shuffle(noise_mask[:, i])
+        noise_mask = pk.pack_bool_matrix(noise_mask)
+
+    # XOR will flip all bits where the noise mask is '1'
+    mapping[-No:, :] = np.bitwise_xor(mapping[-No:, :], noise_mask).astype(mapping.dtype)
+
+    return effective_rate
+
+
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
@@ -71,6 +94,11 @@ def learn_bool_net(parameters):
     optimiser_params = parameters['learner']['optimiser']
 
     training_set = build_training_set(parameters['mapping'])
+
+    if 'add_noise' in parameters['data']:
+        rate = add_noise(training_set, parameters['data']['noise'])
+        parameters['actual_noise'] = rate
+
     learner_params['training_set'] = training_set
     learner_params['gate_generator'] = random_network
 
@@ -165,6 +193,7 @@ def build_result_map(parameters, learner_result):
         'Ng':           final_network.Ng,
         'best_step':    learner_result.best_iterations,
         'steps':        learner_result.final_iterations,
+        'best_err':     learner_result.best_errors,
         'trg_error':    train_state.function_value('e1'),
         'trg_cor':      train_state.function_value('correctness'),
         'trg_mcc':      train_state.function_value('e1_mcc'),
@@ -196,6 +225,9 @@ def build_result_map(parameters, learner_result):
 
     if learner_result.restarts is not None:
         results['restarts'] = learner_result.restarts
+
+    if 'actual_noise' in parameters:
+        results['actual_noise'] = parameters['actual_noise']
 
     # multi-part results
     for bit, v in enumerate(train_state.function_value('per_output_error')):

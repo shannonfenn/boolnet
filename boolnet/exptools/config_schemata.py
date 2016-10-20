@@ -56,7 +56,8 @@ data_schema = Any(
         'operator':                 str,
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
-        Optional('window_size'):    All(int, Range(min=1))
+        Optional('window_size'):    All(int, Range(min=1)),
+        Optional('noise_rate'):     float
         },
         required=True),
     # read from file
@@ -64,6 +65,7 @@ data_schema = Any(
         'type':             'file',
         'filename':         str,
         Optional('dir'):    IsDir(),
+        Optional('noise_rate'):     float
         },
         required=True)
     )
