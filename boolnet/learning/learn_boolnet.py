@@ -96,7 +96,7 @@ def learn_bool_net(parameters):
     training_set = build_training_set(parameters['mapping'])
 
     if 'add_noise' in parameters['data']:
-        rate = add_noise(training_set, parameters['data']['noise'])
+        rate = add_noise(training_set, parameters['data']['add_noise'])
         parameters['actual_noise'] = rate
 
     learner_params['training_set'] = training_set
