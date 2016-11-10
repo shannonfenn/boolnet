@@ -169,8 +169,8 @@ class StratifiedLearner(BasicLearner):
                 # unpack inputs to minFS solver
                 mfs_features = unpack_bool_matrix(inputs, self.Ne)
                 mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
-                fs = mfs.best_feature_set(mfs_features, mfs_target,
-                                          self.mfs_method)
+                fs, _ = mfs.best_feature_set(mfs_features, mfs_target,
+                                             self.mfs_method)
                 if len(fs) == 0:
                     fs = list(range(inputs.shape[0]))
 
