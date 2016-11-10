@@ -141,20 +141,30 @@ def build_states(mapping, gates, objectives):
         S_test = netstate.StandardBNState(gates, M_test)
     elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
-        indices = mapping['training_indices']
-        M_trg, M_test = pk.partition_packed(M, indices)
+        trg_indices = mapping['training_indices']
+        test_indices = mapping['test_indices']
+        if test_indices is None:
+            M_trg, M_test = pk.partition_packed(M, trg_indices)
+        else:
+            M_trg = pk.sample_packed(M, trg_indices)
+            M_test = pk.sample_packed(M, test_indices)
         S_trg = netstate.StandardBNState(gates, M_trg)
         S_test = netstate.StandardBNState(gates, M_test)
     elif mapping['type'] == 'operator':
-        indices = mapping['training_indices']
-        operator = mapping['operator']
+        trg_indices = mapping['training_indices']
+        test_indices = mapping['test_indices']
+        op = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
         window_size = mapping['window_size']
         S_trg = netstate.chained_from_operator(
-            gates, indices, Nb, No, operator, window_size, exclude=False)
-        S_test = netstate.chained_from_operator(
-            gates, indices, Nb, No, operator, window_size, exclude=True)
+            gates, trg_indices, Nb, No, op, window_size)
+        if test_indices is None:
+            S_test = netstate.chained_from_operator(
+                gates, trg_indices, Nb, No, op, window_size, exclude=True)
+        else:
+            S_test = netstate.chained_from_operator(
+                gates, test_indices, Nb, No, op, window_size)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 

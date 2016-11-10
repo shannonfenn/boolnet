@@ -63,13 +63,13 @@ def update_nested(d, u):
     return d
 
 
-def build_filename(params, extension):
+def build_filename(params, extension, key='filename'):
     ''' complicated filename helper.'''
-    filename = params['filename']
+    filename = params[key]
     location = params.get('dir', None)
     # if 'filename' is absolute then ignore 'dir'
-    if location and not os.path.isabs(params['filename']):
-        filename = os.path.join(location, params['filename'])
+    if location and not os.path.isabs(params[key]):
+        filename = os.path.join(location, params[key])
     # add extension if missing
     if os.path.splitext(filename)[-1] == '':
         filename += extension
@@ -77,11 +77,17 @@ def build_filename(params, extension):
 
 
 def load_samples(params, N, Ni):
+    test_indices = None  # default
     if params['type'] == 'given':
         training_indices = np.array(params['indices'], dtype=np.uintp)
+        if 'test' in params:
+            test_indices = np.array(params['test'], dtype=np.uintp)
     if params['type'] == 'file':
         filename = build_filename(params, '.npy')
         training_indices = np.load(filename)
+        if 'test' in params:
+            filename = build_filename(params, '.npy', 'test')
+            test_indices = np.load(filename)
     elif params['type'] == 'generated':
         # this provided seed allows us to generate the same set
         # of training indices across multiple configurations
@@ -93,9 +99,15 @@ def load_samples(params, N, Ni):
             s = get_seed(s)
             params['seed'] = s
         random.seed(s)
-        training_indices = np.array([
-            random.sample(range(N), Ne) for i in range(Ns)])
-    return training_indices
+        if 'test' in params:
+            Nt = params['test']
+            all_indices = np.array([
+                random.sample(range(N), Ne+Nt) for i in range(Ns)])
+            training_indices, test_indices = np.hsplit(all_indices, [Ne])
+        else:
+            training_indices = np.array([
+                random.sample(range(N), Ne) for i in range(Ns)])
+    return training_indices, test_indices
 
 
 def load_dataset(settings):
@@ -106,12 +118,12 @@ def load_dataset(settings):
     elif data_settings['type'] == 'generated':
         instance, N, Ni = generated_instance(data_settings)
 
-    training_indices = load_samples(settings['sampling'], N, Ni)
+    training_indices, test_indices = load_samples(settings['sampling'], N, Ni)
 
     contexts = []
-    for ind in training_indices:
+    for trg, test in zip(training_indices, test_indices):
         context = instance.copy()
-        context.update({'training_indices': ind})
+        context.update({'training_indices': trg, 'test_indices': test})
         contexts.append(context)
 
     return contexts

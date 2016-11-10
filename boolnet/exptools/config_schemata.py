@@ -76,13 +76,15 @@ sampling_schema = Any(
         'type': 'generated',
         'Ns':   All(int, Range(min=1)),
         'Ne':   All(int, Range(min=1)),
-        'seed': seed_schema
+        'seed': seed_schema,
+        Optional('test'): All(int, Range(min=0))
         },
         required=True),
     # read from file
     Schema({
         'type':             'file',
         'filename':         str,
+        Optional('test'):   str,
         Optional('dir'):    IsDir(),
         # allow for now, but don't force
         Optional('seed'):   seed_schema,
@@ -92,6 +94,7 @@ sampling_schema = Any(
     Schema({
         'type':             'given',
         'indices':          [[All(int, Range(min=0))]],
+        Optional('test'):   [[All(int, Range(min=0))]],
         # allow for now, but don't force
         Optional('seed'):   seed_schema,
         },
