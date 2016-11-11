@@ -7,13 +7,54 @@ import cplex
 import numpy as np
 
 
-def single_minimum_feature_set(features, target):
+def single_minimum_feature_set(features, target, debug=False):
     if np.all(target) or not np.any(target):
         # constant target - no solutions
         return []
-    coverage = build_coverage(features, target)
-    _, solution = mink(coverage)
-    return solution
+
+    coverage = sparse_coverage(features, target)
+    Np = len(coverage)
+    Nf = features.shape[1]
+
+    # coverage = build_coverage(features, target)
+    # coverage = coverage_generator(features, target)
+
+    model = cplex.Cplex()
+
+    if not debug:
+        # stop cplex chatter
+        model.set_results_stream(None)
+        model.set_warning_stream(None)
+        model.set_error_stream(None)
+        model.set_log_stream(None)
+
+    model.objective.set_sense(model.objective.sense.minimize)
+
+    obj_coefficients = [1] * Nf
+    lbounds = [0] * Nf
+    ubounds = [1] * Nf
+    types = 'I' * Nf
+    # feature_ids = list(range(Nf))
+
+    sense = 'G' * Np
+    rhs = [1] * Np
+
+    model.variables.add(obj=obj_coefficients, lb=lbounds, ub=ubounds, types=types)
+
+    # rows = [[feature_ids, row] for row in coverage]
+    rows = coverage
+
+    model.linear_constraints.add(lin_expr=rows, senses=sense, rhs=rhs)
+
+    model.solve()
+
+    if model.solution.get_status() == model.solution.status.MIP_optimal:
+        x = model.solution.get_values()
+        fs = np.where(x)[0].tolist()
+    else:
+        fs = []
+
+    return fs
 
 
 # def all_minimum_feature_sets(features, target):
@@ -24,7 +65,7 @@ def single_minimum_feature_set(features, target):
 #     return all_minfs(coverage)
 
 
-def build_coverage(features, target):
+def coverage(features, target):
     Ne, Nf = features.shape
     class_0_indices = np.flatnonzero(target == 0)
     class_1_indices = np.flatnonzero(target)
@@ -40,44 +81,20 @@ def build_coverage(features, target):
     return coverage_matrix
 
 
-def mink(coverage):
-    Np, Nf = coverage.shape
+def sparse_coverage(features, target):
+    Ne, Nf = features.shape
+    class_0_indices = np.flatnonzero(target == 0)
+    class_1_indices = np.flatnonzero(target)
+    coverage = []
+    for i0 in class_0_indices:
+        for i1 in class_1_indices:
+            ind = np.nonzero(features[i0, :] != features[i1, :])[0].tolist()
+            val = [1]*len(ind)
+            coverage.append(cplex.SparsePair(ind, val))
+    return coverage
 
-    model = cplex.Cplex()
 
-    # stop cplex chatter
-    model.set_results_stream(None)
-    model.set_warning_stream(None)
-    model.set_error_stream(None)
-    model.set_log_stream(None)
 
-    model.objective.set_sense(model.objective.sense.minimize)
-
-    obj_coefficients = [1] * Nf
-    lbounds = [0] * Nf
-    ubounds = [1] * Nf
-    types = 'I' * Nf
-    feature_ids = list(range(Nf))
-
-    sense = 'G' * Np
-    rhs = [1] * Np
-
-    model.variables.add(
-        obj=obj_coefficients, lb=lbounds, ub=ubounds, types=types)#, names=my_colnames)
-
-    rows = [[feature_ids, row] for row in coverage]
-
-    model.linear_constraints.add(
-        lin_expr=rows, senses=sense, rhs=rhs)#, names=my_rownames)
-
-    model.solve()
-
-    if model.solution.get_status() == model.solution.status.MIP_optimal:
-        x = model.solution.get_values()
-        fs = np.where(x)[0].tolist()
-        return len(fs), fs
-    else:
-        return 0, []
 
 
 # def all_kfs(coverage, k):
