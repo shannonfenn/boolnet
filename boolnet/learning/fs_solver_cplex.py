@@ -7,7 +7,7 @@ import cplex
 import numpy as np
 
 
-def single_minimum_feature_set(features, target, debug=False):
+def single_minimum_feature_set(features, target, prior_soln=None, debug=False):
     if np.all(target) or not np.any(target):
         # constant target - no solutions
         return []
@@ -45,6 +45,11 @@ def single_minimum_feature_set(features, target, debug=False):
     rows = coverage
 
     model.linear_constraints.add(lin_expr=rows, senses=sense, rhs=rhs)
+
+    if prior_soln is not None:
+        x_ = np.zeros(Nf)
+        x_[prior_soln] = 1
+        model.MIP_starts.add([list(range(Nf)), x_.tolist()])
 
     model.solve()
 

@@ -38,7 +38,7 @@ def unique_pattern_count(all_features, fs_indices):
     return len(counts)
 
 
-def best_feature_set(features, target, method):
+def best_feature_set(features, target, method, prior_soln=None):
     ''' Takes a featureset matrix and target vector and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
     target      - <1D numpy array> of the same number of rows as features
@@ -46,9 +46,9 @@ def best_feature_set(features, target, method):
     returns     - <1D numpy array> feature indices representing best FS
                   according to given method.'''
     if method == 'cardinality>first':
-        return fss.single_minimum_feature_set(features, target), 0
+        return fss.single_minimum_feature_set(features, target, prior_soln), 0
     else:
-        feature_sets = fss.all_minimum_feature_sets(features, target)
+        feature_sets = fss.all_minimum_feature_sets(features, target, prior_soln)
         if len(feature_sets) == 0:
             # No feature sets exist - likely due to constant target
             return [], None
@@ -75,7 +75,7 @@ def best_feature_set(features, target, method):
                 method))
 
 
-def ranked_feature_sets(features, targets, method):
+def ranked_feature_sets(features, targets, method, prior_solns=None):
     ''' Takes a featureset matrix and target matrix and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
     targets     - <2D numpy array> in example x feature format.
@@ -91,7 +91,11 @@ def ranked_feature_sets(features, targets, method):
     secondary_scores = np.zeros(Nt)
 
     for i in range(Nt):
-        fs, score = best_feature_set(features, targets[:, i], method)
+        if prior_solns is not None:
+            fs, score = best_feature_set(features, targets[:, i], method)
+        else:
+            fs, score = best_feature_set(features, targets[:, i],
+                                         method, prior_solns[i])
         feature_sets[i] = fs
         cardinalities[i] = len(fs)
         secondary_scores[i] = score

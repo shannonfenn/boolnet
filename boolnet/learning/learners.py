@@ -150,8 +150,12 @@ class StratifiedLearner(BasicLearner):
                 self.target_matrix[not_learned, :], self.Ne)
 
             # use external solver for minFS
+            if strata > 0:
+                prior_solns = self.feature_sets[strata-1, not_learned]
+            else:
+                prior_solns = [None]*len(not_learned)
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_method)
+                mfs_features, mfs_targets, self.mfs_method, prior_solns)
 
             # replace empty feature sets
             for i in range(len(feature_sets)):

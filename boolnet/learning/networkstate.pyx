@@ -266,7 +266,7 @@ cdef class StandardBNState(BNState):
         self.target[...] = P[Ni:, :]
 
         # just in case
-        self._apply_zero_mask(self.activation)   # does input/output too (they're views)
+        self._apply_zero_mask(self.activation)   # masks input/output too (they're views)
         self._apply_zero_mask(self.target)
 
     property input_matrix:
