@@ -221,14 +221,7 @@ class StratifiedLearner(BasicLearner):
             remapped_new_gates = np.array(new.gates)
             for gate in remapped_new_gates:
                 for i in range(gate.size - 1):
-                    try:
-                        gate[i] = sources_map[gate[i]]
-                    except ValueError as e:
-                        print(i, gate, gate[i], sources_map)
-                        raise e
-                    except IndexError as e:
-                        print(i, gate, gate[i], sources_map)
-                        raise e
+                    gate[i] = sources_map[gate[i]]
 
             accumulated_gates = np.vstack((base.gates[:-base.No, :],
                                            remapped_new_gates[:-new.No, :],
