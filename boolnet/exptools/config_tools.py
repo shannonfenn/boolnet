@@ -77,17 +77,22 @@ def build_filename(params, extension, key='filename'):
 
 
 def load_samples(params, N, Ni):
-    test_indices = None  # default
     if params['type'] == 'given':
         training_indices = np.array(params['indices'], dtype=np.uintp)
         if 'test' in params:
             test_indices = np.array(params['test'], dtype=np.uintp)
+        else:
+            test_indices = [None]*training_indices.shape[0]
+
     if params['type'] == 'file':
         filename = build_filename(params, '.npy')
         training_indices = np.load(filename)
         if 'test' in params:
             filename = build_filename(params, '.npy', 'test')
             test_indices = np.load(filename)
+        else:
+            test_indices = [None]*training_indices.shape[0]
+
     elif params['type'] == 'generated':
         # this provided seed allows us to generate the same set
         # of training indices across multiple configurations
@@ -107,6 +112,7 @@ def load_samples(params, N, Ni):
         else:
             training_indices = np.array([
                 random.sample(range(N), Ne) for i in range(Ns)])
+            test_indices = [None]*Ns
     return training_indices, test_indices
 
 
