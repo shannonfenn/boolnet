@@ -94,7 +94,7 @@ def ranked_feature_sets(features, targets, method, prior_solns=None, timelimit=N
     secondary_scores = np.zeros(Nt)
 
     for i in range(Nt):
-        if prior_solns is not None:
+        if prior_solns is None:
             fs, score = best_feature_set(features, targets[:, i], method, timelimit)
         else:
             fs, score = best_feature_set(features, targets[:, i],
