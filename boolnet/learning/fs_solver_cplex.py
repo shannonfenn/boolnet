@@ -7,7 +7,7 @@ import cplex
 import numpy as np
 
 
-def single_minimum_feature_set(features, target, prior_soln=None, debug=False):
+def single_minimum_feature_set(features, target, prior_soln=None, debug=False, timelimit=None):
     if np.all(target) or not np.any(target):
         # constant target - no solutions
         return []
@@ -20,6 +20,10 @@ def single_minimum_feature_set(features, target, prior_soln=None, debug=False):
     # coverage = coverage_generator(features, target)
 
     model = cplex.Cplex()
+
+    if timelimit is not None:
+        # model.parameters.tuning.timelimit.set(30)
+        model.parameters.tuning.timelimit.set(timelimit)
 
     if not debug:
         # stop cplex chatter
@@ -49,7 +53,8 @@ def single_minimum_feature_set(features, target, prior_soln=None, debug=False):
     if prior_soln is not None:
         x_ = np.zeros(Nf)
         x_[prior_soln] = 1
-        model.MIP_starts.add([list(range(Nf)), x_.tolist()])
+        model.MIP_starts.add([list(range(Nf)), x_.tolist()],
+                             model.MIP_starts.effort_level.check_feasibility)
 
     model.solve()
 

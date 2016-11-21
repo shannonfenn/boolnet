@@ -214,10 +214,8 @@ class StratifiedLearner(BasicLearner):
                                         offset + new.Ng + base.No))
             sources_map = new_input_map + new_gate_map + new_output_map
 
-            # apply to all but the last column (it is for the transfer
-            # functions) of the gate matrix
-            # remapped_new_gates = new.gates.copy()
-            # numpy array since cython memoryview slicing is broken
+            # apply to all but the last column (transfer functions) of the gate
+            # matrix. Use numpy array: cython memoryview slicing is broken
             remapped_new_gates = np.array(new.gates)
             for gate in remapped_new_gates:
                 for i in range(gate.size - 1):
@@ -269,6 +267,7 @@ class StratifiedLearner(BasicLearner):
         accumulated_network = StandardBNState(np.empty((0, 3)), inputs)
 
         for i in range(self.No):
+
             # determine next target index
             target = self.determine_next_target(i, inputs)
 
