@@ -87,7 +87,8 @@ def best_feature_set(features, target, method, prior_soln=None, timelimit=None,
                 method))
 
 
-def ranked_feature_sets(features, targets, method, prior_solns=None, timelimit=None):
+def ranked_feature_sets(features, targets, method, prior_solns=None,
+                        timelimit=None, solver='cplex'):
     ''' Takes a featureset matrix and target matrix and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
     targets     - <2D numpy array> in example x feature format.
@@ -104,10 +105,11 @@ def ranked_feature_sets(features, targets, method, prior_solns=None, timelimit=N
 
     for i in range(Nt):
         if prior_solns is None:
-            fs, score = best_feature_set(features, targets[:, i], method, timelimit)
+            fs, score = best_feature_set(features, targets[:, i], method,
+                                         None, timelimit, solver)
         else:
-            fs, score = best_feature_set(features, targets[:, i],
-                                         method, prior_solns[i], timelimit)
+            fs, score = best_feature_set(features, targets[:, i], method,
+                                         prior_solns[i], timelimit, solver)
         feature_sets[i] = fs
         cardinalities[i] = len(fs)
         secondary_scores[i] = score

@@ -7,7 +7,8 @@ import cplex
 import numpy as np
 
 
-def single_minimum_feature_set(features, target, prior_soln=None, timelimit=None, debug=False):
+def single_minimum_feature_set(features, target, prior_soln=None,
+                               timelimit=None, debug=False):
     if np.all(target) or not np.any(target):
         # constant target - no solutions
         return []
