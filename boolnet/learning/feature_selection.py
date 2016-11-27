@@ -4,7 +4,8 @@ from collections import defaultdict
 from scipy.stats import entropy
 # from boolnet.learning.fs_solver_numberjack as fss
 # import boolnet.learning.fs_solver_ortools as fss
-import boolnet.learning.fs_solver_cplex as fss
+import boolnet.learning.fs_solver_cplex as cpx
+import boolnet.learning.fs_solver_localsolver as lcs
 
 
 def diversity(patterns):
@@ -38,13 +39,21 @@ def unique_pattern_count(all_features, fs_indices):
     return len(counts)
 
 
-def best_feature_set(features, target, method, prior_soln=None, timelimit=None):
+def best_feature_set(features, target, method, prior_soln=None, timelimit=None,
+                     solver='cplex'):
     ''' Takes a featureset matrix and target vector and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
     target      - <1D numpy array> of the same number of rows as features
     method      - <string> which method to use to pick best feature set.
     returns     - <1D numpy array> feature indices representing best FS
                   according to given method.'''
+    if solver == 'cplex':
+        fss = cpx
+    elif solver == 'localsolver':
+        fss = lcs
+    else:
+        ValueError('Invalid solver: {}'.format(solver))
+
     if method == 'cardinality>first':
         fs = fss.single_minimum_feature_set(features, target,
                                             prior_soln, timelimit)
@@ -53,7 +62,7 @@ def best_feature_set(features, target, method, prior_soln=None, timelimit=None):
         feature_sets = fss.all_minimum_feature_sets(features, target,
                                                     prior_soln, timelimit)
         if len(feature_sets) == 0:
-            # No feature sets exist - likely due to constant target
+            # No feature sets found - likely due to constant target
             return [], None
         elif method == 'cardinality>random':
             rand_index = np.random.randint(len(feature_sets))
