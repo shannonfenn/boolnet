@@ -223,6 +223,7 @@ def insert_default_log_keys(settings):
         ['fs_sel_method', False, ['learner', 'minfs_selection_method']],
         ['fs_masking', False, ['learner', 'minfs_masking']],
         ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
+        ['fs_solver', False, ['learner', 'minfs_solver']],
         ['opt_{}', False, ['learner', 'optimiser', '.*']],
     ]
     # give preference to user log_keys
