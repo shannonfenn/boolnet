@@ -24,4 +24,3 @@ EOF
 
 printf "distributing ${MAG}runexp.py${NC}\n"
 scp runexp.py fisher:HMRI/scripts/
-cp -f runexp.py $HOME/HMRI/scripts/
