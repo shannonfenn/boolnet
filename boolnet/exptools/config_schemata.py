@@ -57,15 +57,15 @@ data_schema = Any(
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
         Optional('window_size'):    All(int, Range(min=1)),
-        Optional('add_noise'):     float
+        Optional('add_noise'):      Range(min=0.0)
         },
         required=True),
     # read from file
     Schema({
-        'type':             'file',
-        'filename':         str,
-        Optional('dir'):    IsDir(),
-        Optional('add_noise'):     float
+        'type':                'file',
+        'filename':            str,
+        Optional('dir'):       IsDir(),
+        Optional('add_noise'): Range(min=0.0)
         },
         required=True)
     )
@@ -73,10 +73,10 @@ data_schema = Any(
 sampling_schema = Any(
     # randomly generated
     Schema({
-        'type': 'generated',
-        'Ns':   All(int, Range(min=1)),
-        'Ne':   All(int, Range(min=1)),
-        'seed': seed_schema,
+        'type':           'generated',
+        'Ns':             All(int, Range(min=1)),
+        'Ne':             All(int, Range(min=1)),
+        'seed':           seed_schema,
         Optional('test'): All(int, Range(min=0))
         },
         required=True),
@@ -176,8 +176,9 @@ learner_schema = Schema(
                 'cardinality>entropy',
                 'cardinality>feature_diversity',
                 'cardinality>pattern_diversity'),
-            Optional('minfs_masking'):          bool,
-            Optional('stopping_error'):         float
+            Optional('minfs_masking'):    bool,
+            Optional('minfs_time_limit'): Range(min=0.0),
+            Optional('stopping_error'):   float
             },
             required=True),
         # if target_order = auto then minfs_selection_method must be set

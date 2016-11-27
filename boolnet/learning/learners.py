@@ -61,6 +61,8 @@ class BasicLearner:
         else:
             self.target_order = np.array(parameters['target_order'],
                                          dtype=np.uintp)
+        # Optional minfs solver time limit
+        self.time_limit = parameters.get('minfs_time_limit', None)
 
         # add functors for evaluating the guiding func and stop criteria
         self.gf_eval_name = 'guiding'
@@ -96,7 +98,8 @@ class BasicLearner:
 
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_method)
+                mfs_features, mfs_targets, self.mfs_method,
+                timelimit=self.time_limit)
 
             # randomly pick from top ranked targets
             self.target_order = self.order_from_rank(rank)
@@ -150,12 +153,14 @@ class StratifiedLearner(BasicLearner):
                 self.target_matrix[not_learned, :], self.Ne)
 
             # use external solver for minFS
-            if strata > 0:
+            if strata > 0 and False:  # disabled for now
                 prior_solns = self.feature_sets[strata-1, not_learned]
             else:
                 prior_solns = [None]*len(not_learned)
+
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_method, prior_solns)
+                mfs_features, mfs_targets, self.mfs_method, prior_solns,
+                timelimit=self.time_limit)
 
             # replace empty feature sets
             for i in range(len(feature_sets)):
@@ -173,8 +178,9 @@ class StratifiedLearner(BasicLearner):
                 # unpack inputs to minFS solver
                 mfs_features = unpack_bool_matrix(inputs, self.Ne)
                 mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
-                fs, _ = mfs.best_feature_set(mfs_features, mfs_target,
-                                             self.mfs_method)
+                fs, _ = mfs.best_feature_set(
+                    mfs_features, mfs_target, self.mfs_method,
+                    timelimit=self.time_limit)
                 if len(fs) == 0:
                     fs = list(range(inputs.shape[0]))
 
