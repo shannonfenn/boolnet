@@ -1,4 +1,5 @@
 import localsolver as ls
+import numpy as np
 
 
 def is_feature_set(M, T):
@@ -18,7 +19,7 @@ def build_model(M, T, model):
     for p in range(Ne):
         for q in range(Ne):
             if p != q and T[p] != T[q]:
-                sum_xa = model.sum(x[f] for f in range(Nf) if M[p][f] != M[q][f])
+                sum_xa = model.sum(x[f] for f in range(Nf) if M[p, f] != M[q, f])
                 model.constraint(sum_xa >= 1)
 
     k = model.sum(x)
