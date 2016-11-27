@@ -63,6 +63,7 @@ class BasicLearner:
                                          dtype=np.uintp)
         # Optional minfs solver time limit
         self.time_limit = parameters.get('minfs_time_limit', None)
+        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
 
         # add functors for evaluating the guiding func and stop criteria
         self.gf_eval_name = 'guiding'
@@ -99,7 +100,7 @@ class BasicLearner:
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
                 mfs_features, mfs_targets, self.mfs_method,
-                timelimit=self.time_limit)
+                timelimit=self.time_limit, solver=self.minfs_solver)
 
             # randomly pick from top ranked targets
             self.target_order = self.order_from_rank(rank)
@@ -160,7 +161,7 @@ class StratifiedLearner(BasicLearner):
 
             rank, feature_sets = mfs.ranked_feature_sets(
                 mfs_features, mfs_targets, self.mfs_method, prior_solns,
-                timelimit=self.time_limit)
+                timelimit=self.time_limit, solver=self.minfs_solver)
 
             # replace empty feature sets
             for i in range(len(feature_sets)):
@@ -180,7 +181,7 @@ class StratifiedLearner(BasicLearner):
                 mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
                 fs, _ = mfs.best_feature_set(
                     mfs_features, mfs_target, self.mfs_method,
-                    timelimit=self.time_limit)
+                    timelimit=self.time_limit, solver=self.minfs_solver)
                 if len(fs) == 0:
                     fs = list(range(inputs.shape[0]))
 

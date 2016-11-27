@@ -178,6 +178,7 @@ learner_schema = Schema(
                 'cardinality>pattern_diversity'),
             Optional('minfs_masking'):    bool,
             Optional('minfs_time_limit'): Range(min=0.0),
+            Optional('minfs_solver'):     str,
             Optional('stopping_error'):   float
             },
             required=True),
