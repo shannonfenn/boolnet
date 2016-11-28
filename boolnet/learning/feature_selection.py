@@ -39,14 +39,14 @@ def unique_pattern_count(all_features, fs_indices):
     return len(counts)
 
 
-def best_feature_set(features, target, method, prior_soln=None, timelimit=None,
+def best_feature_set(features, target, metric, prior_soln=None, timelimit=None,
                      solver='cplex'):
     ''' Takes a featureset matrix and target vector and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
     target      - <1D numpy array> of the same number of rows as features
-    method      - <string> which method to use to pick best feature set.
+    metric      - <string> which metric to use to pick best feature set.
     returns     - <1D numpy array> feature indices representing best FS
-                  according to given method.'''
+                  according to given metric.'''
     if solver == 'cplex':
         fss = cpx
     elif solver == 'localsolver':
@@ -54,9 +54,13 @@ def best_feature_set(features, target, method, prior_soln=None, timelimit=None,
     else:
         ValueError('Invalid solver: {}'.format(solver))
 
-    if method == 'cardinality>first':
-        fs = fss.single_minimum_feature_set(features, target,
-                                            prior_soln, timelimit)
+    if metric == 'cardinality>first':
+        try:
+            fs = fss.single_minimum_feature_set(features, target,
+                                                prior_soln, timelimit)
+        except Exception as e:
+            print(e)
+            raise e
         return fs, 0
     else:
         feature_sets = fss.all_minimum_feature_sets(features, target,
@@ -64,39 +68,39 @@ def best_feature_set(features, target, method, prior_soln=None, timelimit=None,
         if len(feature_sets) == 0:
             # No feature sets found - likely due to constant target
             return [], None
-        elif method == 'cardinality>random':
+        elif metric == 'cardinality>random':
             rand_index = np.random.randint(len(feature_sets))
             return feature_sets[rand_index], 0
-        elif method == 'cardinality>entropy':
+        elif metric == 'cardinality>entropy':
             entropies = [feature_set_entropy(features, fs)
                          for fs in feature_sets]
             best_fs = np.argmax(entropies)
             return feature_sets[best_fs], entropies[best_fs]
-        elif method == 'cardinality>feature_diversity':
+        elif metric == 'cardinality>feature_diversity':
             feature_diversities = [feature_diversity(features, fs)
                                    for fs in feature_sets]
             best_fs = np.argmax(feature_diversities)
             return feature_sets[best_fs], feature_diversities[best_fs]
-        elif method == 'cardinality>pattern_diversity':
+        elif metric == 'cardinality>pattern_diversity':
             pattern_diversities = [pattern_diversity(features, fs)
                                    for fs in feature_sets]
             best_fs = np.argmax(pattern_diversities)
             return feature_sets[best_fs], pattern_diversities[best_fs]
         else:
-            raise ValueError('Invalid method for feature selection: {}'.format(
-                method))
+            raise ValueError('Invalid fs selection metric : {}'.format(
+                metric))
 
 
-def ranked_feature_sets(features, targets, method, prior_solns=None,
+def ranked_feature_sets(features, targets, metric, prior_solns=None,
                         timelimit=None, solver='cplex'):
     ''' Takes a featureset matrix and target matrix and finds a minimum FS.
     features    - <2D numpy array> in example x feature format.
     targets     - <2D numpy array> in example x feature format.
-    method      - <string> which method to use to pick best feature set.
+    metric      - <string> which metric to use to pick best feature set.
     returns     - (<permutation>, <list of 1D numpy arrays>)
                     * ranking of targets
                     * feature indices representing best FS for each target
-                      according to given method.'''
+                      according to given metric.'''
 
     Nt = targets.shape[1]
     feature_sets = np.empty(Nt, dtype=list)
@@ -105,10 +109,10 @@ def ranked_feature_sets(features, targets, method, prior_solns=None,
 
     for i in range(Nt):
         if prior_solns is None:
-            fs, score = best_feature_set(features, targets[:, i], method,
+            fs, score = best_feature_set(features, targets[:, i], metric,
                                          None, timelimit, solver)
         else:
-            fs, score = best_feature_set(features, targets[:, i], method,
+            fs, score = best_feature_set(features, targets[:, i], metric,
                                          prior_solns[i], timelimit, solver)
         feature_sets[i] = fs
         cardinalities[i] = len(fs)
