@@ -6,11 +6,13 @@ from boolnet.bintools.packing import (
     unpack_bool_matrix, unpack_bool_vector, BitPackedMatrix)
 from boolnet.learning.networkstate import StandardBNState
 import boolnet.learning.feature_selection as mfs
+from time import time
 
 
 LearnerResult = namedtuple('LearnerResult', [
     'network', 'partial_networks', 'best_errors', 'best_iterations',
-    'final_iterations', 'target_order', 'feature_sets', 'restarts'])
+    'final_iterations', 'target_order', 'feature_sets', 'restarts',
+    'optimisation_time', 'other_time'])
 
 
 def guiding_func_stop_criterion(func_id, limit=None):
@@ -90,6 +92,7 @@ class BasicLearner:
         return np.array(order, dtype=np.uintp)
 
     def run(self, optimiser, parameters):
+        t0 = time()
         self._setup(optimiser, parameters)
 
         if self.target_order is None:
@@ -112,8 +115,10 @@ class BasicLearner:
         state.add_function(self.guiding_func_id, self.target_order,
                            self.gf_eval_name)
 
+        t1 = time()
         # run the optimiser
         opt_result = self.optimiser.run(state, self.opt_params)
+        t2 = time()
 
         return LearnerResult(
             network=opt_result.representation,
@@ -123,7 +128,9 @@ class BasicLearner:
             restarts=[opt_result.restarts],
             target_order=self.target_order,
             feature_sets=None,
-            partial_networks=[])
+            partial_networks=[],
+            optimisation_time=t2-t1,
+            other_time=t1-t0)
 
 
 class StratifiedLearner(BasicLearner):
@@ -273,8 +280,11 @@ class StratifiedLearner(BasicLearner):
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
         accumulated_network = StandardBNState(np.empty((0, 3)), inputs)
 
-        for i in range(self.No):
+        optimisation_times = []
+        other_times = []
 
+        for i in range(self.No):
+            t0 = time()
             # determine next target index
             target = self.determine_next_target(i, inputs)
 
@@ -288,8 +298,12 @@ class StratifiedLearner(BasicLearner):
                                np.arange(state.No, dtype=np.uintp),
                                self.gf_eval_name)
 
+            t1 = time()
+
             # optimise
             partial_result = self.optimiser.run(state, self.opt_params)
+
+            t2 = time()
             # record result
             opt_results.append(partial_result)
 
@@ -307,6 +321,10 @@ class StratifiedLearner(BasicLearner):
 
             self.learned_targets.append(target)
 
+            t3 = time()
+            optimisation_times.append(t2 - t1)
+            other_times.append(t3 - t2 + t1 - t0)
+
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs
         self.reorder_network_outputs(accumulated_network.representation)
@@ -319,7 +337,9 @@ class StratifiedLearner(BasicLearner):
             final_iterations=[r.iteration for r in opt_results],
             target_order=self.learned_targets,
             feature_sets=self.feature_sets,
-            restarts=[r.restarts for r in opt_results])
+            restarts=[r.restarts for r in opt_results],
+            optimisation_time=optimisation_times,
+            other_time=other_times)
 
     # def handle_single_FS(self, feature, target):
     #     # When we have a 1FS we have already learned the target,

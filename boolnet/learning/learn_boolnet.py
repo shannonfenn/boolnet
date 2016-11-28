@@ -213,7 +213,9 @@ def build_result_map(parameters, learner_result):
         'test_mcc':     test_state.function_value('e1_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
-        'tgt_order':    target_order
+        'tgt_order':    target_order,
+        'opt_time':     learner_result.opt_time,
+        'other_time':   learner_result.other_time
         }
 
     # Optional results
