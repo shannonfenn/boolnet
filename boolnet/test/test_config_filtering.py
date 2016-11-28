@@ -41,7 +41,7 @@ log_keys = [
     ('tfs', True,  ['learner', 'network', 'node_funcs']),
     ('trg_indices', True,  ['mapping', 'training_indices']),
     ('guiding_function', True,  ['learner', 'optimiser', 'guiding_function']),
-    ('fs_sel_method', False, ['learner', 'minfs_selection_method']),
+    ('fs_sel_metric', False, ['learner', 'minfs_selection_metric']),
     ('fs_masking', False, ['learner', 'minfs_masking']),
     ('given_tgt_order', False, ['learner', 'target_order']),
     ('opt_{}', False, ['learner', 'optimiser', '.*']),

@@ -57,7 +57,7 @@ class BasicLearner:
         elif parameters['target_order'] == 'auto':
             self.target_order = None
             # this key is only required if auto-targetting
-            self.mfs_method = parameters['minfs_selection_method']
+            self.mfs_metric = parameters['minfs_selection_metric']
         else:
             self.target_order = np.array(parameters['target_order'],
                                          dtype=np.uintp)
@@ -99,7 +99,7 @@ class BasicLearner:
 
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_method,
+                mfs_features, mfs_targets, self.mfs_metric,
                 timelimit=self.time_limit, solver=self.minfs_solver)
 
             # randomly pick from top ranked targets
@@ -134,7 +134,7 @@ class StratifiedLearner(BasicLearner):
         self.auto_target = (parameters['target_order'] == 'auto')
         # Optional
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.mfs_method = parameters.get('minfs_selection_method', None)
+        self.mfs_metric = parameters.get('minfs_selection_metric', None)
         # Initialise
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
@@ -160,7 +160,7 @@ class StratifiedLearner(BasicLearner):
                 prior_solns = [None]*len(not_learned)
 
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_method, prior_solns,
+                mfs_features, mfs_targets, self.mfs_metric, prior_solns,
                 timelimit=self.time_limit, solver=self.minfs_solver)
 
             # replace empty feature sets
@@ -180,7 +180,7 @@ class StratifiedLearner(BasicLearner):
                 mfs_features = unpack_bool_matrix(inputs, self.Ne)
                 mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
                 fs, _ = mfs.best_feature_set(
-                    mfs_features, mfs_target, self.mfs_method,
+                    mfs_features, mfs_target, self.mfs_metric,
                     timelimit=self.time_limit, solver=self.minfs_solver)
                 if len(fs) == 0:
                     fs = list(range(inputs.shape[0]))

@@ -220,7 +220,7 @@ def insert_default_log_keys(settings):
         ['guiding_function', True, ['learner', 'optimiser',
                                     'guiding_function']],
         ['given_tgt_order', True, ['learner', 'target_order']],
-        ['fs_sel_method', False, ['learner', 'minfs_selection_method']],
+        ['fs_sel_metric', False, ['learner', 'minfs_selection_metric']],
         ['fs_masking', False, ['learner', 'minfs_masking']],
         ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
         ['fs_solver', False, ['learner', 'minfs_solver']],

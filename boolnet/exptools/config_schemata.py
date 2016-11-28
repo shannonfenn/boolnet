@@ -171,7 +171,7 @@ learner_schema = Schema(
             'target_order': target_order_schema,
             Required('seed', default=None): Any(
                 None, All(int, Range(min=0))),
-            Optional('minfs_selection_method'): Any(
+            Optional('minfs_selection_metric'): Any(
                 'cardinality>first', 'cardinality>random',
                 'cardinality>entropy',
                 'cardinality>feature_diversity',
@@ -182,12 +182,12 @@ learner_schema = Schema(
             Optional('stopping_error'):   float
             },
             required=True),
-        # if target_order = auto then minfs_selection_method must be set
+        # if target_order = auto then minfs_selection_metric must be set
         conditionally_required(
-            'target_order', 'auto', 'minfs_selection_method'),
-        # if minfs_masking = True then minfs_selection_method must be set
+            'target_order', 'auto', 'minfs_selection_metric'),
+        # if minfs_masking = True then minfs_selection_metric must be set
         conditionally_required(
-            'minfs_masking', True, 'minfs_selection_method'),
+            'minfs_masking', True, 'minfs_selection_metric'),
         # if name = basic then minfs_masking is not allowed
         conditionally_forbidden(
             'name', 'basic', 'minfs_masking')
