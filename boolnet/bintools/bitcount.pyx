@@ -26,6 +26,22 @@ cpdef void popcount_matrix_rows(packed_type_t[:, :] mat, size_t[:] row_counts):
         row_counts[i] = mpn_popcount(&mat[i, 0], cols)
 
 
+cpdef size_t scan_vector(packed_type_t[:] vec):
+    cdef bint was_zero
+    cdef size_t pos, row_len = PACKED_SIZE * vec.shape[0]
+
+    # to ensure there is at least a 1 at the end for mpn_scan1 we need to add it, but also
+    # remember if the last bit was set so we can unset it, and also return the correct count
+    was_zero = ((vec[-1] & PACKED_HIGH_BIT_SET) == 0)
+    vec[-1] |= PACKED_HIGH_BIT_SET
+    pos = mpn_scan1(&vec[0], 0)
+    if was_zero:
+        vec[-1] &= ~PACKED_HIGH_BIT_SET
+        if pos == row_len - 1:
+            return row_len
+    return pos
+
+
 cpdef size_t floodcount_vector(packed_type_t[:] vec, size_t end_mask_len=0):
     cdef bint was_zero
     cdef size_t pos, row_len = PACKED_SIZE * vec.shape[0]
