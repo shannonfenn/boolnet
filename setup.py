@@ -47,6 +47,7 @@ if args.count('build_ext') > 0 and args.count('--inplace') == 0:
 extensions = [
     Extension('boolnet.bintools.packing',
               ['boolnet/bintools/packing.pyx'],
+              language='c++',
               include_dirs=include_dirs),
     Extension('boolnet.bintools.bitcount',
               ['boolnet/bintools/bitcount.pyx'],

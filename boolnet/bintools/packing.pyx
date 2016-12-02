@@ -1,4 +1,7 @@
 # cython: language_level=3, profile=False
+# cython: boundscheck=False
+# cython: nonecheck=False
+# cython: cdivision=True
 import numpy as np
 cimport numpy as np
 from math import ceil
@@ -10,6 +13,7 @@ PACKED_SIZE_PY = PACKED_SIZE
 PACKED_ALL_SET = ULLONG_MAX
 PACKED_HIGH_BIT_SET = 0x8000000000000000
 packed_type = np.uint64
+
 
 
 class BitPackedMatrix(np.ndarray):
@@ -48,6 +52,15 @@ class BitPackedMatrix(np.ndarray):
         super(BitPackedMatrix, self).__setstate__(state[0:-2])
 
 
+cpdef setbits(packed_type_t[:] vec, set[size_t] positions):
+    cdef:
+        size_t pos, bit, chunk
+    for pos in positions:
+        chunk = pos // PACKED_SIZE
+        bit = pos % PACKED_SIZE
+        vec[chunk] |= (<packed_type_t>1) << bit
+
+
 cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, size_t column):
     ''' This method assumed mat.shape[0] == PACKED_SIZE.'''
     cdef:
@@ -63,50 +76,81 @@ cpdef pack_chunk(packed_type_t[:] mat, packed_type_t[:, :] packed, size_t Nf, si
         packed[f, column] = chunk
 
 
-cpdef pack_bool_matrix(np.uint8_t[:, :] mat):
+cpdef packmat(np.uint8_t[:, :] mat, bint transpose=True):
     cdef:
-        size_t Ne, Nf, num_chunks, f, c, bit
+        size_t Nr, Nc, num_chunks, i, ch, bit
         packed_type_t chunk
         packed_type_t[:, :] packed
         np.uint8_t[:, :] padded
 
-    Ne, Nf = mat.shape[0], mat.shape[1]
-    num_chunks = int(ceil(Ne / <double>PACKED_SIZE))
-    # pad rows with zeros to next multiple of PACKED_SIZE 
-    padded = np.zeros((num_chunks * PACKED_SIZE, Nf), dtype=np.uint8)
-    padded[:Ne, :] = mat
-    # build packed matrix
-    packed = np.empty((Nf, num_chunks), dtype=np.uint64)
-    for f in range(Nf):
-        for c in range(num_chunks):
-            chunk = 0
-            for bit in range(PACKED_SIZE):
-                chunk |= (<packed_type_t>(padded[c*PACKED_SIZE+bit, f]) << bit)
-            packed[f, c] = chunk
+    Nr, Nc = mat.shape[0], mat.shape[1]
+    if transpose:
+        num_chunks = int(ceil(Nr / <double>PACKED_SIZE))
+        # pad rows with zeros to next multiple of PACKED_SIZE 
+        padded = np.zeros((num_chunks * PACKED_SIZE, Nc), dtype=np.uint8)
+        padded[:Nr, :] = mat
+        # build packed matrix
+        packed = np.empty((Nc, num_chunks), dtype=packed_type)
+        for i in range(Nc):
+            for ch in range(num_chunks):
+                chunk = 0
+                for bit in range(PACKED_SIZE):
+                    chunk |= (<packed_type_t>(padded[ch*PACKED_SIZE+bit, i]) << bit)
+                packed[i, ch] = chunk
+    else:
+        num_chunks = int(ceil(Nc / <double>PACKED_SIZE))
+        # pad rows with zeros to next multiple of PACKED_SIZE 
+        padded = np.zeros((Nr, num_chunks * PACKED_SIZE), dtype=np.uint8)
+        padded[:, :Nc] = mat
+        # build packed matrix
+        packed = np.empty((Nr, num_chunks), dtype=packed_type)
+        for i in range(Nr):
+            for ch in range(num_chunks):
+                chunk = 0
+                for bit in range(PACKED_SIZE):
+                    chunk |= (<packed_type_t>(padded[i, ch*PACKED_SIZE+bit]) << bit)
+                packed[i, ch] = chunk
     return np.asarray(packed)
 
 
-cpdef unpack_bool_matrix(packed_type_t[:, :] packed_mat, size_t Ne):
+cpdef unpackmat(packed_type_t[:, :] packed_mat, size_t n, bint transpose=True):
     cdef:
-        size_t Nf, num_chunks, f, c, bit, example
+        size_t Nr, Nc, num_chunks, i, ch, bit, r, c
         packed_type_t mask, chunk
         np.uint8_t[:, :] unpacked
 
-    Nf, num_chunks = packed_mat.shape[0], packed_mat.shape[1]
-    unpacked = np.zeros((num_chunks*PACKED_SIZE, Nf), dtype=np.uint8)
-    for f in range(Nf):
-        example = 0
-        for c in range(num_chunks):
-            mask = 1
-            chunk = packed_mat[f, c]
-            for bit in range(PACKED_SIZE):
-                unpacked[example, f] += ((chunk & mask) >> bit)
-                mask <<= 1
-                example += 1
-    return np.asarray(unpacked[:Ne, :])
+    num_chunks = packed_mat.shape[1]
+    if transpose:
+        Nc = packed_mat.shape[0]
+        Nr = n
+        unpacked = np.zeros((num_chunks*PACKED_SIZE, Nc), dtype=np.uint8)
+        for i in range(Nc):
+            r = 0
+            for ch in range(num_chunks):
+                mask = 1
+                chunk = packed_mat[i, ch]
+                for bit in range(PACKED_SIZE):
+                    unpacked[r, i] += ((chunk & mask) >> bit)
+                    mask <<= 1
+                    r += 1
+        return np.asarray(unpacked[:Nr, :])
+    else:
+        Nr = packed_mat.shape[0]
+        Nc = n
+        unpacked = np.zeros((Nr, num_chunks*PACKED_SIZE), dtype=np.uint8)
+        for i in range(Nr):
+            c = 0
+            for ch in range(num_chunks):
+                mask = 1
+                chunk = packed_mat[i, ch]
+                for bit in range(PACKED_SIZE):
+                    unpacked[i, c] += ((chunk & mask) >> bit)
+                    mask <<= 1
+                    c += 1
+        return np.asarray(unpacked[:, :Nc])
 
 
-cpdef unpack_bool_vector(packed_type_t[:] packed_vec, size_t Ne):
+cpdef unpackvec(packed_type_t[:] packed_vec, size_t Ne):
     cdef:
         size_t num_chunks, c, bit, example
         packed_type_t mask, chunk
