@@ -52,7 +52,7 @@ class BitPackedMatrix(np.ndarray):
         super(BitPackedMatrix, self).__setstate__(state[0:-2])
 
 
-cpdef setbits(packed_type_t[:] vec, set[size_t] positions):
+cpdef setbits(packed_type_t[:] vec, set positions):
     cdef:
         size_t pos, bit, chunk
     for pos in positions:
