@@ -28,7 +28,7 @@ class PackedMatrix(np.ndarray):
         pickled_state = super(PackedMatrix, self).__reduce__()
         # Create our own tuple to pass to __setstate__
         new_state = pickled_state[2] + (self.Ne, self.Ni)
-        # Return a tuple that replaces the parent's __setstate__ tuple with our own
+        # Return a tuple that replaces the parent's __setstate__ with our own
         return (pickled_state[0], pickled_state[1], new_state)
 
     def __setstate__(self, state):
@@ -39,7 +39,7 @@ class PackedMatrix(np.ndarray):
 
 
 def partition_packed(matrix, indices):
-    M_trg, M_test = pk.partition_packed(matrix, matrix.Ne, indices)
+    M_trg, M_test = pk.partition(matrix, matrix.Ne, indices)
 
     # return the PackedMatrix types to provide meta-data
     Ne = indices.shape[0]
@@ -50,6 +50,6 @@ def partition_packed(matrix, indices):
 
 
 def sample_packed(matrix, indices, invert=False):
-    sample = pk.sample_packed(matrix, matrix.Ne, indices, invert)
+    sample = pk.sample(matrix, matrix.Ne, indices, invert)
     Ne = matrix.Ne - indices.size if invert else indices.size
     return PackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)

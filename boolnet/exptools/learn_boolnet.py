@@ -3,10 +3,11 @@ import random
 import logging
 import re
 import numpy as np
+import bitpacking.packing as pk
 import boolnet.bintools.functions as fn
-import boolnet.bintools.packing as pk
 import boolnet.bintools.example_generator as gen
 import boolnet.network.networkstate as ns
+import boolnet.utils as utils
 import boolnet.learners as learners
 import boolnet.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
@@ -51,7 +52,8 @@ def build_training_set(mapping):
     if mapping['type'] == 'raw_split':
         return mapping['training_set']
     elif mapping['type'] == 'raw_unsplit':
-        return pk.sample_packed(mapping['matrix'], mapping['training_indices'])
+        return utils.sample_packed(mapping['matrix'],
+                                   mapping['training_indices'])
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
         operator = mapping['operator']
@@ -144,10 +146,10 @@ def build_states(mapping, gates, objectives):
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
         if test_indices is None:
-            M_trg, M_test = pk.partition_packed(M, trg_indices)
+            M_trg, M_test = utils.partition_packed(M, trg_indices)
         else:
-            M_trg = pk.sample_packed(M, trg_indices)
-            M_test = pk.sample_packed(M, test_indices)
+            M_trg = utils.sample_packed(M, trg_indices)
+            M_test = utils.sample_packed(M, test_indices)
         S_trg = ns.StandardBNState(gates, M_trg)
         S_test = ns.StandardBNState(gates, M_test)
     elif mapping['type'] == 'operator':
