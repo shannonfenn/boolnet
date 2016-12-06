@@ -216,7 +216,7 @@ def build_result_map(parameters, learner_result):
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
         'tgt_order':    target_order,
-        'opt_time':     learner_result.opt_time,
+        'opt_time':     learner_result.optimisation_time,
         'other_time':   learner_result.other_time
         }
 

@@ -12,7 +12,7 @@ import argparse                     # CLI
 import itertools                    # imap and count
 import scoop                        # for distributed parallellism
 
-from boolnet.learn_boolnet import learn_bool_net
+from boolnet.exptools.learn_boolnet import learn_bool_net
 import boolnet.exptools.config_tools as cfg
 
 

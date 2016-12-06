@@ -5,7 +5,7 @@ import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
 import boolnet.bintools.functions as fn
-from utils import PackedMatrix
+from boolnet.utils import PackedMatrix
 from boolnet.network.networkstate import StandardBNState
 from time import time
 

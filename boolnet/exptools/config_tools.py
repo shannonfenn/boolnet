@@ -6,11 +6,10 @@ import numpy as np
 import os
 import json
 import random
-import bitpacking.packing as pk
 
 import boolnet.exptools.config_schemata as sch
 import boolnet.bintools.operator_iterator as op
-from utils import PackedMatrix
+from boolnet.utils import PackedMatrix
 
 
 def get_seed(key):
