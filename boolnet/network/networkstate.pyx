@@ -7,14 +7,15 @@ cimport numpy as np
 from copy import copy
 from math import ceil
 
+from bitpacking.packing import packed_type
+from bitpacking.packing cimport (
+    packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE)
+
 from boolnet.network.boolnet cimport BoolNet, Move
 from boolnet.bintools.functions import function_name
 from boolnet.bintools.functions cimport Function
 from boolnet.bintools.biterror import EVALUATORS 
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
-from boolnet.bintools.packing import packed_type
-from boolnet.bintools.packing cimport (
-    packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE)
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
 from boolnet.bintools.example_generator cimport (
     PackedExampleGenerator, packed_from_operator)

@@ -4,7 +4,7 @@
 # import tempfile
 # from pytest import yield_fixture
 # from boolnet.exptools.config_tools import generate_configurations
-# from boolnet.learning.learn_boolnet import learn_bool_net
+# from boolnet.learn_boolnet import learn_bool_net
 
 
 # TEST_DIR = 'boolnet/test/runs/'

@@ -4,9 +4,10 @@ import numpy as np
 cimport numpy as np
 import cython
 from libc.math cimport sqrt
-from boolnet.bintools.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
-from boolnet.bintools.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET, generate_end_mask
-from boolnet.bintools.packing import packed_type
+
+from bitpacking.bitcount cimport popcount_matrix, popcount_vector, floodcount_vector, floodcount_chunk
+from bitpacking.packing cimport packed_type_t, PACKED_SIZE, PACKED_ALL_SET, generate_end_mask
+from bitpacking.packing import packed_type
 
 
 EVALUATORS = {

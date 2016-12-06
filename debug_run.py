@@ -1,8 +1,7 @@
 from boolnet.exptools.config_tools import generate_configurations
-from boolnet.learning.learn_boolnet import (build_initial_network,
-                                            build_training_state)
-import boolnet.learning.learners as learners
-import boolnet.learning.optimisers as optimisers
+from boolnet.learn_boolnet import (build_initial_network, build_training_state)
+import boolnet.learners as learners
+import boolnet.optimisers as optimisers
 import numpy as np
 import argparse
 import yaml

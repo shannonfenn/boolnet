@@ -6,9 +6,9 @@ import numpy as np
 import boolnet.bintools.functions as fn
 import boolnet.bintools.packing as pk
 import boolnet.bintools.example_generator as gen
-import boolnet.learning.networkstate as netstate
-import boolnet.learning.learners as learners
-import boolnet.learning.optimisers as optimisers
+import boolnet.network.networkstate as ns
+import boolnet.learners as learners
+import boolnet.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
 import boolnet.exptools.config_filtering as cf
 
@@ -137,8 +137,8 @@ def build_states(mapping, gates, objectives):
     if mapping['type'] == 'raw_split':
         M_trg = mapping['training_set']
         M_test = mapping['test_set']
-        S_trg = netstate.StandardBNState(gates, M_trg)
-        S_test = netstate.StandardBNState(gates, M_test)
+        S_trg = ns.StandardBNState(gates, M_trg)
+        S_test = ns.StandardBNState(gates, M_test)
     elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
         trg_indices = mapping['training_indices']
@@ -148,8 +148,8 @@ def build_states(mapping, gates, objectives):
         else:
             M_trg = pk.sample_packed(M, trg_indices)
             M_test = pk.sample_packed(M, test_indices)
-        S_trg = netstate.StandardBNState(gates, M_trg)
-        S_test = netstate.StandardBNState(gates, M_test)
+        S_trg = ns.StandardBNState(gates, M_trg)
+        S_test = ns.StandardBNState(gates, M_test)
     elif mapping['type'] == 'operator':
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
@@ -157,13 +157,13 @@ def build_states(mapping, gates, objectives):
         Nb = mapping['Nb']
         No = mapping['No']
         window_size = mapping['window_size']
-        S_trg = netstate.chained_from_operator(
+        S_trg = ns.chained_from_operator(
             gates, trg_indices, Nb, No, op, window_size)
         if test_indices is None:
-            S_test = netstate.chained_from_operator(
+            S_test = ns.chained_from_operator(
                 gates, trg_indices, Nb, No, op, window_size, exclude=True)
         else:
-            S_test = netstate.chained_from_operator(
+            S_test = ns.chained_from_operator(
                 gates, test_indices, Nb, No, op, window_size)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))

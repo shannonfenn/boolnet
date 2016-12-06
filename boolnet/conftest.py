@@ -4,7 +4,7 @@ import numpy as np
 import os.path
 from copy import copy
 from pytest import fixture
-from boolnet.bintools.packing import unpack_bool_matrix
+from bitpacking.packing import unpack_bool_matrix
 import boolnet.bintools.functions as fn
 
 

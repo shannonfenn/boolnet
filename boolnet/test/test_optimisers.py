@@ -1,4 +1,4 @@
-from boolnet.learning.optimisers import SA, stepped_exp_decrease, geometric
+from boolnet.optimisers import SA, stepped_exp_decrease, geometric
 from math import exp
 import numpy as np
 import operator as op

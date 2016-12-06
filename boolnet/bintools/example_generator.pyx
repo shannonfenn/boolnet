@@ -1,8 +1,8 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 import numpy as np
-from boolnet.bintools.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
-from boolnet.bintools.packing import packed_type, BitPackedMatrix
+from bitpacking.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
+from bitpacking.packing import packed_type, BitPackedMatrix
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
 
 

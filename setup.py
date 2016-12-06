@@ -19,8 +19,6 @@ if "clean" in args:
     print("Deleting cython files...")
     to_remove = []
     # C
-    to_remove += glob.glob('boolnet/bintools/packing.c')
-    to_remove += glob.glob('boolnet/bintools/bitcount.c')
     to_remove += glob.glob('boolnet/bintools/functions.c')
     to_remove += glob.glob('boolnet/bintools/biterror.c')
     to_remove += glob.glob('boolnet/bintools/biterror_chained.c')
@@ -30,12 +28,11 @@ if "clean" in args:
     # C++
     to_remove += glob.glob('boolnet/network/algorithms.cpp')
     to_remove += glob.glob('boolnet/network/boolnet.cpp')
-    to_remove += glob.glob('boolnet/learning/networkstate.cpp')
+    to_remove += glob.glob('boolnet/network/networkstate.cpp')
     # Static lib files
     to_remove += glob.glob('boolnet/bintools/*.so')
     to_remove += glob.glob('boolnet/exptools/*.so')
     to_remove += glob.glob('boolnet/network/*.so')
-    to_remove += glob.glob('boolnet/learning/*.so')
     for f in to_remove:
         os.remove(f)
 
@@ -45,14 +42,6 @@ if args.count('build_ext') > 0 and args.count('--inplace') == 0:
     sys.argv.insert(sys.argv.index('build_ext')+1, '--inplace')
 
 extensions = [
-    Extension('boolnet.bintools.packing',
-              ['boolnet/bintools/packing.pyx'],
-              language='c++',
-              include_dirs=include_dirs),
-    Extension('boolnet.bintools.bitcount',
-              ['boolnet/bintools/bitcount.pyx'],
-              libraries=['gmp'],
-              include_dirs=include_dirs),
     Extension('boolnet.bintools.functions',
               ['boolnet/bintools/functions.pyx'],
               include_dirs=include_dirs),
@@ -82,8 +71,8 @@ extensions = [
               ['boolnet/network/boolnet.pyx'],
               language='c++',
               include_dirs=include_dirs),
-    Extension('boolnet.learning.networkstate',
-              ['boolnet/learning/networkstate.pyx'],
+    Extension('boolnet.network.networkstate',
+              ['boolnet/network/networkstate.pyx'],
               language='c++',
               include_dirs=include_dirs),
     ]

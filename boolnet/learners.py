@@ -4,8 +4,8 @@ import numpy as np
 import boolnet.bintools.functions as fn
 from boolnet.bintools.packing import (
     unpack_bool_matrix, unpack_bool_vector, BitPackedMatrix)
-from boolnet.learning.networkstate import StandardBNState
-import boolnet.learning.feature_selection as mfs
+from boolnet.network.networkstate import StandardBNState
+import minfs.feature_selection as mfs
 from time import time
 
 

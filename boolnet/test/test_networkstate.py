@@ -16,7 +16,7 @@ from boolnet.bintools.operator_iterator import (
     OpExampleIterFactory)
 from boolnet.bintools.example_generator import (
     packed_from_operator, PackedExampleGenerator)
-from boolnet.learning.networkstate import (
+from boolnet.network.networkstate import (
     StandardBNState, ChainedBNState,
     standard_from_operator, chained_from_operator)
 

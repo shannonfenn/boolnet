@@ -2,7 +2,7 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import fixture
 from boolnet.network.boolnet import BoolNet
-# from boolnet.learning.learners import build_mask
+# from boolnet.learners import build_mask
 
 
 # #################### Global fixtures #################### #
