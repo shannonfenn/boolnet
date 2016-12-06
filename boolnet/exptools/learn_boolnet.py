@@ -75,7 +75,7 @@ def add_noise(mapping, rate):
 
     for i in range(No):
         np.random.shuffle(noise_mask[:, i])
-    noise_mask = pk.pack_bool_matrix(noise_mask)
+    noise_mask = pk.packmat(noise_mask)
 
     # XOR will flip all bits where the noise mask is '1'
     mapping[-No:, :] = np.bitwise_xor(mapping[-No:, :], noise_mask).astype(mapping.dtype)

@@ -14,7 +14,7 @@ from BoolNet.NetworkEvaluatorCython import NetworkEvaluatorCython
 from BoolNet.function_names import scalar_functions, function_name, Function
 from BoolNet.BooleanNetwork import BooleanNetwork
 from BoolNet.RandomBooleanNetwork import RandomBooleanNetwork
-from BoolNet.Packing import pack_bool_matrix
+from BoolNet.Packing import packmat
 
 
 def parse_arguments():
@@ -138,8 +138,8 @@ if __name__ == '__main__':
     Ne, Ni = inputs.shape
     _, No = target.shape
 
-    inputs = pack_bool_matrix(inputs)
-    target = pack_bool_matrix(target)
+    inputs = packmat(inputs)
+    target = packmat(target)
 
     evaluator = evaluator_class(inputs, target, Ne)
 

@@ -1,6 +1,6 @@
 # cython: language_level=3
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
-from boolnet.bintools.packing cimport packed_type_t
+from bitpacking.packing cimport packed_type_t
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
 
 

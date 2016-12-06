@@ -11,7 +11,7 @@ sys.path.append(os.path.expanduser('~/HMRI/code/python/'))
 
 from BoolNet.function_names import all_functions, function_name, function_value
 
-from BoolNet.Packing import pack_bool_matrix, packed_type, generate_end_mask
+from BoolNet.Packing import packmat, packed_type, generate_end_mask
 
 
 # def parse_arguments():
@@ -46,7 +46,7 @@ def tests(metrics, param_sets, repeats):
 def make_params(f):
     E_unpacked = np.array(json.load(f), dtype=packed_type)
     Ne, _ = E_unpacked.shape
-    E = pack_bool_matrix(E_unpacked)
+    E = packmat(E_unpacked)
     E_scratch = np.zeros_like(E)
     end_mask = generate_end_mask(Ne)
     return (E, E_scratch, Ne, end_mask)

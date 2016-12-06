@@ -1,4 +1,5 @@
 import numpy as np
+import bitpacking.packing as pk
 
 
 class PackedMatrix(np.ndarray):
@@ -42,13 +43,13 @@ def partition_packed(matrix, indices):
 
     # return the PackedMatrix types to provide meta-data
     Ne = indices.shape[0]
-    training_matrix = BitPackedMatrix(M_trg, Ne=Ne, Ni=matrix.Ni)
-    test_matrix = BitPackedMatrix(M_test, Ne=matrix.Ne-Ne, Ni=matrix.Ni)
+    training_matrix = PackedMatrix(M_trg, Ne=Ne, Ni=matrix.Ni)
+    test_matrix = PackedMatrix(M_test, Ne=matrix.Ne-Ne, Ni=matrix.Ni)
 
     return training_matrix, test_matrix
 
 
-cpdef sample_packed(matrix, indices, invert=False):
-    sample = pk.sample_packed(matrix, matrix.Ne, indiced, invert)
+def sample_packed(matrix, indices, invert=False):
+    sample = pk.sample_packed(matrix, matrix.Ne, indices, invert)
     Ne = matrix.Ne - indices.size if invert else indices.size
-    return BitPackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)
+    return PackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)

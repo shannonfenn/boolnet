@@ -2,7 +2,8 @@
 # cython: boundscheck=False, wraparound=False, nonecheck=False, cdivision=True, initializedcheck=False
 import numpy as np
 from bitpacking.packing cimport packed_type_t, pack_chunk, PACKED_SIZE
-from bitpacking.packing import packed_type, BitPackedMatrix
+from bitpacking.packing import packed_type
+from boolnet.utils import PackedMatrix
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
 
 
@@ -19,7 +20,7 @@ cpdef packed_from_operator(indices, Nb, No, operator, exclude=False):
     if Ne % PACKED_SIZE > 0:
         chunks += 1
 
-    M = BitPackedMatrix(np.empty((Ni+No, chunks), dtype=packed_type), Ne, Ni)
+    M = PackedMatrix(np.empty((Ni+No, chunks), dtype=packed_type), Ne, Ni)
     
     I, T = np.split(M, [Ni])
     packed_factory.reset()

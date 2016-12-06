@@ -1,7 +1,7 @@
 # cython: language_level=3
 import cython
 cimport numpy as np
-from boolnet.bintools.packing cimport packed_type_t
+from bitpacking.packing cimport packed_type_t
 
 cdef confusion(packed_type_t[:] errors, packed_type_t[:] target, size_t Ne,
                packed_type_t[:] TP_buf, packed_type_t[:] FP_buf, packed_type_t[:] FN_buf)

@@ -3,7 +3,7 @@ from pytest import fixture
 from numpy.testing import assert_array_almost_equal
 from boolnet.bintools.functions import function_from_name
 from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
-from boolnet.bintools.packing import packed_type
+from bitpacking.packing import packed_type
 
 
 def eval_chained(window_width, Ep, error_evaluator):

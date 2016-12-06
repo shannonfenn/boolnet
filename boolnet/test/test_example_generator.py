@@ -3,7 +3,7 @@ import os.path
 import numpy as np
 from pytest import fixture
 from numpy.testing import assert_array_equal as assert_array_equal
-from boolnet.bintools.packing import packed_type, pack_bool_matrix
+from bitpacking.packing import packed_type, packmat
 import boolnet.bintools.operator_iterator as opit
 from boolnet.bintools.example_generator import (
     packed_from_operator, PackedExampleGenerator)
@@ -186,8 +186,8 @@ class TestExampleGenerator:
         indices = np.sort(indices)
         inp = inp[indices, :]
         tgt = tgt[indices, :]
-        inp_p = pack_bool_matrix(inp)
-        tgt_p = pack_bool_matrix(tgt)
+        inp_p = packmat(inp)
+        tgt_p = packmat(tgt)
         if exclude:
             indices = [i for i in range(Ne) if i not in indices]
         indices = np.array(indices, dtype=packed_type)
@@ -236,7 +236,7 @@ class TestExampleGenerator:
             expected_indices = np.array(expected_indices, dtype=packed_type)
         else:
             expected_indices = indices
-        expected = pack_bool_matrix(np.hstack((
+        expected = packmat(np.hstack((
             inp[expected_indices, :],
             tgt[expected_indices, :])))
 

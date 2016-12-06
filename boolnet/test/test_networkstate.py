@@ -5,10 +5,10 @@ from copy import copy, deepcopy
 from collections import namedtuple
 from pytest import mark, raises, fixture
 
-from boolnet.bintools.packing import (
-    pack_bool_matrix, unpack_bool_matrix, generate_end_mask, BitPackedMatrix,
-    partition_packed)
-from boolnet.bintools.packing import PACKED_SIZE_PY as PACKED_SIZE
+import bitpacking.packing as pk
+from bitpacking.packing import PACKED_SIZE_PY as PACKED_SIZE
+
+from boolnet.utils import PackedMatrix, partition_packed
 from boolnet.bintools.functions import (
     function_name, all_functions, function_from_name)
 from boolnet.bintools.operator_iterator import (
@@ -37,13 +37,13 @@ def to_binary(value, num_bits):
 
 
 def all_possible_inputs(num_bits):
-    return pack_bool_matrix(np.array(
+    return pk.packmat(np.array(
         [to_binary(i, num_bits) for i in range(2**num_bits)],
         dtype=np.uint8))
 
 
 def packed_zeros(shape):
-    return pack_bool_matrix(np.zeros(shape, dtype=np.uint8))
+    return pk.packmat(np.zeros(shape, dtype=np.uint8))
 
 
 # ############ Helpers for fixtures ############# #
@@ -75,8 +75,8 @@ def harness_to_fixture(fname, state_type):
 def standard_harness_to_fixture(test):
     Ni = test['Ni']
     No = test['No']
-    gates = np.array(test['gates'], np.uint32)
-    samples = np.array(test['samples'], np.uint32)
+    gates = np.array(test['gates'], np.uintp)
+    samples = np.array(test['samples'], np.uintp)
 
     # add non-existant sub-dictionaries
     test['input matrix'] = {}
@@ -101,7 +101,7 @@ def standard_harness_to_fixture(test):
 
     # Test sample version
     samples_t = np.array([i for i in range(inputs.shape[0])
-                          if i not in samples])
+                          if i not in samples], dtype=np.uintp)
 
     target_t = target[samples_t]
     inputs_t = inputs[samples_t]
@@ -114,9 +114,9 @@ def standard_harness_to_fixture(test):
     test['error matrix']['test'] = error[samples_t]
 
     # generate sample versions
-    Mf = BitPackedMatrix(
-        np.vstack((pack_bool_matrix(inputs),
-                   pack_bool_matrix(target))),
+    Mf = PackedMatrix(
+        np.vstack((pk.packmat(inputs),
+                   pk.packmat(target))),
         Ne=inputs.shape[0], Ni=Ni)
 
     # This is wrong, need to use packed sampling methods
@@ -256,7 +256,7 @@ class TestStandard:
     def build_instance(self, instance_dict, sample_type, field):
         state = instance_dict['state'][sample_type]
         expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
-        return state, expected, lambda mat: unpack_bool_matrix(mat, state.Ne)
+        return state, expected, lambda mat: pk.unpackmat(mat, state.Ne)
 
     def output_different_helper(self, instance):
         state, _, eval_func = self.build_instance(
@@ -298,7 +298,7 @@ class TestStandard:
         (2, (2, 4), 4)      # both
     ])
     def test_construction_exceptions(self, Ni, Tshape, Ne):
-        M = BitPackedMatrix(np.vstack((
+        M = PackedMatrix(np.vstack((
             all_possible_inputs(Ni),
             packed_zeros(Tshape))), Ne, Ni)
         with raises(ValueError):
@@ -448,7 +448,7 @@ class TestBoth:
         assert state.Ni == state_params['Ni']
         assert state.No == state_params['No']
         assert state.Ng == len(state_params['gates'])
-        assert state.zero_mask == generate_end_mask(state.Ne)
+        assert state.zero_mask == pk.generate_end_mask(state.Ne)
 
     def test_from_operator_func_value(self, state_params,
                                       state_type, sample_type):

@@ -6,10 +6,11 @@ import numpy as np
 import os
 import json
 import random
+import bitpacking.packing as pk
 
 import boolnet.exptools.config_schemata as sch
-import boolnet.bintools.packing as pk
 import boolnet.bintools.operator_iterator as op
+from utils import PackedMatrix
 
 
 def get_seed(key):
@@ -147,7 +148,7 @@ def file_instance(params):
     # build list of train/test set instances
     instance = {
         'type': 'raw_unsplit',
-        'matrix': pk.BitPackedMatrix(Mp, N, Ni)
+        'matrix': PackedMatrix(Mp, N, Ni)
         }
 
     return instance, N, Ni

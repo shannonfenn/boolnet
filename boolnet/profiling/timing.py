@@ -3,7 +3,7 @@ import line_profiler
 import timeit
 import shlex
 import argparse
-from BoolNet.Packing import pack_bool_matrix, unpack_bool_matrix, unpack_bool_vector
+from BoolNet.Packing import packmat, unpackmat, unpackvec
 from BoolNet.BooleanNetwork import BooleanNetwork
 
 
@@ -12,7 +12,7 @@ def dump_stats(profile, func_name):
     stats = profile.get_stats()
     assert len(stats.timings) > 0, "No profile stats."
     for key, timings in stats.timings.items():
-        if key[-1] == 'unpack_bool_matrix':
+        if key[-1] == 'unpackmat':
             assert len(timings) > 0
             break
     else:
@@ -22,32 +22,32 @@ def dump_stats(profile, func_name):
 def profile_packing(line=False):
     # setup
     A = np.array(np.random.randint(2, size=(32, 50)), dtype=np.uint8)
-    Ap = pack_bool_matrix(A)
+    Ap = packmat(A)
     Vp = Ap[0, :]
 
     timeit.timeit('"-".join(str(n) for n in range(100))', number=10000)
 
     print('BASIC TIMING')
-    print('pack_bool_matrix')
+    print('packmat')
     timeit.main(args=shlex.split(
-        """-s'from __main__ import A, pack_bool_matrix' 'pack_bool_matrix(A)'"""))
-    print('unpack_bool_vector')
+        """-s'from __main__ import A, packmat' 'packmat(A)'"""))
+    print('unpackvec')
     timeit.main(args=shlex.split(
-        """-s'from __main__ import Vp, unpack_bool_vector' 'unpack_bool_vector(Vp, 32)'"""))
-    print('unpack_bool_matrix')
+        """-s'from __main__ import Vp, unpackvec' 'unpackvec(Vp, 32)'"""))
+    print('unpackmat')
     timeit.main(args=shlex.split(
-        """-s'from __main__ import Ap, unpack_bool_matrix' 'unpack_bool_matrix(Ap, 32)'"""))
+        """-s'from __main__ import Ap, unpackmat' 'unpackmat(Ap, 32)'"""))
 
     if line:
         print('\nLINE PROFILING')
-        profile = line_profiler.LineProfiler(pack_bool_matrix)
-        profile.runcall(pack_bool_matrix, A)
+        profile = line_profiler.LineProfiler(packmat)
+        profile.runcall(packmat, A)
         dump_stats(profile)
-        profile = line_profiler.LineProfiler(unpack_bool_matrix)
-        profile.runcall(unpack_bool_matrix, Ap, 32)
+        profile = line_profiler.LineProfiler(unpackmat)
+        profile.runcall(unpackmat, Ap, 32)
         dump_stats(profile)
-        profile = line_profiler.LineProfiler(unpack_bool_vector)
-        profile.runcall(unpack_bool_vector, Vp, 32)
+        profile = line_profiler.LineProfiler(unpackvec)
+        profile.runcall(unpackvec, Vp, 32)
         dump_stats(profile)
 
 

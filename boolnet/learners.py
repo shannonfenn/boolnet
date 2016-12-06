@@ -1,11 +1,12 @@
 from copy import copy
 from collections import namedtuple
 import numpy as np
-import boolnet.bintools.functions as fn
-from boolnet.bintools.packing import (
-    unpack_bool_matrix, unpack_bool_vector, BitPackedMatrix)
-from boolnet.network.networkstate import StandardBNState
+import bitpacking.packing as pk
 import minfs.feature_selection as mfs
+
+import boolnet.bintools.functions as fn
+from utils import PackedMatrix
+from boolnet.network.networkstate import StandardBNState
 from time import time
 
 
@@ -97,8 +98,8 @@ class BasicLearner:
 
         if self.target_order is None:
             # determine the target order by ranking feature sets
-            mfs_features = unpack_bool_matrix(self.input_matrix, self.Ne)
-            mfs_targets = unpack_bool_matrix(self.target_matrix, self.Ne)
+            mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
+            mfs_targets = pk.unpackmat(self.target_matrix, self.Ne)
 
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
@@ -156,8 +157,8 @@ class StratifiedLearner(BasicLearner):
             not_learned = np.setdiff1d(all_targets, self.learned_targets)
 
             # unpack inputs to minFS solver
-            mfs_features = unpack_bool_matrix(inputs, self.Ne)
-            mfs_targets = unpack_bool_matrix(
+            mfs_features = pk.unpackmat(inputs, self.Ne)
+            mfs_targets = pk.unpackmat(
                 self.target_matrix[not_learned, :], self.Ne)
 
             # use external solver for minFS
@@ -184,8 +185,8 @@ class StratifiedLearner(BasicLearner):
             t = self.target_order[strata]
             if self.use_minfs_selection:
                 # unpack inputs to minFS solver
-                mfs_features = unpack_bool_matrix(inputs, self.Ne)
-                mfs_target = unpack_bool_vector(self.target_matrix[t], self.Ne)
+                mfs_features = pk.unpackmat(inputs, self.Ne)
+                mfs_target = pk.unpackvec(self.target_matrix[t], self.Ne)
                 fs, _ = mfs.best_feature_set(
                     mfs_features, mfs_target, self.mfs_metric,
                     timelimit=self.time_limit, solver=self.minfs_solver)
@@ -203,8 +204,8 @@ class StratifiedLearner(BasicLearner):
 
         target = self.target_matrix[target_index]
 
-        return BitPackedMatrix(np.vstack((inputs, target)),
-                               Ne=self.Ne, Ni=inputs.shape[0])
+        return PackedMatrix(np.vstack((inputs, target)),
+                            Ne=self.Ne, Ni=inputs.shape[0])
 
     def next_gates(self, strata, problem_matrix):
         size = self.remaining_budget // (self.No - strata)
@@ -248,7 +249,7 @@ class StratifiedLearner(BasicLearner):
 
         new_target = np.vstack((base.target_matrix, new.target_matrix))
 
-        new_problem_matrix = BitPackedMatrix(
+        new_problem_matrix = PackedMatrix(
             np.vstack((self.input_matrix, new_target)),
             Ne=self.Ne, Ni=self.Ni)
 
@@ -300,8 +301,12 @@ class StratifiedLearner(BasicLearner):
 
             t1 = time()
 
+            print('optimising...')
+
             # optimise
             partial_result = self.optimiser.run(state, self.opt_params)
+
+            print('done.')
 
             t2 = time()
             # record result
@@ -317,13 +322,16 @@ class StratifiedLearner(BasicLearner):
             # new Ni = Ng - No + Ni
             No = accumulated_network.No
             inputs = accumulated_network.activation_matrix[:-No, :]
-            inputs = BitPackedMatrix(inputs, Ne=self.Ne, Ni=inputs.shape[0])
+            inputs = PackedMatrix(inputs, Ne=self.Ne, Ni=inputs.shape[0])
 
             self.learned_targets.append(target)
 
             t3 = time()
             optimisation_times.append(t2 - t1)
             other_times.append(t3 - t2 + t1 - t0)
+
+            print(optimisation_times[-1])
+            print(other_times[-1])
 
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs

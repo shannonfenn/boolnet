@@ -4,7 +4,7 @@ import numpy as np
 import os.path
 from copy import copy
 from pytest import fixture
-from bitpacking.packing import unpack_bool_matrix
+from bitpacking.packing import unpackmat
 import boolnet.bintools.functions as fn
 
 
@@ -46,7 +46,7 @@ def error_matrix_harness(request):
     test, Ep = ERROR_MATRIX_CACHE[fname]
     test = copy(test)
     Ep = np.array(Ep, copy=True)
-    E = unpack_bool_matrix(Ep, test['Ne'])
+    E = unpackmat(Ep, test['Ne'])
     test['packed error matrix'] = Ep
     test['unpacked error matrix'] = E
     # No = Ep.shape[0]

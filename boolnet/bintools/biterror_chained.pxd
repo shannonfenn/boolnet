@@ -1,5 +1,5 @@
 import cython
-from boolnet.bintools.packing cimport packed_type_t
+from bitpacking.packing cimport packed_type_t
 cimport numpy as np
 
 
