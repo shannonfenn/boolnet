@@ -39,7 +39,7 @@ class PackedMatrix(np.ndarray):
 
 
 def partition_packed(matrix, indices):
-    M_trg, M_test = pk.partition(matrix, matrix.Ne, indices)
+    M_trg, M_test = pk.partition_columns(matrix, matrix.Ne, indices)
 
     # return the PackedMatrix types to provide meta-data
     Ne = indices.shape[0]
@@ -50,6 +50,10 @@ def partition_packed(matrix, indices):
 
 
 def sample_packed(matrix, indices, invert=False):
-    sample = pk.sample(matrix, matrix.Ne, indices, invert)
+    sample = pk.sample_columns(matrix, matrix.Ne, indices, invert)
     Ne = matrix.Ne - indices.size if invert else indices.size
     return PackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)
+
+
+def unpack(packed_matrix, transpose=True):
+    return pk.unpackmat(packed_matrix, packed_matrix.Ne, transpose=transpose)
