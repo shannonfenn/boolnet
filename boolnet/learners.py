@@ -301,12 +301,8 @@ class StratifiedLearner(BasicLearner):
 
             t1 = time()
 
-            print('optimising...')
-
             # optimise
             partial_result = self.optimiser.run(state, self.opt_params)
-
-            print('done.')
 
             t2 = time()
             # record result
