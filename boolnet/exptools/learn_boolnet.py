@@ -158,15 +158,13 @@ def build_states(mapping, gates, objectives):
         op = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
-        window_size = mapping['window_size']
-        S_trg = ns.chained_from_operator(
-            gates, trg_indices, Nb, No, op, window_size)
+        # window_size = mapping['window_size']
+        S_trg = ns.standard_from_operator(gates, trg_indices, Nb, No, op)
         if test_indices is None:
-            S_test = ns.chained_from_operator(
-                gates, trg_indices, Nb, No, op, window_size, exclude=True)
+            S_test = ns.standard_from_operator(gates, trg_indices, Nb, No, op,
+                                               exclude=True)
         else:
-            S_test = ns.chained_from_operator(
-                gates, test_indices, Nb, No, op, window_size)
+            S_test = ns.standard_from_operator(gates, test_indices, Nb, No, op)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
