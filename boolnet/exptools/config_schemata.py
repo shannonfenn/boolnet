@@ -159,8 +159,27 @@ optimiser_schema = Any(
     )
 
 
-target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
+fs_selection_metric_schema = Any(
+    'cardinality>first', 'cardinality>random', 'cardinality>entropy',
+    'cardinality>feature_diversity', 'cardinality>pattern_diversity')
 
+minfs_params_schema = Any(
+    # CPLEX
+    Schema({
+        Optional('time_limit'):       Range(min=0.0),
+        }),
+    # Meta-RaPS
+    Schema({
+        Optional('iterations'):             All(int, Range(min=1)),
+        Optional('improvement_iterations'): All(int, Range(min=1)),
+        Optional('search_magnitude'):       All(float, Range(min=0, max=1)),
+        Optional('priority'):               All(float, Range(min=0, max=1)),
+        Optional('restriction'):            All(float, Range(min=0, max=1)),
+        Optional('improvement'):            All(float, Range(min=0, max=1))
+        }),
+    )
+
+target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
 
 learner_schema = Schema(
     All(
@@ -171,21 +190,13 @@ learner_schema = Schema(
             'target_order': target_order_schema,
             Required('seed', default=None): Any(
                 None, All(int, Range(min=0))),
-            Optional('minfs_selection_metric'): Any(
-                'cardinality>first', 'cardinality>random',
-                'cardinality>entropy',
-                'cardinality>feature_diversity',
-                'cardinality>pattern_diversity'),
-            Optional('minfs_masking'):    bool,
-            Optional('minfs_time_limit'): Range(min=0.0),
-            Optional('minfs_solver'):     str,
-            Optional('stopping_error'):   float
+            Optional('minfs_masking'):          bool,
+            Optional('stopping_error'):         float,
+            Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
+            Optional('minfs_solver_params'):    minfs_params_schema,
+            Optional('minfs_selection_metric'): fs_selection_metric_schema,
             },
             required=True),
-        # if target_order = auto then minfs_selection_metric must be set
-        conditionally_required(
-            'target_order', 'auto', 'minfs_selection_metric'),
-        # if minfs_masking = True then minfs_selection_metric must be set
         conditionally_required(
             'minfs_masking', True, 'minfs_selection_metric'),
         # if name = basic then minfs_masking is not allowed

@@ -65,7 +65,7 @@ class BasicLearner:
             self.target_order = np.array(parameters['target_order'],
                                          dtype=np.uintp)
         # Optional minfs solver time limit
-        self.time_limit = parameters.get('minfs_time_limit', None)
+        self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
 
         # add functors for evaluating the guiding func and stop criteria
@@ -104,7 +104,7 @@ class BasicLearner:
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
                 mfs_features, mfs_targets, self.mfs_metric,
-                timelimit=self.time_limit, solver=self.minfs_solver)
+                self.minfs_solver, self.minfs_params)
 
             # randomly pick from top ranked targets
             self.target_order = self.order_from_rank(rank)
@@ -165,11 +165,11 @@ class StratifiedLearner(BasicLearner):
             if strata > 0 and False:  # disabled for now
                 prior_solns = self.feature_sets[strata-1, not_learned]
             else:
-                prior_solns = [None]*len(not_learned)
+                prior_solns = None
 
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_metric, prior_solns,
-                timelimit=self.time_limit, solver=self.minfs_solver)
+                mfs_features, mfs_targets, self.mfs_metric,
+                self.minfs_solver, self.minfs_params, prior_solns)
 
             # replace empty feature sets
             for i in range(len(feature_sets)):
@@ -189,7 +189,7 @@ class StratifiedLearner(BasicLearner):
                 mfs_target = pk.unpackvec(self.target_matrix[t], self.Ne)
                 fs, _ = mfs.best_feature_set(
                     mfs_features, mfs_target, self.mfs_metric,
-                    timelimit=self.time_limit, solver=self.minfs_solver)
+                    self.minfs_solver, self.minfs_params)
                 if len(fs) == 0:
                     fs = list(range(inputs.shape[0]))
 
