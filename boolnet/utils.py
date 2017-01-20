@@ -23,6 +23,9 @@ class PackedMatrix(np.ndarray):
     def No(self):
         return self.shape[0] - self.Ni
 
+    def split(self):
+        return np.split(self, [self.Ni])
+
     def __reduce__(self):
         # Get the parent's __reduce__ tuple
         pickled_state = super(PackedMatrix, self).__reduce__()
