@@ -49,7 +49,7 @@ cdef class StandardE1(Evaluator):
 
 
 cdef class StandardE2(Evaluator):
-    cdef double[:] weight_vector
+    cdef readonly double[:] weight_vector
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
