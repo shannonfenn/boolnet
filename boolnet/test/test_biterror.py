@@ -1,6 +1,6 @@
 from boolnet.bintools.functions import function_from_name
 import numpy as np
-from boolnet.bintools.biterror import EVALUATORS, StandardE2
+from boolnet.bintools.biterror import EVALUATORS, E2
 
 
 def test_function_value(error_matrix_harness):
@@ -29,7 +29,7 @@ def test_e2_weight_vector(error_matrix_harness):
     order = np.array([4, 3, 8, 0, 2, 7, 1, 5, 6], dtype=np.uintp)
     expected = np.array([5, 6, 1, 9, 7, 2, 8, 4, 3], dtype=float)
     expected /= expected.sum()
-    evaluator = StandardE2(1, len(order), order)
+    evaluator = E2(1, len(order), order)
     actual = evaluator.weight_vector
     np.testing.assert_array_almost_equal(actual, expected)
 

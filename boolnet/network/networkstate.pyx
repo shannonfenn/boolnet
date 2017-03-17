@@ -14,31 +14,15 @@ from bitpacking.packing cimport (
 from boolnet.network.boolnet cimport BoolNet, Move
 from boolnet.bintools.functions import function_name
 from boolnet.bintools.functions cimport Function
-from boolnet.bintools.biterror import EVALUATORS 
-from boolnet.bintools.biterror_chained import CHAINED_EVALUATORS
+from boolnet.bintools.biterror import EVALUATORS
 from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
 from boolnet.bintools.example_generator cimport (
     PackedExampleGenerator, packed_from_operator)
 
 
-# cpdef standard_from_mapping(network, mapping):
-#     if isinstance(mapping, BoolMapping):
-#         return StandardBNState(network, mapping.inputs, mapping.target, mapping.Ne)
-#     elif isinstance(mapping, OperatorBoolMapping):
-#         return standard_from_operator(network, mapping.indices,
-#                                       mapping.Nb, mapping.No,
-#                                       mapping.operator, mapping.N)
-
-
-cpdef standard_from_operator(gates, indices, Nb, No, operator, exclude=False):
+cpdef state_from_operator(gates, indices, Nb, No, operator, exclude=False):
     M = packed_from_operator(indices, Nb, No, operator, exclude)
-    return StandardBNState(gates, M)
-
-
-cpdef chained_from_operator(gates, indices, Nb, No, operator, window_size, exclude=False):
-    ex_factory = OpExampleIterFactory(indices, Nb, operator, exclude)
-    packed_ex_factory = PackedExampleGenerator(ex_factory, No)
-    return ChainedBNState(gates, packed_ex_factory, window_size)
+    return BNState(gates, M)
 
 
 cdef class BNState:
@@ -51,10 +35,15 @@ cdef class BNState:
         readonly size_t invalid_start
         readonly bint evaluated
 
-    def __init__(self, gates, size_t Ni, size_t No, size_t Ne, size_t cols):
+    def __init__(self, gates, problem_matrix):
         ''' Sets up the activation and error matrices for a new network.
             Note: This copies the provided network, so do not expect modifications
                   to pass through transparently without reacquiring the new alias.'''
+        Ni = problem_matrix.Ni
+        No = problem_matrix.shape[0] - Ni
+        Ne = problem_matrix.Ne
+        cols = problem_matrix.shape[1]
+
         self.network = BoolNet(gates, Ni, No)
         Ng = self.network.Ng
 
@@ -83,7 +72,18 @@ cdef class BNState:
         self.invalid_start = 0
         self._check_state_invariants()
 
+        # buffer view for copying
+        cdef packed_type_t[:, :] P = problem_matrix
+
+        self.inputs[...] = P[:Ni, :]
+        self.target[...] = P[Ni:, :]
+
+        # just in case
+        self._apply_zero_mask(self.activation)   # masks input/output too (they're views)
+        self._apply_zero_mask(self.target)
+
     def __copy__(self):
+        # we don't want copying
         raise NotImplementedError
 
     property Ni:
@@ -111,6 +111,29 @@ cdef class BNState:
             # conversion to list prevents silly copy bugs
             return list(self.err_evaluators.keys())
 
+    property input_matrix:
+        def __get__(self):
+            return self.inputs
+
+    property target_matrix:
+        def __get__(self):
+            return self.target
+
+    property activation_matrix:
+        def __get__(self):
+            self.evaluate()
+            return self.activation
+
+    property output_matrix:
+        def __get__(self):
+            self.evaluate()
+            return self.outputs
+
+    property error_matrix:
+        def __get__(self):
+            self.evaluate()
+            return self.error
+
     cpdef connected_gates(self):
         return self.network.connected_gates()
 
@@ -118,10 +141,19 @@ cdef class BNState:
         return self.network.connected_sources()
 
     cpdef add_function(self, Function function, size_t[:] order, name=''):
-       pass
+        eval_class = EVALUATORS[function]
+        if not name:
+            name = function_name(function) + str(np.asarray(order))
+        self.err_evaluators[name] = eval_class(self.Ne, self.No, order)
+        self.evaluated = False
+        return name
 
     cpdef function_value(self, name):
-        pass
+        if name not in self.err_evaluators:
+            raise ValueError('No evaluator with name: {}'.format(name))
+        if not self.evaluated:
+            self.evaluate()
+        return self.err_evaluators[name].evaluate(self.error, self.target)
 
     cpdef set_gates(self, np.uint32_t[:, :] gates):
         # force reevaluation
@@ -175,7 +207,7 @@ cdef class BNState:
         self.network.clear_history()
 
     ############################### Evaluation methods ###############################
-    cdef void _evaluate(self):
+    cpdef evaluate(self):
         ''' Evaluate the activation and error matrices for the network
             getting node TFs from network. '''
         cdef:
@@ -183,6 +215,9 @@ cdef class BNState:
             packed_type_t[:, :] activation, outputs, error, target
             np.uint32_t[:, :] gates
             f_type func
+
+        if self.evaluated:
+            return
 
         Ng = self.network.Ng
         Ni = self.network.Ni
@@ -210,6 +245,22 @@ cdef class BNState:
         for o in range(No):
             for c in range(cols):
                 error[o, c] = (target[o, c] ^ outputs[o, c])
+
+        # masking the activation does the output as well (since it is a view)
+        self._apply_zero_mask(self.activation)
+        self._apply_zero_mask(self.error)
+
+        self.evaluated = True
+
+    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
+        # when evaluating make a zeroing-mask '11110000' to AND the last
+        # column in the error matrix with to clear the value back to zero
+        cdef size_t r, rows, cols
+
+        rows, cols = matrix.shape[0], matrix.shape[1]
+
+        for r in range(rows):
+            matrix[r, cols-1] &= self.zero_mask
 
     cdef _check_state_invariants(self):
         cdef size_t Ng, Ni, No
@@ -250,223 +301,3 @@ cdef class BNState:
             raise ValueError('Error column width ({}) != cols ({}).'.
                              format(self.error.shape[1], self.cols))
 
-
-cdef class StandardBNState(BNState):
-
-    def __init__(self, gates, problem_matrix):
-        Ni = problem_matrix.Ni
-        No = problem_matrix.shape[0] - Ni
-        Ne = problem_matrix.Ne
-        cols = problem_matrix.shape[1]
-        super().__init__(gates, Ni, No, Ne, cols)
-
-        # buffer view for copying
-        cdef packed_type_t[:, :] P = problem_matrix
-
-        self.inputs[...] = P[:Ni, :]
-        self.target[...] = P[Ni:, :]
-
-        # just in case
-        self._apply_zero_mask(self.activation)   # masks input/output too (they're views)
-        self._apply_zero_mask(self.target)
-
-    property input_matrix:
-        def __get__(self):
-            return self.inputs
-
-    property target_matrix:
-        def __get__(self):
-            return self.target
-
-    property activation_matrix:
-        def __get__(self):
-            self.evaluate()
-            return self.activation
-
-    property output_matrix:
-        def __get__(self):
-            self.evaluate()
-            return self.outputs
-
-    property error_matrix:
-        def __get__(self):
-            self.evaluate()
-            return self.error
-
-    cpdef add_function(self, Function function, size_t[:] order, name=''):
-        eval_class = EVALUATORS[function]
-        if not name:
-            name = function_name(function) + str(np.asarray(order))
-        self.err_evaluators[name] = eval_class(self.Ne, self.No, order)
-        self.evaluated = False
-        return name
-
-    cpdef function_value(self, name):
-        if name not in self.err_evaluators:
-            raise ValueError('No evaluator with name: {}'.format(name))
-        if not self.evaluated:
-            self.evaluate()
-        return self.err_evaluators[name].evaluate(self.error, self.target)
-
-    cpdef evaluate(self):
-        ''' Evaluate the activation and error matrices if the
-            network has been modified since the last evaluation. '''
-
-        if self.evaluated:
-            return
-
-        self._evaluate()
-
-        self._apply_zero_mask(self.activation)   # this does output_matrix as well (since it is a view)
-        self._apply_zero_mask(self.error)
-
-        self.evaluated = True
-
-    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
-        # when evaluating make a zeroing-mask '11110000' to AND the last
-        # column in the error matrix with to clear the value back to zero
-        cdef size_t r, rows, cols
-
-        rows, cols = matrix.shape[0], matrix.shape[1]
-
-        for r in range(rows):
-            matrix[r, cols-1] &= self.zero_mask
-
-
-cdef class ChainedBNState(BNState):
-    cdef:
-        readonly PackedExampleGenerator example_generator
-        size_t blocks, zero_mask_cols
-        dict function_value_cache
-
-    def __init__(self, gates, PackedExampleGenerator example_generator,
-                 size_t window_size):
-        super().__init__(gates, example_generator.Ni, example_generator.No,
-                         example_generator.Ne, window_size)
-        block_width = (self.cols * PACKED_SIZE)
-        self.blocks = ceil(self.Ne / <double>block_width)
-
-        # work out the number of columns remaining after blocking
-        # as this determines the zero_mask width
-        total_cols = ceil(self.Ne / <double>PACKED_SIZE)
-        remainder = total_cols % self.cols
-
-        self.zero_mask_cols = 1
-        if remainder > 0:
-            self.zero_mask_cols += self.cols - remainder
-
-        self.example_generator = example_generator
-        self.function_value_cache = dict()
-
-    cpdef add_function(self, Function function, size_t[:] order, name=''):
-        eval_class = CHAINED_EVALUATORS[function]
-        if not name:
-            name = function_name(function) + str(np.asarray(order))
-        self.err_evaluators[name] = eval_class(self.Ne, self.No, self.cols, order)
-        self.evaluated = False
-        return name
-
-    cpdef function_value(self, name):
-        if name not in self.err_evaluators:
-            raise ValueError('No evaluator with name: {}'.format(name))
-        if not self.evaluated:
-            self.evaluate()
-        return self.function_value_cache[name]
-
-    cdef evaluate(self):
-        cdef:
-            size_t block
-            dict evaluators = self.err_evaluators
-
-        self.example_generator.reset()
-        for m in evaluators:
-            evaluators[m].reset()
-
-        for block in range(self.blocks):
-            self.example_generator.next_examples(self.inputs, self.target)
-            self._evaluate()
-            # on the last iteration we must not perform a partial evaluation
-            if block < self.blocks - 1:
-                for m in evaluators:
-                    evaluators[m].partial_evaluation(self.error, self.target)
-
-        self._apply_zero_mask(self.error)
-        for m in evaluators:
-            self.function_value_cache[m] = evaluators[m].final_evaluation(self.error, self.target)
-        self.evaluated = True
-
-    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
-        # when evaluating make a zeroing-mask '11110000' to AND the last
-        # column in the error matrix with to clear the value back to zero
-        cdef size_t r, c, rows, cols
-
-        rows, cols = matrix.shape[0], matrix.shape[1]
-
-        for r in range(rows):
-            matrix[r, cols-self.zero_mask_cols] &= self.zero_mask
-            for c in range(1, self.zero_mask_cols):
-                matrix[r, cols-self.zero_mask_cols+c] = 0
-
-
-    ## DEBUG
-    #def I(self):
-    #    cdef:
-    #        size_t block
-    #    outs = []
-    #    self.example_generator.reset() 
-    #    for block in range(self.blocks):
-    #        self.example_generator.next_examples(self.inputs, self.target)
-    #        outs.append(np.array(self.inputs))
-    #    return np.hstack(outs)
-
-    #def T(self):
-    #    cdef:
-    #        size_t block
-    #    tgts = []
-    #    self.example_generator.reset() 
-    #    for block in range(self.blocks):
-    #        self.example_generator.next_examples(self.inputs, self.target)
-    #        if block < self.blocks - 1:
-    #            tgts.append(np.array(self.target))
-        
-    #    self._apply_zero_mask(self.target)
-    #    tgts.append(np.array(self.target))
-    #    return np.hstack(tgts)
-    
-    #def O(self):
-    #    cdef:
-    #        size_t block
-
-    #    outs = []
-    #    self.example_generator.reset()
- 
-    #    for block in range(self.blocks):
-    #        self.example_generator.next_examples(self.inputs, self.target)
-    #        self._evaluate()
-    #        # on the last iteration we must not perform a partial evaluation
-    #        if block < self.blocks - 1:
-    #            outs.append(np.array(self.outputs))
-
-    #    self._apply_zero_mask(self.outputs)
-    #    outs.append(np.array(self.outputs))
-    #    return np.hstack(outs)
-
-    #def E(self):
-    #    cdef:
-    #        size_t block
-    #        dict evaluators = self.err_evaluators
-
-    #    errs = []
-
-    #    self.example_generator.reset()
- 
-    #    for block in range(self.blocks):
-    #        self.example_generator.next_examples(self.inputs, self.target)
-    #        self._evaluate()
-    #        # on the last iteration we must not perform a partial evaluation
-    #        if block < self.blocks - 1:
-    #            errs.append(np.array(self.error))
-
-    #    self._apply_zero_mask(self.error)
-    #    errs.append(np.array(self.error))
-    #    return np.hstack(errs)

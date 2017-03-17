@@ -6,7 +6,7 @@ import minfs.feature_selection as mfs
 
 import boolnet.bintools.functions as fn
 from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
-from boolnet.network.networkstate import StandardBNState
+from boolnet.network.networkstate import BNState
 from time import time
 
 
@@ -91,11 +91,11 @@ class BasicLearner:
                 self.minfs_solver, self.minfs_params)
 
             # randomly pick from possible exact orders
-            self.target_order = order_from_rank(rank)
+            self.target_order = order_from_rank(rank).astype(np.uintp)
 
         # build the network state
         gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
-        state = StandardBNState(gates, self.problem_matrix)
+        state = BNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
         state.add_function(self.guiding_func_id, self.target_order,
                            self.gf_eval_name)
@@ -237,7 +237,7 @@ class StratifiedLearner(BasicLearner):
             np.vstack((self.input_matrix, new_target)),
             Ne=self.Ne, Ni=self.Ni)
 
-        return StandardBNState(accumulated_gates, new_problem_matrix)
+        return BNState(accumulated_gates, new_problem_matrix)
 
     def reorder_network_outputs(self, network):
         # all non-output gates are left alone, and the output gates are
@@ -263,7 +263,7 @@ class StratifiedLearner(BasicLearner):
         inputs = self.input_matrix.copy()
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
-        accumulated_network = StandardBNState(np.empty((0, 3)), inputs)
+        accumulated_network = BNState(np.empty((0, 3)), inputs)
 
         optimisation_times = []
         other_times = []
@@ -277,7 +277,7 @@ class StratifiedLearner(BasicLearner):
 
             # build state to be optimised
             gates = self.next_gates(i, partial_instance)
-            state = StandardBNState(gates, partial_instance)
+            state = BNState(gates, partial_instance)
             # add the guiding function to be evaluated
             state.add_function(self.guiding_func_id,
                                np.arange(state.No, dtype=np.uintp),
@@ -293,7 +293,7 @@ class StratifiedLearner(BasicLearner):
             opt_results.append(partial_result)
 
             # build up final network by inserting this partial result
-            result_state = StandardBNState(
+            result_state = BNState(
                 partial_result.representation.gates, partial_instance)
             accumulated_network = self.join_networks(
                 accumulated_network, result_state, i, target)
@@ -309,9 +309,6 @@ class StratifiedLearner(BasicLearner):
             t3 = time()
             optimisation_times.append(t2 - t1)
             other_times.append(t3 - t2 + t1 - t0)
-
-            print(optimisation_times[-1])
-            print(other_times[-1])
 
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs

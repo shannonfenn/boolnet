@@ -14,11 +14,9 @@ from boolnet.bintools.functions import (
 from boolnet.bintools.operator_iterator import (
     ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL,
     OpExampleIterFactory)
-from boolnet.bintools.example_generator import (
-    packed_from_operator, PackedExampleGenerator)
-from boolnet.network.networkstate import (
-    StandardBNState, ChainedBNState,
-    standard_from_operator, chained_from_operator)
+from boolnet.bintools.example_generator import (packed_from_operator,
+                                                PackedExampleGenerator)
+from boolnet.network.networkstate import BNState, state_from_operator
 
 
 TEST_NETWORKS = glob.glob('boolnet/test/networks/*.yaml')
@@ -58,7 +56,7 @@ def harnesses_with_property(bool_property_name):
 HARNESS_CACHE = dict()
 
 
-def harness_to_fixture(fname, state_type):
+def harness_to_fixture(fname):
     if fname not in HARNESS_CACHE:
         with open(fname) as stream:
             test = yaml.safe_load(stream)
@@ -66,13 +64,6 @@ def harness_to_fixture(fname, state_type):
 
     test = deepcopy(HARNESS_CACHE[fname])
 
-    if state_type == 'standard':
-        return standard_harness_to_fixture(test)
-    elif state_type == 'chained':
-        return chained_harness_to_fixture(test)
-
-
-def standard_harness_to_fixture(test):
     Ni = test['Ni']
     No = test['No']
     gates = np.array(test['gates'], np.uintp)
@@ -125,50 +116,9 @@ def standard_harness_to_fixture(test):
 
     # add states to test
     test['state'] = {
-        'full': StandardBNState(gates, Mf),
-        'sample': StandardBNState(gates, Ms),
-        'test': StandardBNState(gates, Mt)
-    }
-
-    return test
-
-
-def chained_harness_to_fixture(test):
-    Ni = test['Ni']
-    No = test['No']
-    gates = np.array(test['gates'], np.uint32)
-
-    indices_f = np.arange(2**Ni, dtype=np.uint32)
-    indices_s = np.array(test['samples'], dtype=np.uint32)
-
-    op = operator_map[test['target function']]
-
-    if test['target function'] in ['zero', 'unary_and', 'unary_or']:
-        Nb = Ni
-    else:
-        Nb = Ni // 2
-
-    iter_factory_f = OpExampleIterFactory(indices_f, Nb, op, exclude=False)
-    iter_factory_s = OpExampleIterFactory(indices_s, Nb, op, exclude=False)
-    iter_factory_t = OpExampleIterFactory(indices_s, Nb, op, exclude=True)
-
-    generator_f = PackedExampleGenerator(iter_factory_f, No)
-    generator_s = PackedExampleGenerator(iter_factory_s, No)
-    generator_t = PackedExampleGenerator(iter_factory_t, No)
-
-    Ne_f = 2**Ni
-    Ne_s = indices_s.size
-    Ne_t = Ne_f - Ne_s
-
-    window_size_f = np.random.randint(1, max(2, Ne_f // PACKED_SIZE))
-    window_size_s = np.random.randint(1, max(2, Ne_s // PACKED_SIZE))
-    window_size_t = np.random.randint(1, max(2, Ne_t // PACKED_SIZE))
-
-    # add states to test
-    test['state'] = {
-        'full': ChainedBNState(gates, generator_f, window_size_f),
-        'sample': ChainedBNState(gates, generator_s, window_size_s),
-        'test': ChainedBNState(gates, generator_t, window_size_t),
+        'full': BNState(gates, Mf),
+        'sample': BNState(gates, Ms),
+        'test': BNState(gates, Mt)
     }
 
     return test
@@ -179,19 +129,9 @@ def sample_type(request):
     return request.param
 
 
-@fixture(params=['standard', 'chained'])
-def state_type(request):
-    return request.param
-
-
 @fixture(params=TEST_NETWORKS)
-def chained_state(request):
-    return harness_to_fixture(request.param, 'chained')
-
-
-@fixture(params=TEST_NETWORKS)
-def state_harness(request, state_type):
-    return harness_to_fixture(request.param, state_type)
+def state_harness(request):
+    return harness_to_fixture(request.param)
 
 
 @fixture(params=TEST_NETWORKS)
@@ -238,226 +178,222 @@ def state_params(request):
 
 @fixture(params=list(harnesses_with_property('invariant under single move')))
 def single_move_invariant(request):
-    return harness_to_fixture(request.param, 'standard')
+    return harness_to_fixture(request.param)
 
 
 @fixture(params=list(harnesses_with_property('invariant under multiple moves')))
 def multiple_move_invariant(request):
-    return harness_to_fixture(request.param, 'standard')
+    return harness_to_fixture(request.param)
 
 
 MoveAndExpected = namedtuple('MoveAnExpected', ['move', 'expected'])
 
 
+# ##################### TEST HELPERS ##################### #
+def build_instance(instance_dict, sample_type, field):
+    state = instance_dict['state'][sample_type]
+    expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
+    return state, expected, lambda mat: pk.unpackmat(mat, state.Ne)
+
+
+def output_different(instance):
+    state, _, eval_func = build_instance(instance, 'full', 'error matrix')
+    for k in range(10):
+        old_error = eval_func(state.error_matrix)
+        state.move_to_random_neighbour()
+        assert not np.array_equal(eval_func(state.error_matrix), old_error)
+        state.revert_move()
+
+
+def build_from_params(params, sample_type):
+    return state_from_operator(
+        gates=params['gates'],
+        indices=params['indices'][sample_type],
+        Nb=params['Nb'], No=params['No'],
+        operator=params['operator'],
+        exclude=params['exclude'][sample_type]
+    )
+
+
+def run_instance(instance, state):
+    func_id = function_from_name(instance['function'])
+    order = instance['order']
+    if order == 'lsb':
+        order = np.arange(state.No, dtype=np.uintp)
+    elif order == 'msb':
+        order = np.arange(state.No, dtype=np.uintp)[::-1]
+    expected = instance['value']
+    name = state.add_function(func_id, order)
+    actual = state.function_value(name)
+    np.testing.assert_array_almost_equal(expected, actual)
+
+
+# ##################### FIXTURES ##################### #
+@fixture(params=TEST_NETWORKS)
+def state(request):
+    return harness_to_fixture(request.param)
+
+
+@fixture
+def single_layer_zero():
+    instance = harness_to_fixture(
+        'boolnet/test/networks/single_layer_zero.yaml')
+
+    instance = copy(instance)
+
+    test_case = instance['multiple_moves_test_case']
+
+    updated_test_case = []
+    for step in test_case:
+        move = step['move']
+        expected = np.array(step['expected'], dtype=np.uint8)
+        updated_test_case.append(
+            MoveAndExpected(move=move, expected=expected))
+
+    instance['multiple_moves_test_case'] = updated_test_case
+    return instance
+
+
+# ################### Exception Testing ################### #
+@mark.parametrize("Ni, Tshape, Ne", [
+    (1, (2, 4), 4),     # net.No != #tgts
+    (2, (1, 4), 4),     # net.Ni != #inps
+    (2, (2, 4), 4)      # both
+])
+def test_construction_exceptions(Ni, Tshape, Ne):
+    M = PackedMatrix(np.vstack((
+        all_possible_inputs(Ni),
+        packed_zeros(Tshape))), Ne, Ni)
+    with raises(ValueError):
+        BNState([(0, 1, 3)], M)
+
+
 # ################### Functionality Testing ################### #
-class TestStandard:
 
-    # ##################### HELPERS ##################### #
-    def build_instance(self, instance_dict, sample_type, field):
-        state = instance_dict['state'][sample_type]
-        expected = np.array(instance_dict[field][sample_type], dtype=np.uint8)
-        return state, expected, lambda mat: pk.unpackmat(mat, state.Ne)
 
-    def output_different_helper(self, instance):
-        state, _, eval_func = self.build_instance(
-            instance, 'full', 'error matrix')
-        for k in range(10):
-            old_error = eval_func(state.error_matrix)
-            state.move_to_random_neighbour()
-            assert not np.array_equal(eval_func(state.error_matrix), old_error)
-            state.revert_move()
+def test_input_matrix(state, sample_type):
+    state, expected, eval_func = build_instance(state, sample_type,
+                                                'input matrix')
+    actual = eval_func(state.input_matrix)
+    np.testing.assert_array_equal(expected, actual)
 
-    # ##################### FIXTURES ##################### #
-    @fixture(params=TEST_NETWORKS)
-    def standard_state(self, request):
-        return harness_to_fixture(request.param, 'standard')
 
-    @fixture
-    def single_layer_zero(self):
-        instance = harness_to_fixture(
-            'boolnet/test/networks/single_layer_zero.yaml', 'standard')
+def test_target_matrix(state, sample_type):
+    state, expected, eval_func = build_instance(state, sample_type,
+                                                'target matrix')
+    actual = eval_func(state.target_matrix)
+    np.testing.assert_array_equal(expected, actual)
 
-        instance = copy(instance)
 
-        test_case = instance['multiple_moves_test_case']
+def test_output_matrix(state, sample_type):
+    state, expected, eval_func = build_instance(state, sample_type,
+                                                'output matrix')
+    actual = eval_func(state.output_matrix)
+    np.testing.assert_array_equal(expected, actual)
 
-        updated_test_case = []
-        for step in test_case:
-            move = step['move']
-            expected = np.array(step['expected'], dtype=np.uint8)
-            updated_test_case.append(
-                MoveAndExpected(move=move, expected=expected))
 
-        instance['multiple_moves_test_case'] = updated_test_case
-        return instance
+def test_activation_matrix(state, sample_type):
+    state, expected, eval_func = build_instance(state, sample_type,
+                                                'activation matrix')
+    actual = eval_func(state.activation_matrix)
+    np.testing.assert_array_equal(expected, actual)
 
-    # ################### Exception Testing ################### #
-    @mark.parametrize("Ni, Tshape, Ne", [
-        (1, (2, 4), 4),     # net.No != #tgts
-        (2, (1, 4), 4),     # net.Ni != #inps
-        (2, (2, 4), 4)      # both
-    ])
-    def test_construction_exceptions(self, Ni, Tshape, Ne):
-        M = PackedMatrix(np.vstack((
-            all_possible_inputs(Ni),
-            packed_zeros(Tshape))), Ne, Ni)
-        with raises(ValueError):
-            StandardBNState([(0, 1, 3)], M)
 
-    # ################### Functionality Testing ################### #
-    def test_input_matrix(self, standard_state, sample_type):
-        state, expected, eval_func = self.build_instance(
-            standard_state, sample_type, 'input matrix')
-        actual = eval_func(state.input_matrix)
-        np.testing.assert_array_equal(expected, actual)
+def test_error_matrix(state, sample_type):
+    state, expected, eval_func = build_instance(state, sample_type,
+                                                'error matrix')
+    actual = eval_func(state.error_matrix)
+    np.testing.assert_array_equal(expected, actual)
 
-    def test_target_matrix(self, standard_state, sample_type):
-        state, expected, eval_func = self.build_instance(
-            standard_state, sample_type, 'target matrix')
-        actual = eval_func(state.target_matrix)
-        np.testing.assert_array_equal(expected, actual)
 
-    def test_output_matrix(self, standard_state, sample_type):
-        state, expected, eval_func = self.build_instance(
-            standard_state, sample_type, 'output matrix')
-        actual = eval_func(state.output_matrix)
-        np.testing.assert_array_equal(expected, actual)
+def test_single_move_output_different(single_move_invariant):
+    output_different(single_move_invariant)
 
-    def test_activation_matrix(self, standard_state, sample_type):
-        state, expected, eval_func = self.build_instance(
-            standard_state, sample_type, 'activation matrix')
-        actual = eval_func(state.activation_matrix)
-        np.testing.assert_array_equal(expected, actual)
 
-    def test_error_matrix(self, standard_state, sample_type):
-        state, expected, eval_func = self.build_instance(
-            standard_state, sample_type, 'error matrix')
+def test_multiple_move_output_different(multiple_move_invariant):
+    output_different(multiple_move_invariant)
+
+
+def test_move_with_initial_evaluation(single_layer_zero):
+    state, expected, eval_func = build_instance(
+        single_layer_zero, 'full', 'error matrix')
+
+    actual = eval_func(state.error_matrix)
+    np.testing.assert_array_equal(expected, actual)
+
+    test_case = single_layer_zero['multiple_moves_test_case'][4]
+    expected = test_case.expected
+
+    state.apply_move(test_case.move)
+    actual = eval_func(state.error_matrix)
+    np.testing.assert_array_equal(expected, actual)
+
+
+def test_multiple_moves_error_matrix(single_layer_zero):
+    state, _, eval_func = build_instance(
+        single_layer_zero, 'full', 'error matrix')
+
+    test_case = single_layer_zero['multiple_moves_test_case']
+
+    for move, expected in test_case:
+        state.apply_move(move)
         actual = eval_func(state.error_matrix)
         np.testing.assert_array_equal(expected, actual)
 
-    def test_single_move_output_different(self, single_move_invariant):
-        self.output_different_helper(single_move_invariant)
 
-    def test_multiple_move_output_different(self, multiple_move_invariant):
-        self.output_different_helper(multiple_move_invariant)
+def test_multiple_reverts_error_matrix(single_layer_zero):
+    state, _, eval_func = build_instance(
+        single_layer_zero, 'full', 'error matrix')
 
-    def test_move_with_initial_evaluation(self, single_layer_zero):
-        state, expected, eval_func = self.build_instance(
-            single_layer_zero, 'full', 'error matrix')
+    test_case = single_layer_zero['multiple_moves_test_case']
 
+    for move, _ in test_case:
+        state.apply_move(move)
+
+    for _, expected in reversed(test_case):
         actual = eval_func(state.error_matrix)
         np.testing.assert_array_equal(expected, actual)
-
-        test_case = single_layer_zero['multiple_moves_test_case'][4]
-        expected = test_case.expected
-
-        state.apply_move(test_case.move)
-        actual = eval_func(state.error_matrix)
-        np.testing.assert_array_equal(expected, actual)
-
-    def test_multiple_moves_error_matrix(self, single_layer_zero):
-        state, _, eval_func = self.build_instance(
-            single_layer_zero, 'full', 'error matrix')
-
-        test_case = single_layer_zero['multiple_moves_test_case']
-
-        for move, expected in test_case:
-            state.apply_move(move)
-            actual = eval_func(state.error_matrix)
-            np.testing.assert_array_equal(expected, actual)
-
-    def test_multiple_reverts_error_matrix(self, single_layer_zero):
-        state, _, eval_func = self.build_instance(
-            single_layer_zero, 'full', 'error matrix')
-
-        test_case = single_layer_zero['multiple_moves_test_case']
-
-        for move, _ in test_case:
-            state.apply_move(move)
-
-        for _, expected in reversed(test_case):
-            actual = eval_func(state.error_matrix)
-            np.testing.assert_array_equal(expected, actual)
-            state.revert_move()
-
-    def test_pre_evaluated_network(self, standard_state):
-        state_s, expected, eval_func_s = self.build_instance(
-            standard_state, 'sample', 'activation matrix')
-
-        for i in range(10):
-            state_s.move_to_random_neighbour()
-            state_s.evaluate()
-        state_s.revert_all_moves()
-
-        # check sample state is still giving original results
-        actual = eval_func_s(state_s.activation_matrix)
-        np.testing.assert_array_equal(expected, actual)
-
-        state_f, expected, eval_func_f = self.build_instance(
-            standard_state, 'full', 'activation matrix')
-
-        # check full state is still giving original results
-        state_f.set_gates(state_s.gates)
-        actual = eval_func_f(state_f.activation_matrix)
-
-        np.testing.assert_array_equal(expected, actual)
+        state.revert_move()
 
 
-class TestBoth:
+def test_pre_evaluated_network(state):
+    state_s, expected, eval_func_s = build_instance(
+        state, 'sample', 'activation matrix')
 
-    def build_from_params(self, params, eval_type, sample_type):
-        if eval_type == 'standard':
-            return standard_from_operator(
-                gates=params['gates'],
-                indices=params['indices'][sample_type],
-                Nb=params['Nb'], No=params['No'],
-                operator=params['operator'],
-                exclude=params['exclude'][sample_type]
-            )
-        elif eval_type == 'chained':
-            return chained_from_operator(
-                gates=params['gates'],
-                indices=params['indices'][sample_type],
-                Nb=params['Nb'], No=params['No'],
-                operator=params['operator'],
-                window_size=params['window_size'][sample_type],
-                exclude=params['exclude'][sample_type]
-            )
+    for i in range(10):
+        state_s.move_to_random_neighbour()
+        state_s.evaluate()
+    state_s.revert_all_moves()
 
-    def run_instance(self, instance, state):
-        func_id = function_from_name(instance['function'])
-        order = instance['order']
-        if order == 'lsb':
-            order = np.arange(state.No, dtype=np.uintp)
-        elif order == 'msb':
-            order = np.arange(state.No, dtype=np.uintp)[::-1]
-        expected = instance['value']
-        name = state.add_function(func_id, order)
-        actual = state.function_value(name)
-        np.testing.assert_array_almost_equal(expected, actual)
+    # check sample state is still giving original results
+    actual = eval_func_s(state_s.activation_matrix)
+    np.testing.assert_array_equal(expected, actual)
 
-    # ################### Exception Testing ################### #
-    def test_function_not_added(self, chained_state, sample_type):
-        with raises(ValueError):
-            chained_state['state'][sample_type].function_value('non-existant')
+    state_f, expected, eval_func_f = build_instance(
+        state, 'full', 'activation matrix')
 
-    # ################### Functionality Testing ################### #
-    def test_from_operator_combined_attributes(self, state_params,
-                                               state_type, sample_type):
-        state = self.build_from_params(state_params, state_type, sample_type)
-        assert state.Ni == state_params['Ni']
-        assert state.No == state_params['No']
-        assert state.Ng == len(state_params['gates'])
-        assert state.zero_mask == pk.generate_end_mask(state.Ne)
+    # check full state is still giving original results
+    state_f.set_gates(state_s.gates)
+    actual = eval_func_f(state_f.activation_matrix)
 
-    def test_from_operator_func_value(self, state_params,
-                                      state_type, sample_type):
-        for instance in state_params['instances'][sample_type]:
-            state = self.build_from_params(
-                state_params, state_type, sample_type)
-            self.run_instance(instance, state)
+    np.testing.assert_array_equal(expected, actual)
 
-    def test_function_value(self, state_harness, sample_type):
-        state = state_harness['state'][sample_type]
-        for instance in state_harness['instances'][sample_type]:
-            self.run_instance(instance, state)
+
+def test_from_operator_combined_attributes(state_params, sample_type):
+    state = build_from_params(state_params, sample_type)
+    assert state.Ni == state_params['Ni']
+    assert state.No == state_params['No']
+    assert state.Ng == len(state_params['gates'])
+    assert state.zero_mask == pk.generate_end_mask(state.Ne)
+
+
+def test_from_operator_func_value(state_params, sample_type):
+    for instance in state_params['instances'][sample_type]:
+        state = build_from_params(state_params, sample_type)
+        run_instance(instance, state)
+
+
+def test_function_value(state_harness, sample_type):
+    state = state_harness['state'][sample_type]
+    for instance in state_harness['instances'][sample_type]:
+        run_instance(instance, state)

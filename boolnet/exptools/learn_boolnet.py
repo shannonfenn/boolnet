@@ -139,8 +139,8 @@ def build_states(mapping, gates, objectives):
     if mapping['type'] == 'raw_split':
         M_trg = mapping['training_set']
         M_test = mapping['test_set']
-        S_trg = ns.StandardBNState(gates, M_trg)
-        S_test = ns.StandardBNState(gates, M_test)
+        S_trg = ns.BNState(gates, M_trg)
+        S_test = ns.BNState(gates, M_test)
     elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
         trg_indices = mapping['training_indices']
@@ -150,8 +150,8 @@ def build_states(mapping, gates, objectives):
         else:
             M_trg = utils.sample_packed(M, trg_indices)
             M_test = utils.sample_packed(M, test_indices)
-        S_trg = ns.StandardBNState(gates, M_trg)
-        S_test = ns.StandardBNState(gates, M_test)
+        S_trg = ns.BNState(gates, M_trg)
+        S_test = ns.BNState(gates, M_test)
     elif mapping['type'] == 'operator':
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
@@ -159,12 +159,12 @@ def build_states(mapping, gates, objectives):
         Nb = mapping['Nb']
         No = mapping['No']
         # window_size = mapping['window_size']
-        S_trg = ns.standard_from_operator(gates, trg_indices, Nb, No, op)
+        S_trg = ns.state_from_operator(gates, trg_indices, Nb, No, op)
         if test_indices is None:
-            S_test = ns.standard_from_operator(gates, trg_indices, Nb, No, op,
-                                               exclude=True)
+            S_test = ns.state_from_operator(gates, trg_indices, Nb, No, op,
+                                            exclude=True)
         else:
-            S_test = ns.standard_from_operator(gates, test_indices, Nb, No, op)
+            S_test = ns.state_from_operator(gates, test_indices, Nb, No, op)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 

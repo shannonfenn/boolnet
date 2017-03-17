@@ -44,49 +44,49 @@ cdef class Correctness(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE1(Evaluator):
+cdef class E1(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE2(Evaluator):
+cdef class E2(Evaluator):
     cdef readonly double[:] weight_vector
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE2MCC(StandardE2):
+cdef class E2MCC(E2):
     cdef PerOutputMCC per_output_evaluator
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE3(Evaluator):
+cdef class E3(Evaluator):
     cdef packed_type_t[:] row_disjunction
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE4(Evaluator):
+cdef class E4(Evaluator):
     cdef size_t end_subtractor
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE5(Evaluator):
+cdef class E5(Evaluator):
     cdef size_t row_width, end_subtractor
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE6(Evaluator):
+cdef class E6(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE6MCC(Evaluator):
+cdef class E6MCC(Evaluator):
     cdef PerOutputMCC per_output_evaluator
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class StandardE7(Evaluator):
+cdef class E7(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)

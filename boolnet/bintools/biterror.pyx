@@ -11,16 +11,16 @@ from bitpacking.packing import packed_type
 
 
 EVALUATORS = {
-    fn.E1: StandardE1,
-    fn.E2: StandardE2,
-    fn.E3: StandardE3,
-    fn.E4: StandardE4,
-    fn.E5: StandardE5,
-    fn.E6: StandardE6,
-    fn.E7: StandardE7,
+    fn.E1: E1,
+    fn.E2: E2,
+    fn.E3: E3,
+    fn.E4: E4,
+    fn.E5: E5,
+    fn.E6: E6,
+    fn.E7: E7,
     fn.E1_MCC: MeanMCC,
-    fn.E2_MCC: StandardE2MCC,
-    fn.E6_MCC: StandardE6MCC,
+    fn.E2_MCC: E2MCC,
+    fn.E6_MCC: E6MCC,
     fn.CORRECTNESS: Correctness,
     fn.PER_OUTPUT_ERROR: PerOutputMean,
     fn.PER_OUTPUT_MCC: PerOutputMCC
@@ -150,7 +150,7 @@ cdef class Correctness(Evaluator):
         return 1.0 - popcount_vector(self.row_disjunction) / self.divisor
 
 
-cdef class StandardE1(Evaluator):
+cdef class E1(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
 
@@ -159,7 +159,7 @@ cdef class StandardE1(Evaluator):
         return popcount_matrix(E) / self.divisor
 
 
-cdef class StandardE2(Evaluator):
+cdef class E2(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         cdef size_t i
         super().__init__(Ne, No, feature_order)
@@ -180,7 +180,7 @@ cdef class StandardE2(Evaluator):
         return result / self.Ne
 
 
-cdef class StandardE2MCC(StandardE2):
+cdef class E2MCC(E2):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
         self.per_output_evaluator = PerOutputMCC(Ne, No, feature_order)
@@ -197,7 +197,7 @@ cdef class StandardE2MCC(StandardE2):
         return result
 
 
-cdef class StandardE3(Evaluator):
+cdef class E3(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
         self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
@@ -215,7 +215,7 @@ cdef class StandardE3(Evaluator):
         return result / self.divisor
 
 
-cdef class StandardE4(Evaluator):
+cdef class E4(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne
@@ -232,7 +232,7 @@ cdef class StandardE4(Evaluator):
         return result / self.divisor
 
 
-cdef class StandardE5(Evaluator):
+cdef class E5(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
@@ -249,7 +249,7 @@ cdef class StandardE5(Evaluator):
         return 0.0
 
 
-cdef class StandardE6(Evaluator):
+cdef class E6(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, row_sum
         
@@ -262,7 +262,7 @@ cdef class StandardE6(Evaluator):
         return 0.0
 
 
-cdef class StandardE6MCC(Evaluator):
+cdef class E6MCC(Evaluator):
     def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
         super().__init__(Ne, No, feature_order)
         self.per_output_evaluator = PerOutputMCC(Ne, No, feature_order)
@@ -281,7 +281,7 @@ cdef class StandardE6MCC(Evaluator):
         return 0.0
 
 
-cdef class StandardE7(Evaluator):
+cdef class E7(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i, r, c
         
