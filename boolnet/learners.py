@@ -94,7 +94,8 @@ class BasicLearner:
             self.target_order = order_from_rank(rank).astype(np.uintp)
 
         # build the network state
-        gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
+        gates = self.gate_generator(self.budget, self.Ni,
+                                    self.No, self.node_funcs)
         state = BNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
         state.add_function(self.guiding_func_id, self.target_order,
@@ -194,7 +195,8 @@ class StratifiedLearner(BasicLearner):
     def next_gates(self, strata, problem_matrix):
         size = self.remaining_budget // (self.No - strata)
         self.remaining_budget -= size
-        return self.gate_generator(size, problem_matrix.Ni, self.node_funcs)
+        return self.gate_generator(size, problem_matrix.Ni,
+                                   problem_matrix.No, self.node_funcs)
 
     def join_networks(self, base, new, strata, target_index):
         # simple: build up a map for all sources, for sources after the

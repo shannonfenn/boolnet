@@ -38,12 +38,13 @@ def seed_rng(seed):
     return seed
 
 
-def random_network(Ng, Ni, node_funcs):
+def random_network(Ng, Ni, No, node_funcs):
     # generate random feedforward network
     gates = np.empty(shape=(Ng, 3), dtype=np.int32)
     for g in range(Ng):
-        gates[g, 0] = np.random.randint(g + Ni)
-        gates[g, 1] = np.random.randint(g + Ni)
+        # don't allow connecting outputs together
+        gates[g, 0] = np.random.randint(min(g, Ng - No) + Ni)
+        gates[g, 1] = np.random.randint(min(g, Ng - No) + Ni)
     gates[:, 2] = np.random.choice(node_funcs, size=Ng)
     return gates
 
