@@ -5,7 +5,7 @@ import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
 import boolnet.bintools.functions as fn
-from boolnet.utils import PackedMatrix
+from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
 from boolnet.network.networkstate import StandardBNState
 from time import time
 
@@ -23,13 +23,6 @@ def guiding_func_stop_criterion(func_id, limit=None):
         return lambda _, error: error <= limit
     else:
         return lambda _, error: error >= limit
-
-
-def inverse_permutation(permutation):
-    inverse = np.zeros_like(permutation)
-    for i, p in enumerate(permutation):
-        inverse[p] = i
-    return inverse
 
 
 class BasicLearner:
@@ -83,15 +76,6 @@ class BasicLearner:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                              format(self.node_funcs))
 
-    def order_from_rank(self, ranks):
-        ''' Converts a ranking with ties into an ordering,
-            breaking ties with uniform probability.'''
-        order = []
-        ranks, counts = np.unique(ranks, return_counts=True)
-        for rank, count in zip(ranks, counts):
-            order.extend((np.random.permutation(count) + rank).tolist())
-        return np.array(order, dtype=np.uintp)
-
     def run(self, optimiser, parameters):
         t0 = time()
         self._setup(optimiser, parameters)
@@ -106,8 +90,8 @@ class BasicLearner:
                 mfs_features, mfs_targets, self.mfs_metric,
                 self.minfs_solver, self.minfs_params)
 
-            # randomly pick from top ranked targets
-            self.target_order = self.order_from_rank(rank)
+            # randomly pick from possible exact orders
+            self.target_order = order_from_rank(rank)
 
         # build the network state
         gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)

@@ -60,3 +60,28 @@ def sample_packed(matrix, indices, invert=False):
 
 def unpack(packed_matrix, transpose=True):
     return pk.unpackmat(packed_matrix, packed_matrix.Ne, transpose=transpose)
+
+
+def inverse_permutation(permutation):
+    inverse = np.zeros_like(permutation)
+    for i, p in enumerate(permutation):
+        inverse[p] = i
+    return inverse
+
+
+def rank_with_ties_broken(ranking_with_ties):
+    new_ranking = np.zeros_like(ranking_with_ties)
+    ranks, counts = np.unique(ranking_with_ties, return_counts=True)
+    for rank, count in zip(ranks, counts):
+        indices = np.where(ranking_with_ties == rank)
+        perm = np.random.permutation(count) + rank
+        new_ranking[indices] = perm
+    return new_ranking
+
+
+def order_from_rank(ranking_with_ties):
+    ''' Converts a ranking with ties into an ordering,
+        breaking ties with uniform probability.'''
+    ranking_without_ties = rank_with_ties_broken(ranking_with_ties)
+    # orders and rankings are inverse when no ties are present
+    return inverse_permutation(ranking_without_ties)
