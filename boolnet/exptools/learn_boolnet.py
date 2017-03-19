@@ -170,9 +170,9 @@ def build_states(mapping, gates, objectives):
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
     # add functions to be later called by name
-    for func, order, name in objectives:
-        S_trg.add_function(func, order, name)
-        S_test.add_function(func, order, name)
+    for func, name in objectives:
+        S_trg.add_function(func, name)
+        S_test.add_function(func, name)
 
     return S_trg, S_test
 
@@ -186,14 +186,13 @@ def build_result_map(parameters, learner_result):
     gates = final_network.gates
 
     # build evaluators for training and test data
-    target_order = np.array(learner_result.target_order, dtype=np.uintp)
     objective_functions = [
-        (guiding_function, target_order, 'guiding'),
-        (fn.E1, target_order, 'e1'),
-        (fn.E1_MCC, target_order, 'e1_mcc'),
-        (fn.CORRECTNESS, target_order, 'correctness'),
-        (fn.PER_OUTPUT_ERROR, target_order, 'per_output_error'),
-        (fn.PER_OUTPUT_MCC, target_order, 'per_output_mcc')]
+        (guiding_function, 'guiding'),
+        (fn.E1, 'e1'),
+        (fn.E1_MCC, 'e1_mcc'),
+        (fn.CORRECTNESS, 'correctness'),
+        (fn.PER_OUTPUT_ERROR, 'per_output_error'),
+        (fn.PER_OUTPUT_MCC, 'per_output_mcc')]
 
     train_state, test_state = build_states(
         parameters['mapping'], gates, objective_functions)
@@ -214,7 +213,7 @@ def build_result_map(parameters, learner_result):
         'test_mcc':     test_state.function_value('e1_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
-        'tgt_order':    target_order,
+        'tgt_order':    np.array(learner_result.target_order, dtype=np.uintp),
         'opt_time':     learner_result.optimisation_time,
         'other_time':   learner_result.other_time
         }

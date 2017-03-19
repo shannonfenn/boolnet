@@ -8,12 +8,9 @@ cdef confusion(packed_type_t[:] errors, packed_type_t[:] target, size_t Ne,
 
 cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN)
 
-cdef bint is_permutation(size_t[:] P, size_t No)
-
 
 cdef class Evaluator:
     cdef size_t Ne, No, cols
-    cdef size_t[:] order
     cdef double divisor
 
 

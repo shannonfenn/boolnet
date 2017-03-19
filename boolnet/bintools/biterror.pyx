@@ -66,12 +66,8 @@ cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN):
         return TP/d * TN/d - FP/d * FN/d
 
 
-cdef bint is_permutation(size_t[:] P, size_t No):
-    return len(P) == No and min(P) == 0 and max(P) == No - 1 and len(np.unique(P)) == No
-
-
 cdef class Evaluator:
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
+    def __init__(self, size_t Ne, size_t No):
         if Ne % PACKED_SIZE == 0:
             self.cols = Ne // PACKED_SIZE
         else:
@@ -79,16 +75,11 @@ cdef class Evaluator:
         self.Ne = Ne
         self.No = No
         self.divisor = No * Ne
-        # check feature_order is a valid permutation
-        if not is_permutation(feature_order, No):
-            raise ValueError('ChainedEvaluator - Error {} is not a size {} permutation!'.format(
-                np.asarray(feature_order), No))
-        self.order = np.array(feature_order)
 
 
 cdef class PerOutputMCC(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
         self.tp_buffer = np.zeros(self.cols, dtype=packed_type)
         self.fp_buffer = np.zeros(self.cols, dtype=packed_type)
         self.fn_buffer = np.zeros(self.cols, dtype=packed_type)
@@ -111,8 +102,8 @@ cdef class PerOutputMCC(Evaluator):
 
 
 cdef class PerOutputMean(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
         self.accumulator = np.zeros(self.No, dtype=np.float64)
         self.divisor = Ne
 
@@ -125,17 +116,17 @@ cdef class PerOutputMean(Evaluator):
 
 
 cdef class MeanMCC(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
-        self.per_output_evaluator = PerOutputMCC(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
+        self.per_output_evaluator = PerOutputMCC(Ne, No)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         return sum(self.per_output_evaluator.evaluate(E, T)) / <double>self.No
 
 
 cdef class Correctness(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
         self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
         self.divisor = Ne
 
@@ -151,8 +142,8 @@ cdef class Correctness(Evaluator):
 
 
 cdef class E1(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef double result = 0.0
@@ -160,15 +151,12 @@ cdef class E1(Evaluator):
 
 
 cdef class E2(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
+    def __init__(self, size_t Ne, size_t No):
         cdef size_t i
-        super().__init__(Ne, No, feature_order)
-        # highest weight to earliest features - normalises to [0, 1]
-        weights = np.arange(No, 0, -1, dtype=np.float64) / (0.5 * No * (No + 1.0))
-        self.weight_vector = np.empty(No, dtype=np.float64)
-        # reorder by feature order
-        for i in range(No):
-            self.weight_vector[i] = weights[self.order[i]]
+        super().__init__(Ne, No)
+        # highest weight to earliest features - normalised to [0, 1]
+        self.weight_vector = np.arange(No, 0, -1, dtype=np.float64) / (0.5 * No * (No + 1.0))
+
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i
@@ -181,9 +169,9 @@ cdef class E2(Evaluator):
 
 
 cdef class E2MCC(E2):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
-        self.per_output_evaluator = PerOutputMCC(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
+        self.per_output_evaluator = PerOutputMCC(Ne, No)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i
@@ -198,17 +186,16 @@ cdef class E2MCC(E2):
 
 
 cdef class E3(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
         self.row_disjunction = np.zeros(self.cols, dtype=packed_type)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, r, c
+        cdef size_t r, c
         cdef double result = 0.0
         
         self.row_disjunction[:] = 0
-        for i in range(self.No):
-            r = self.order[i]
+        for r in range(self.No):
             for c in range(self.cols):
                 self.row_disjunction[c] |= E[r, c]
             result += popcount_vector(self.row_disjunction)
@@ -216,16 +203,15 @@ cdef class E3(Evaluator):
 
 
 cdef class E4(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, r, row_sum = 0
+        cdef size_t r, row_sum = 0
         cdef double result = 0.0
 
-        for i in range(self.No):
-            r = self.order[i]
+        for r in range(self.No):
             row_sum = max(row_sum, floodcount_vector(E[r, :], self.end_subtractor))
             result += row_sum
 
@@ -233,62 +219,58 @@ cdef class E4(Evaluator):
 
 
 cdef class E5(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
         self.end_subtractor = self.cols * PACKED_SIZE - Ne % (self.cols * PACKED_SIZE)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, r, row_sum
+        cdef size_t r, row_sum
         
         # find earliest row with an error value
-        for i in range(self.No):
-            r = self.order[i]
+        for r in range(self.No):
             row_sum = floodcount_vector(E[r, :], self.end_subtractor)
             if row_sum > 0:
-                return (self.Ne * (self.No - i - 1) + row_sum) / self.divisor
+                return (self.Ne * (self.No - r - 1) + row_sum) / self.divisor
         return 0.0
 
 
 cdef class E6(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, r, row_sum
+        cdef size_t r, row_sum
         
         # find earliest row with an error value
-        for i in range(self.No):
-            r = self.order[i]
+        for r in range(self.No):
             row_sum = popcount_vector(E[r, :])
             if row_sum > 0:
-                return (self.Ne * (self.No - i - 1) + row_sum) / self.divisor
+                return (self.Ne * (self.No - r - 1) + row_sum) / self.divisor
         return 0.0
 
 
 cdef class E6MCC(Evaluator):
-    def __init__(self, size_t Ne, size_t No, size_t[:] feature_order):
-        super().__init__(Ne, No, feature_order)
-        self.per_output_evaluator = PerOutputMCC(Ne, No, feature_order)
+    def __init__(self, size_t Ne, size_t No):
+        super().__init__(Ne, No)
+        self.per_output_evaluator = PerOutputMCC(Ne, No)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, r, row_sum
+        cdef size_t r, row_sum
         cdef double[:] per_output
 
         per_output = self.per_output_evaluator.evaluate(E, T)
 
         # find earliest row with an error value
-        for i in range(self.No):
-            r = self.order[i]
+        for r in range(self.No):
             if self.per_output_evaluator.errors_exist[r]:
-                return (-1.0 * (self.No - i - 1) + per_output[r]) / self.No
+                return (-1.0 * (self.No - r - 1) + per_output[r]) / self.No
         return 0.0
 
 
 cdef class E7(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
-        cdef size_t i, r, c
+        cdef size_t r, c
         
         # find earliest row with an error value
-        for i in range(self.No):
-            r = self.order[i]
+        for r in range(self.No):
             for c in range(self.cols):
                 if E[r, c] > 0:
-                    return self.Ne / self.divisor * (self.No - i)
+                    return self.Ne / self.divisor * (self.No - r)
         return 0.0

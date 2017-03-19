@@ -91,15 +91,27 @@ class BasicLearner:
                 self.minfs_solver, self.minfs_params)
 
             # randomly pick from possible exact orders
-            self.target_order = order_from_rank(rank).astype(np.uintp)
+            self.target_order = order_from_rank(rank)
 
         # build the network state
         gates = self.gate_generator(self.budget, self.Ni,
                                     self.No, self.node_funcs)
+
+        # reorder problem matrix
+        outputs = self.problem_matrix[-self.No:, :]
+        outputs[:] = outputs[self.target_order, :]
+
         state = BNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
-        state.add_function(self.guiding_func_id, self.target_order,
-                           self.gf_eval_name)
+        state.add_function(self.guiding_func_id, self.gf_eval_name)
+
+        # undo reordering
+        inverse_order = inverse_permutation(self.target_order)
+        outputs[:] = outputs[inverse_order, :]
+        gates = np.array(state.gates)
+        out_gates = gates[-self.No:, :]
+        out_gates[:] = out_gates[inverse_order, :]
+        state.set_gates(gates)
 
         t1 = time()
         # run the optimiser
@@ -281,9 +293,7 @@ class StratifiedLearner(BasicLearner):
             gates = self.next_gates(i, partial_instance)
             state = BNState(gates, partial_instance)
             # add the guiding function to be evaluated
-            state.add_function(self.guiding_func_id,
-                               np.arange(state.No, dtype=np.uintp),
-                               self.gf_eval_name)
+            state.add_function(self.guiding_func_id, self.gf_eval_name)
 
             t1 = time()
 

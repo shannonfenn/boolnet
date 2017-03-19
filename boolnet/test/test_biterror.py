@@ -1,6 +1,6 @@
 from boolnet.bintools.functions import function_from_name
 import numpy as np
-from boolnet.bintools.biterror import EVALUATORS, E2
+from boolnet.bintools.biterror import EVALUATORS
 
 
 def test_function_value(error_matrix_harness):
@@ -19,19 +19,15 @@ def test_function_value(error_matrix_harness):
         elif order == 'msb':
             order = np.arange(No, dtype=np.uintp)[::-1]
 
+        E_ = E[order, :]
+        T_ = T[order, :]
+
         eval_class = EVALUATORS[func_id]
-        error_evaluator = eval_class(Ne, No, order)
-        actual = error_evaluator.evaluate(E, T)
+
+        error_evaluator = eval_class(Ne, No)
+        actual = error_evaluator.evaluate(E_, T_)
         np.testing.assert_array_almost_equal(actual, expected)
 
-
-def test_e2_weight_vector(error_matrix_harness):
-    order = np.array([4, 3, 8, 0, 2, 7, 1, 5, 6], dtype=np.uintp)
-    expected = np.array([5, 6, 1, 9, 7, 2, 8, 4, 3], dtype=float)
-    expected /= expected.sum()
-    evaluator = E2(1, len(order), order)
-    actual = evaluator.weight_vector
-    np.testing.assert_array_almost_equal(actual, expected)
 
 # @pytest.mark.python
 # def test_error(error_matrix_harness, function):

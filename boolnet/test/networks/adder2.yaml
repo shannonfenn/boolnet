@@ -82,41 +82,29 @@ error matrix:
         - [0, 0, 0]
 instances:
     sample:
-         - {function: e1, order: lsb, value: 0.0}
-         - {function: e2, order: msb, value: 0.0}
-         - {function: e2, order: lsb, value: 0.0}
-         - {function: e3, order: msb, value: 0.0}
-         - {function: e3, order: lsb, value: 0.0}
-         - {function: e7, order: msb, value: 0.0}
-         - {function: e7, order: lsb, value: 0.0}
-         - {function: e4, order: msb, value: 0.0}
-         - {function: e4, order: lsb, value: 0.0}
-         - {function: e5, order: msb, value: 0.0}
-         - {function: e5, order: lsb, value: 0.0}
-         - {function: e6, order: msb, value: 0.0}
-         - {function: e6, order: lsb, value: 0.0}
-         - {function: correctness, order: lsb, value: 1.0}
-         - {function: e1_mcc, order: lsb, value: 1.0}
-         - {function: per_output_error, order: lsb, value: [0.0, 0.0, 0.0]}
-         - {function: per_output_mcc, order: lsb, value: [1.0, 1.0, 1.0]}
+         - {function: e1, value: 0.0}
+         - {function: e2, value: 0.0}
+         - {function: e3, value: 0.0}
+         - {function: e7, value: 0.0}
+         - {function: e4, value: 0.0}
+         - {function: e5, value: 0.0}
+         - {function: e6, value: 0.0}
+         - {function: correctness, value: 1.0}
+         - {function: e1_mcc, value: 1.0}
+         - {function: per_output_error, value: [0.0, 0.0, 0.0]}
+         - {function: per_output_mcc, value: [1.0, 1.0, 1.0]}
     full:
-         - {function: e1, order: lsb, value: 0.0}
-         - {function: e2, order: msb, value: 0.0}
-         - {function: e2, order: lsb, value: 0.0}
-         - {function: e3, order: msb, value: 0.0}
-         - {function: e3, order: lsb, value: 0.0}
-         - {function: e7, order: msb, value: 0.0}
-         - {function: e7, order: lsb, value: 0.0}
-         - {function: e4, order: msb, value: 0.0}
-         - {function: e4, order: lsb, value: 0.0}
-         - {function: e5, order: msb, value: 0.0}
-         - {function: e5, order: lsb, value: 0.0}
-         - {function: e6, order: msb, value: 0.0}
-         - {function: e6, order: lsb, value: 0.0}
-         - {function: correctness, order: lsb, value: 1.0}
-         - {function: e1_mcc, order: lsb, value: 1.0}
-         - {function: per_output_error, order: lsb, value: [0.0, 0.0, 0.0]}
-         - {function: per_output_mcc, order: lsb, value: [1.0, 1.0, 1.0]}
+         - {function: e1, value: 0.0}
+         - {function: e2, value: 0.0}
+         - {function: e3, value: 0.0}
+         - {function: e7, value: 0.0}
+         - {function: e4, value: 0.0}
+         - {function: e5, value: 0.0}
+         - {function: e6, value: 0.0}
+         - {function: correctness, value: 1.0}
+         - {function: e1_mcc, value: 1.0}
+         - {function: per_output_error, value: [0.0, 0.0, 0.0]}
+         - {function: per_output_mcc, value: [1.0, 1.0, 1.0]}
 
 valid_masks:
     - 

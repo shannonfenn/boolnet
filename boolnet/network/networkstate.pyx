@@ -20,8 +20,14 @@ from boolnet.bintools.example_generator cimport (
     PackedExampleGenerator, packed_from_operator)
 
 
-cpdef state_from_operator(gates, indices, Nb, No, operator, exclude=False):
+cpdef state_from_operator(gates, indices, Nb, No, operator, order=None, exclude=False):
     M = packed_from_operator(indices, Nb, No, operator, exclude)
+
+    if order is None:
+        order = np.arange(No, dtype=np.uintp)
+
+    M[-No:, :] = M[-No:, :][order, :]
+
     return BNState(gates, M)
 
 
@@ -140,11 +146,11 @@ cdef class BNState:
     cpdef connected_sources(self):
         return self.network.connected_sources()
 
-    cpdef add_function(self, Function function, size_t[:] order, name=''):
+    cpdef add_function(self, Function function, name=''):
         eval_class = EVALUATORS[function]
         if not name:
-            name = function_name(function) + str(np.asarray(order))
-        self.err_evaluators[name] = eval_class(self.Ne, self.No, order)
+            name = function_name(function)
+        self.err_evaluators[name] = eval_class(self.Ne, self.No)
         self.evaluated = False
         return name
 

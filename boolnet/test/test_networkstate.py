@@ -110,8 +110,6 @@ def harness_to_fixture(fname):
                    pk.packmat(target))),
         Ne=inputs.shape[0], Ni=Ni)
 
-    # This is wrong, need to use packed sampling methods
-    # but they will handle Ne which is good
     Ms, Mt = partition_packed(Mf, samples)
 
     # add states to test
@@ -205,25 +203,10 @@ def output_different(instance):
         state.revert_move()
 
 
-def build_from_params(params, sample_type):
-    return state_from_operator(
-        gates=params['gates'],
-        indices=params['indices'][sample_type],
-        Nb=params['Nb'], No=params['No'],
-        operator=params['operator'],
-        exclude=params['exclude'][sample_type]
-    )
-
-
 def run_instance(instance, state):
     func_id = function_from_name(instance['function'])
-    order = instance['order']
-    if order == 'lsb':
-        order = np.arange(state.No, dtype=np.uintp)
-    elif order == 'msb':
-        order = np.arange(state.No, dtype=np.uintp)[::-1]
     expected = instance['value']
-    name = state.add_function(func_id, order)
+    name = state.add_function(func_id)
     actual = state.function_value(name)
     np.testing.assert_array_almost_equal(expected, actual)
 
@@ -380,7 +363,15 @@ def test_pre_evaluated_network(state):
 
 
 def test_from_operator_combined_attributes(state_params, sample_type):
-    state = build_from_params(state_params, sample_type)
+    state = state_from_operator(
+        gates=state_params['gates'],
+        indices=state_params['indices'][sample_type],
+        Nb=state_params['Nb'],
+        No=state_params['No'],
+        operator=state_params['operator'],
+        exclude=state_params['exclude'][sample_type]
+    )
+
     assert state.Ni == state_params['Ni']
     assert state.No == state_params['No']
     assert state.Ng == len(state_params['gates'])
@@ -389,7 +380,12 @@ def test_from_operator_combined_attributes(state_params, sample_type):
 
 def test_from_operator_func_value(state_params, sample_type):
     for instance in state_params['instances'][sample_type]:
-        state = build_from_params(state_params, sample_type)
+        state = state_from_operator(
+            gates=state_params['gates'],
+            indices=state_params['indices'][sample_type],
+            Nb=state_params['Nb'], No=state_params['No'],
+            operator=state_params['operator'],
+            exclude=state_params['exclude'][sample_type])
         run_instance(instance, state)
 
 
