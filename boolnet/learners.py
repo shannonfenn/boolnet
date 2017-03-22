@@ -50,6 +50,8 @@ class BasicLearner:
             self.target_order = np.arange(self.No, dtype=np.uintp)
         elif parameters['target_order'] == 'msb':
             self.target_order = np.arange(self.No, dtype=np.uintp)[::-1]
+        elif parameters['target_order'] == 'random':
+            self.target_order = np.random.permutation(self.No).astype(np.uintp)
         elif parameters['target_order'] == 'auto':
             self.target_order = None
             # this key is only required if auto-targetting
