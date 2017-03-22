@@ -83,10 +83,12 @@ cdef class BoolNet:
         # sure to only modify connected gates
         cdef:
             size_t gate, terminal, shift
-            size_t cur_source, new_source, Ni
+            size_t cur_source, new_source, Ni, Ng, No
             np.uint8_t temp
             Move move
         Ni = self.Ni
+        Ng = self.Ng
+        No = self.No
 
         # pick a random gate to move
         gate = algorithms.sample_bool(self.connected_gates())
@@ -99,7 +101,8 @@ cdef class BoolNet:
 
         # decide how much to shift the input
         # (gate can only connect to previous gate or input)
-        shift = random_uniform_int(gate + Ni - 1) + 1
+        # (output gates cannot connect to each other)
+        shift = random_uniform_int(min(gate, Ng - No) + Ni - 1) + 1
         # Get shifted connection
         new_source = (cur_source + shift) % (gate + Ni)
 

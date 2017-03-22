@@ -5,8 +5,8 @@ import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
 import boolnet.bintools.functions as fn
-from boolnet.utils import PackedMatrix
-from boolnet.network.networkstate import StandardBNState
+from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
+from boolnet.network.networkstate import BNState
 from time import time
 
 
@@ -23,13 +23,6 @@ def guiding_func_stop_criterion(func_id, limit=None):
         return lambda _, error: error <= limit
     else:
         return lambda _, error: error >= limit
-
-
-def inverse_permutation(permutation):
-    inverse = np.zeros_like(permutation)
-    for i, p in enumerate(permutation):
-        inverse[p] = i
-    return inverse
 
 
 class BasicLearner:
@@ -57,6 +50,8 @@ class BasicLearner:
             self.target_order = np.arange(self.No, dtype=np.uintp)
         elif parameters['target_order'] == 'msb':
             self.target_order = np.arange(self.No, dtype=np.uintp)[::-1]
+        elif parameters['target_order'] == 'random':
+            self.target_order = np.random.permutation(self.No).astype(np.uintp)
         elif parameters['target_order'] == 'auto':
             self.target_order = None
             # this key is only required if auto-targetting
@@ -83,15 +78,6 @@ class BasicLearner:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                              format(self.node_funcs))
 
-    def order_from_rank(self, ranks):
-        ''' Converts a ranking with ties into an ordering,
-            breaking ties with uniform probability.'''
-        order = []
-        ranks, counts = np.unique(ranks, return_counts=True)
-        for rank, count in zip(ranks, counts):
-            order.extend((np.random.permutation(count) + rank).tolist())
-        return np.array(order, dtype=np.uintp)
-
     def run(self, optimiser, parameters):
         t0 = time()
         self._setup(optimiser, parameters)
@@ -106,15 +92,28 @@ class BasicLearner:
                 mfs_features, mfs_targets, self.mfs_metric,
                 self.minfs_solver, self.minfs_params)
 
-            # randomly pick from top ranked targets
-            self.target_order = self.order_from_rank(rank)
+            # randomly pick from possible exact orders
+            self.target_order = order_from_rank(rank)
 
         # build the network state
-        gates = self.gate_generator(self.budget, self.Ni, self.node_funcs)
-        state = StandardBNState(gates, self.problem_matrix)
+        gates = self.gate_generator(self.budget, self.Ni,
+                                    self.No, self.node_funcs)
+
+        # reorder problem matrix
+        outputs = self.problem_matrix[-self.No:, :]
+        outputs[:] = outputs[self.target_order, :]
+
+        state = BNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
-        state.add_function(self.guiding_func_id, self.target_order,
-                           self.gf_eval_name)
+        state.add_function(self.guiding_func_id, self.gf_eval_name)
+
+        # undo reordering
+        inverse_order = inverse_permutation(self.target_order)
+        outputs[:] = outputs[inverse_order, :]
+        gates = np.array(state.gates)
+        out_gates = gates[-self.No:, :]
+        out_gates[:] = out_gates[inverse_order, :]
+        state.set_gates(gates)
 
         t1 = time()
         # run the optimiser
@@ -210,7 +209,8 @@ class StratifiedLearner(BasicLearner):
     def next_gates(self, strata, problem_matrix):
         size = self.remaining_budget // (self.No - strata)
         self.remaining_budget -= size
-        return self.gate_generator(size, problem_matrix.Ni, self.node_funcs)
+        return self.gate_generator(size, problem_matrix.Ni,
+                                   problem_matrix.No, self.node_funcs)
 
     def join_networks(self, base, new, strata, target_index):
         # simple: build up a map for all sources, for sources after the
@@ -253,7 +253,7 @@ class StratifiedLearner(BasicLearner):
             np.vstack((self.input_matrix, new_target)),
             Ne=self.Ne, Ni=self.Ni)
 
-        return StandardBNState(accumulated_gates, new_problem_matrix)
+        return BNState(accumulated_gates, new_problem_matrix)
 
     def reorder_network_outputs(self, network):
         # all non-output gates are left alone, and the output gates are
@@ -279,7 +279,7 @@ class StratifiedLearner(BasicLearner):
         inputs = self.input_matrix.copy()
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
-        accumulated_network = StandardBNState(np.empty((0, 3)), inputs)
+        accumulated_network = BNState(np.empty((0, 3)), inputs)
 
         optimisation_times = []
         other_times = []
@@ -293,11 +293,9 @@ class StratifiedLearner(BasicLearner):
 
             # build state to be optimised
             gates = self.next_gates(i, partial_instance)
-            state = StandardBNState(gates, partial_instance)
+            state = BNState(gates, partial_instance)
             # add the guiding function to be evaluated
-            state.add_function(self.guiding_func_id,
-                               np.arange(state.No, dtype=np.uintp),
-                               self.gf_eval_name)
+            state.add_function(self.guiding_func_id, self.gf_eval_name)
 
             t1 = time()
 
@@ -309,7 +307,7 @@ class StratifiedLearner(BasicLearner):
             opt_results.append(partial_result)
 
             # build up final network by inserting this partial result
-            result_state = StandardBNState(
+            result_state = BNState(
                 partial_result.representation.gates, partial_instance)
             accumulated_network = self.join_networks(
                 accumulated_network, result_state, i, target)
@@ -325,9 +323,6 @@ class StratifiedLearner(BasicLearner):
             t3 = time()
             optimisation_times.append(t2 - t1)
             other_times.append(t3 - t2 + t1 - t0)
-
-            print(optimisation_times[-1])
-            print(other_times[-1])
 
         # reorder the outputs to match the supplied target order
         # NOTE: This is why output gates are not included as possible inputs

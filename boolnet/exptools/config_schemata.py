@@ -179,7 +179,8 @@ minfs_params_schema = Any(
         }),
     )
 
-target_order_schema = Any('auto', 'msb', 'lsb', All(list, permutation))
+target_order_schema = Any('auto', 'msb', 'lsb',
+                          'random', All(list, permutation))
 
 learner_schema = Schema(
     All(

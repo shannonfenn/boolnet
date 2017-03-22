@@ -38,12 +38,13 @@ def seed_rng(seed):
     return seed
 
 
-def random_network(Ng, Ni, node_funcs):
+def random_network(Ng, Ni, No, node_funcs):
     # generate random feedforward network
     gates = np.empty(shape=(Ng, 3), dtype=np.int32)
     for g in range(Ng):
-        gates[g, 0] = np.random.randint(g + Ni)
-        gates[g, 1] = np.random.randint(g + Ni)
+        # don't allow connecting outputs together
+        gates[g, 0] = np.random.randint(min(g, Ng - No) + Ni)
+        gates[g, 1] = np.random.randint(min(g, Ng - No) + Ni)
     gates[:, 2] = np.random.choice(node_funcs, size=Ng)
     return gates
 
@@ -139,8 +140,8 @@ def build_states(mapping, gates, objectives):
     if mapping['type'] == 'raw_split':
         M_trg = mapping['training_set']
         M_test = mapping['test_set']
-        S_trg = ns.StandardBNState(gates, M_trg)
-        S_test = ns.StandardBNState(gates, M_test)
+        S_trg = ns.BNState(gates, M_trg)
+        S_test = ns.BNState(gates, M_test)
     elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
         trg_indices = mapping['training_indices']
@@ -150,8 +151,8 @@ def build_states(mapping, gates, objectives):
         else:
             M_trg = utils.sample_packed(M, trg_indices)
             M_test = utils.sample_packed(M, test_indices)
-        S_trg = ns.StandardBNState(gates, M_trg)
-        S_test = ns.StandardBNState(gates, M_test)
+        S_trg = ns.BNState(gates, M_trg)
+        S_test = ns.BNState(gates, M_test)
     elif mapping['type'] == 'operator':
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
@@ -159,19 +160,19 @@ def build_states(mapping, gates, objectives):
         Nb = mapping['Nb']
         No = mapping['No']
         # window_size = mapping['window_size']
-        S_trg = ns.standard_from_operator(gates, trg_indices, Nb, No, op)
+        S_trg = ns.state_from_operator(gates, trg_indices, Nb, No, op)
         if test_indices is None:
-            S_test = ns.standard_from_operator(gates, trg_indices, Nb, No, op,
-                                               exclude=True)
+            S_test = ns.state_from_operator(gates, trg_indices, Nb, No, op,
+                                            exclude=True)
         else:
-            S_test = ns.standard_from_operator(gates, test_indices, Nb, No, op)
+            S_test = ns.state_from_operator(gates, test_indices, Nb, No, op)
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
     # add functions to be later called by name
-    for func, order, name in objectives:
-        S_trg.add_function(func, order, name)
-        S_test.add_function(func, order, name)
+    for func, name in objectives:
+        S_trg.add_function(func, name)
+        S_test.add_function(func, name)
 
     return S_trg, S_test
 
@@ -185,14 +186,13 @@ def build_result_map(parameters, learner_result):
     gates = final_network.gates
 
     # build evaluators for training and test data
-    target_order = np.array(learner_result.target_order, dtype=np.uintp)
     objective_functions = [
-        (guiding_function, target_order, 'guiding'),
-        (fn.E1, target_order, 'e1'),
-        (fn.E1_MCC, target_order, 'e1_mcc'),
-        (fn.CORRECTNESS, target_order, 'correctness'),
-        (fn.PER_OUTPUT_ERROR, target_order, 'per_output_error'),
-        (fn.PER_OUTPUT_MCC, target_order, 'per_output_mcc')]
+        (guiding_function, 'guiding'),
+        (fn.E1, 'e1'),
+        (fn.E1_MCC, 'e1_mcc'),
+        (fn.CORRECTNESS, 'correctness'),
+        (fn.PER_OUTPUT_ERROR, 'per_output_error'),
+        (fn.PER_OUTPUT_MCC, 'per_output_mcc')]
 
     train_state, test_state = build_states(
         parameters['mapping'], gates, objective_functions)
@@ -213,7 +213,7 @@ def build_result_map(parameters, learner_result):
         'test_mcc':     test_state.function_value('e1_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
-        'tgt_order':    target_order,
+        'tgt_order':    np.array(learner_result.target_order, dtype=np.uintp),
         'opt_time':     learner_result.optimisation_time,
         'other_time':   learner_result.other_time
         }

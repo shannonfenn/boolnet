@@ -19,9 +19,13 @@ def test_function_value(error_matrix_harness):
         elif order == 'msb':
             order = np.arange(No, dtype=np.uintp)[::-1]
 
+        E_ = E[order, :]
+        T_ = T[order, :]
+
         eval_class = EVALUATORS[func_id]
-        error_evaluator = eval_class(Ne, No, order)
-        actual = error_evaluator.evaluate(E, T)
+
+        error_evaluator = eval_class(Ne, No)
+        actual = error_evaluator.evaluate(E_, T_)
         np.testing.assert_array_almost_equal(actual, expected)
 
 
