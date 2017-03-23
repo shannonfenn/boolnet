@@ -177,6 +177,11 @@ class LAHC(RestartLocalSearch):
                 best_representation = copy(state.representation)
                 best_iteration = iteration
 
+            # Stop on user defined condition
+            if self.stopping_criterion(state, best_error):
+                self.reached_stopping_criterion = True
+                break
+
             # Determine whether to accept the new state
             if self.accept(new_error, error):
                 error = new_error
@@ -186,11 +191,6 @@ class LAHC(RestartLocalSearch):
             # Clear the move history to save memory and prevent accidentally
             # undoing accepted moves later
             state.clear_history()
-
-            # Stop on user defined condition
-            if self.stopping_criterion(state, best_error):
-                self.reached_stopping_criterion = True
-                break
 
         return OptimiserResult(
             representation=best_representation,
