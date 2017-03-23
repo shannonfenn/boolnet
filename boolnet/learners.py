@@ -107,18 +107,19 @@ class BasicLearner:
         # add the guiding function to be evaluated
         state.add_function(self.guiding_func_id, self.gf_eval_name)
 
-        # undo reordering
-        inverse_order = inverse_permutation(self.target_order)
-        outputs[:] = outputs[inverse_order, :]
-        gates = np.array(state.gates)
-        out_gates = gates[-self.No:, :]
-        out_gates[:] = out_gates[inverse_order, :]
-        state.set_gates(gates)
-
         t1 = time()
         # run the optimiser
         opt_result = self.optimiser.run(state, self.opt_params)
         t2 = time()
+
+        # undo ordering
+        inverse_order = inverse_permutation(self.target_order)
+        outputs[:] = outputs[inverse_order, :]
+
+        gates = np.array(opt_result.representation.gates)
+        out_gates = gates[-self.No:, :]
+        out_gates[:] = out_gates[inverse_order, :]
+        opt_result.representation.set_gates(gates)
 
         return LearnerResult(
             network=opt_result.representation,
