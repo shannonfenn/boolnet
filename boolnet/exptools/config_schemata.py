@@ -137,6 +137,7 @@ optimiser_schema = Any(
         'temp_rate':                Range(min=0.0, max=1.0),
         'steps_per_temp':           All(int, Range(min=1)),
         'guiding_function':         In(guiding_functions),
+        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
         Optional('max_restarts'):   All(int, Range(min=0))
         },
         required=True),
@@ -145,6 +146,7 @@ optimiser_schema = Any(
         'name':                     'HC',
         'max_iterations':           All(int, Range(min=1)),
         'guiding_function':         In(guiding_functions),
+        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
         Optional('max_restarts'):   All(int, Range(min=0))
         },
         required=True),
@@ -154,6 +156,7 @@ optimiser_schema = Any(
         'cost_list_length':         All(int, Range(min=1)),
         'max_iterations':           All(int, Range(min=1)),
         'guiding_function':         In(guiding_functions),
+        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
         Optional('max_restarts'):   All(int, Range(min=0))
         },
         required=True),
@@ -164,6 +167,7 @@ optimiser_schema = Any(
         'max_iterations':           All(int, Range(min=1)),
         'percolation_period':       All(int, Range(min=1)),
         'guiding_function':         In(guiding_functions),
+        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
         Optional('max_restarts'):   All(int, Range(min=0))
         },
         required=True)

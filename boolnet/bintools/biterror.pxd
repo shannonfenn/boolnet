@@ -85,5 +85,12 @@ cdef class E6MCC(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
+cdef class E6Thresholded(Evaluator):
+    cpdef double threshold
+    cdef PerOutputMean per_output_evaluator
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
 cdef class E7(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)

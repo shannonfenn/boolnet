@@ -43,6 +43,8 @@ class BasicLearner:
         self.opt_params = copy(parameters['optimiser'])
         gf_name = self.opt_params['guiding_function']
         self.guiding_func_id = fn.function_from_name(gf_name)
+        self.guiding_func_params = self.opt_params.get(
+            'guiding_function_parameters', {})
         self.opt_params['minimise'] = fn.is_minimiser(self.guiding_func_id)
 
         # convert shorthands for target order
@@ -105,7 +107,8 @@ class BasicLearner:
 
         state = BNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
-        state.add_function(self.guiding_func_id, self.gf_eval_name)
+        state.add_function(self.guiding_func_id, self.gf_eval_name,
+                           self.guiding_func_params)
 
         t1 = time()
         # run the optimiser

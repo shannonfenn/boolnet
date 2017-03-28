@@ -146,11 +146,11 @@ cdef class BNState:
     cpdef connected_sources(self):
         return self.network.connected_sources()
 
-    cpdef add_function(self, Function function, name=''):
+    cpdef add_function(self, Function function, name='', params={}):
         eval_class = EVALUATORS[function]
         if not name:
             name = function_name(function)
-        self.err_evaluators[name] = eval_class(self.Ne, self.No)
+        self.err_evaluators[name] = eval_class(self.Ne, self.No, **params)
         self.evaluated = False
         return name
 

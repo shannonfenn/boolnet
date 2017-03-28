@@ -21,6 +21,7 @@ EVALUATORS = {
     fn.E1_MCC: MeanMCC,
     fn.E2_MCC: E2MCC,
     fn.E6_MCC: E6MCC,
+    fn.E6_THRESHOLDED: E6Thresholded,
     fn.CORRECTNESS: Correctness,
     fn.PER_OUTPUT_ERROR: PerOutputMean,
     fn.PER_OUTPUT_MCC: PerOutputMCC
@@ -262,6 +263,28 @@ cdef class E6MCC(Evaluator):
             if self.per_output_evaluator.errors_exist[r]:
                 return (-1.0 * (self.No - r - 1) + per_output[r]) / self.No
         return 0.0
+
+
+cdef class E6Thresholded(Evaluator):
+    def __init__(self, size_t Ne, size_t No, threshold=0.0):
+        super().__init__(Ne, No)
+        self.per_output_evaluator = PerOutputMean(Ne, No)
+        self.threshold = threshold
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t r, r2
+        cdef double[:] per_output
+
+        per_output = self.per_output_evaluator.evaluate(E, T)
+        
+        # find earliest row with an error value
+        for r in range(self.No):
+            if per_output[r] > self.threshold:
+                for r2 in range(r+1, self.No):
+                    per_output[r2] = 1.0
+                break
+
+        return sum(per_output) / self.No
 
 
 cdef class E7(Evaluator):
