@@ -121,17 +121,23 @@ def load_dataset(settings):
 
     if data_settings['type'] == 'file':
         instance, N, Ni = file_instance(data_settings)
+    elif data_settings['type'] == 'split':
+        instance, N, Ni = split_instance(data_settings)
     elif data_settings['type'] == 'generated':
         instance, N, Ni = generated_instance(data_settings)
 
-    training_indices, test_indices = load_samples(settings['sampling'], N, Ni)
+    # Only handle sampling if data is not alread split
+    if data_settings['type'] == 'split':
+        contexts = [instance]
+    else:
+        training_indices, test_indices = load_samples(settings['sampling'],
+                                                      N, Ni)
 
-    contexts = []
-    for trg, test in zip(training_indices, test_indices):
-        context = instance.copy()
-        context.update({'training_indices': trg, 'test_indices': test})
-        contexts.append(context)
-
+        contexts = []
+        for trg, test in zip(training_indices, test_indices):
+            context = instance.copy()
+            context.update({'training_indices': trg, 'test_indices': test})
+            contexts.append(context)
     return contexts
 
 
@@ -144,13 +150,26 @@ def file_instance(params):
         N = dataset['Ne']
         Ni = dataset['Ni']
 
-    # build list of train/test set instances
     instance = {
         'type': 'raw_unsplit',
         'matrix': PackedMatrix(Mp, N, Ni)
         }
 
     return instance, N, Ni
+
+
+def split_instance(params):
+    trg_filename = build_filename(params, '.npz', key='training_filename')
+    test_filename = build_filename(params, '.npz', key='test_filename')
+    with np.load(trg_filename) as train, np.load(test_filename) as test:
+        instance = {
+            'type': 'raw_split',
+            'training_set': PackedMatrix(train['matrix'], train['Ne'],
+                                         train['Ni']),
+            'test_set': PackedMatrix(test['matrix'], test['Ne'], test['Ni'])
+            }
+
+    return instance, None, None
 
 
 def generated_instance(params):

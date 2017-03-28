@@ -67,6 +67,15 @@ data_schema = Any(
         Optional('dir'):       IsDir(),
         Optional('add_noise'): Range(min=0.0)
         },
+        required=True),
+    # pre-split, read from file
+    Schema({
+        'type':                'split',
+        'training_filename':   str,
+        'test_filename':       str,
+        Optional('dir'):       IsDir(),
+        Optional('add_noise'): Range(min=0.0)
+        },
         required=True)
     )
 
@@ -98,7 +107,9 @@ sampling_schema = Any(
         # allow for now, but don't force
         Optional('seed'):   seed_schema,
         },
-        required=True)
+        required=True),
+    # blank - data is already split
+    Schema({'type': 'blank'}, required=True)
     )
 
 
