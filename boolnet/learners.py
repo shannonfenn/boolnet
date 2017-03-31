@@ -87,8 +87,14 @@ class BasicLearner:
                     self.stopping_fn_params = condition[2]
                 else:
                     self.stopping_fn_params = {}
-        self.opt_params['stopping_condition'] = fn_value_stop_criterion(
-            self.stopping_fn_id, self.stopping_fn_eval_name, condition[1])
+            self.opt_params['stopping_condition'] = fn_value_stop_criterion(
+                self.stopping_fn_id, self.stopping_fn_eval_name, condition[1])
+        else:
+            self.stopping_fn_eval_name = self.guiding_fn_eval_name
+            self.stopping_fn_id = self.guiding_fn_id
+            self.stopping_fn_params = self.guiding_fn_params
+            self.opt_params['stopping_condition'] = fn_value_stop_criterion(
+                self.stopping_fn_id, self.stopping_fn_eval_name)
 
         # check parameters
         if self.guiding_fn_id not in fn.scalar_functions():
