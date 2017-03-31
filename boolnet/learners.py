@@ -71,7 +71,7 @@ class BasicLearner:
             self.guiding_fn_eval_name)
 
         # Check if user supplied a stopping condition
-        condition = parameters.get('stopping_condition', None)
+        condition = self.opt_params.get('stopping_condition', None)
         if condition:
             if condition[0] == 'guiding':
                 self.stopping_fn_eval_name = self.guiding_fn_eval_name
@@ -87,7 +87,7 @@ class BasicLearner:
                     self.stopping_fn_params = condition[2]
                 else:
                     self.stopping_fn_params = {}
-        self.opt_params['stopping_criterion'] = fn_value_stop_criterion(
+        self.opt_params['stopping_condition'] = fn_value_stop_criterion(
             self.stopping_fn_id, self.stopping_fn_eval_name, condition[1])
 
         # check parameters

@@ -38,10 +38,11 @@ class RestartLocalSearch:
             else:
                 self.is_as_good = op.ge
                 self.is_better = op.gt
-            self.stopping_criterion = parameters['stopping_criterion']
+            self.stopping_condition = parameters['stopping_condition']
+            self.return_option = parameters.get('return', 'best')
             # self.max_restarts = parameters.get('max_restarts', 0)
             self.max_restarts = parameters.get('max_restarts', 0)
-            self.reached_stopping_criterion = False
+            self.reached_stopping_condition = False
         except KeyError:
             print('Optimiser parameters missing!', file=sys.stderr)
             raise
@@ -64,7 +65,7 @@ class RestartLocalSearch:
         for i in range(self.max_restarts + 1):
             # state.set_representation(original_state)
             step_result = self._optimise(state)
-            if self.reached_stopping_criterion:
+            if self.reached_stopping_condition:
                 break
             elif i < self.max_restarts:
                 state.randomise()
@@ -95,12 +96,12 @@ class HC(RestartLocalSearch):
         # set up aspiration criteria
         best_iteration = 0
 
-        self.reached_stopping_criterion = False
+        self.reached_stopping_condition = False
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
-            if self.stopping_criterion(state):
-                self.reached_stopping_criterion = True
+            if self.stopping_condition(state):
+                self.reached_stopping_condition = True
                 break
 
             # perform random move
@@ -156,13 +157,13 @@ class LAHC(RestartLocalSearch):
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
-        if self.stopping_criterion(state):
-            self.reached_stopping_criterion = True
+        if self.stopping_condition(state):
+            self.reached_stopping_condition = True
             return OptimiserResult(
                 representation=best_representation, error=best_error,
                 best_iteration=0, iteration=0, restarts=None)
         else:
-            self.reached_stopping_criterion = False
+            self.reached_stopping_condition = False
 
         # optimisation loop
         for iteration in range(self.max_iterations):
@@ -178,8 +179,8 @@ class LAHC(RestartLocalSearch):
                 best_iteration = iteration
 
             # Stop on user defined condition
-            if self.stopping_criterion(state):
-                self.reached_stopping_criterion = True
+            if self.stopping_condition(state):
+                self.reached_stopping_condition = True
                 break
 
             # Determine whether to accept the new state
@@ -191,6 +192,9 @@ class LAHC(RestartLocalSearch):
             # Clear the move history to save memory and prevent accidentally
             # undoing accepted moves later
             state.clear_history()
+
+        if self.return_option == 'last':
+            best_representation = copy(state.representation)
 
         return OptimiserResult(
             representation=best_representation,
@@ -277,13 +281,13 @@ class LAHC_perc(LAHC):
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
-        if self.stopping_criterion(state):
-            self.reached_stopping_criterion = True
+        if self.stopping_condition(state):
+            self.reached_stopping_condition = True
             return OptimiserResult(
                 representation=best_representation, error=best_error,
                 best_iteration=0, iteration=0, restarts=None)
         else:
-            self.reached_stopping_criterion = False
+            self.reached_stopping_condition = False
 
         # optimisation loop
         for iteration in range(self.max_iterations):
@@ -303,8 +307,8 @@ class LAHC_perc(LAHC):
                 best_iteration = iteration
 
             # Stop on user defined condition
-            if self.stopping_criterion(state):
-                self.reached_stopping_criterion = True
+            if self.stopping_condition(state):
+                self.reached_stopping_condition = True
                 break
 
             # Determine whether to accept the new state
@@ -316,6 +320,9 @@ class LAHC_perc(LAHC):
             # Clear the move history to save memory and prevent accidentally
             # undoing accepted moves later
             state.clear_history()
+
+        if self.return_option == 'last':
+            best_representation = copy(state.representation)
 
         return OptimiserResult(
             representation=best_representation,
@@ -375,7 +382,7 @@ class SA(RestartLocalSearch):
 
         last_temp = self.init_temp  # so we can check for temp changes
 
-        self.reached_stopping_criterion = False
+        self.reached_stopping_condition = False
 
         # annealing loop
         for iteration, temp in enumerate(self.temperatures):
@@ -401,8 +408,8 @@ class SA(RestartLocalSearch):
                 best_iteration = iteration
 
             # Stop on user defined condition
-            if self.stopping_criterion(state):
-                self.reached_stopping_criterion = True
+            if self.stopping_condition(state):
+                self.reached_stopping_condition = True
                 break
 
             # Determine whether to accept the new state
@@ -414,6 +421,9 @@ class SA(RestartLocalSearch):
             # In any case, clear the move history to save memory
             # and prevent accidentally undoing accepted moves later
             state.clear_history()
+
+        if self.return_option == 'last':
+            best_representation = copy(state.representation)
 
         return OptimiserResult(
             representation=best_representation,

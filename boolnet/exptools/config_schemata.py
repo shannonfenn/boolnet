@@ -127,48 +127,58 @@ network_schema = All(
     #     })
     )
 
+stopping_condition_schema = Any(['guiding', float],
+                                [In(guiding_functions), float])
 
 optimiser_schema = Any(
     # Simulated Annealing
     Schema({
-        'name':                     'SA',
-        'num_temps':                All(int, Range(min=1)),
-        'init_temp':                Range(min=0.0),
-        'temp_rate':                Range(min=0.0, max=1.0),
-        'steps_per_temp':           All(int, Range(min=1)),
-        'guiding_function':         In(guiding_functions),
+        'name':                                  'SA',
+        'num_temps':                             All(int, Range(min=1)),
+        'init_temp':                             Range(min=0.0),
+        'temp_rate':                             Range(min=0.0, max=1.0),
+        'steps_per_temp':                        All(int, Range(min=1)),
+        'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
-        Optional('max_restarts'):   All(int, Range(min=0))
+        Optional('return'):                      In(['best', 'last']),
+        Optional('stopping_condition'):          stopping_condition_schema,
+        Optional('max_restarts'):                All(int, Range(min=0))
         },
         required=True),
     # Hill Climbing
     Schema({
-        'name':                     'HC',
-        'max_iterations':           All(int, Range(min=1)),
-        'guiding_function':         In(guiding_functions),
+        'name':                                  'HC',
+        'max_iterations':                        All(int, Range(min=1)),
+        'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
-        Optional('max_restarts'):   All(int, Range(min=0))
+        Optional('return'):                      In(['best', 'last']),
+        Optional('stopping_condition'):          stopping_condition_schema,
+        Optional('max_restarts'):                All(int, Range(min=0))
         },
         required=True),
     # Late-Acceptance Hill Climbing
     Schema({
-        'name':                     'LAHC',
-        'cost_list_length':         All(int, Range(min=1)),
-        'max_iterations':           All(int, Range(min=1)),
-        'guiding_function':         In(guiding_functions),
+        'name':                                  'LAHC',
+        'cost_list_length':                      All(int, Range(min=1)),
+        'max_iterations':                        All(int, Range(min=1)),
+        'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
-        Optional('max_restarts'):   All(int, Range(min=0))
+        Optional('return'):                      In(['best', 'last']),
+        Optional('stopping_condition'):          stopping_condition_schema,
+        Optional('max_restarts'):                All(int, Range(min=0))
         },
         required=True),
     # LAHC with periodic percolation
     Schema({
-        'name':                     'LAHC_perc',
-        'cost_list_length':         All(int, Range(min=1)),
-        'max_iterations':           All(int, Range(min=1)),
-        'percolation_period':       All(int, Range(min=1)),
-        'guiding_function':         In(guiding_functions),
+        'name':                                  'LAHC_perc',
+        'cost_list_length':                      All(int, Range(min=1)),
+        'max_iterations':                        All(int, Range(min=1)),
+        'percolation_period':                    All(int, Range(min=1)),
+        'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
-        Optional('max_restarts'):   All(int, Range(min=0))
+        Optional('return'):                      In(['best', 'last']),
+        Optional('stopping_condition'):          stopping_condition_schema,
+        Optional('max_restarts'):                All(int, Range(min=0))
         },
         required=True)
     )
@@ -197,9 +207,6 @@ minfs_params_schema = Any(
 target_order_schema = Any('auto', 'msb', 'lsb',
                           'random', All(list, permutation))
 
-stopping_condition_schema = Any(['guiding', float],
-                                [In(guiding_functions), float])
-
 learner_schema = Schema(
     All(
         Schema({
@@ -210,7 +217,6 @@ learner_schema = Schema(
             Required('seed', default=None): Any(
                 None, All(int, Range(min=0))),
             Optional('minfs_masking'):          bool,
-            Optional('stopping_condition'):     stopping_condition_schema,
             Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
             Optional('minfs_solver_params'):    minfs_params_schema,
             Optional('minfs_selection_metric'): fs_selection_metric_schema,
