@@ -197,6 +197,9 @@ minfs_params_schema = Any(
 target_order_schema = Any('auto', 'msb', 'lsb',
                           'random', All(list, permutation))
 
+stopping_condition_schema = Any(['guiding', float],
+                                [In(guiding_functions), float])
+
 learner_schema = Schema(
     All(
         Schema({
@@ -207,7 +210,7 @@ learner_schema = Schema(
             Required('seed', default=None): Any(
                 None, All(int, Range(min=0))),
             Optional('minfs_masking'):          bool,
-            Optional('stopping_error'):         float,
+            Optional('stopping_condition'):     stopping_condition_schema,
             Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
             Optional('minfs_solver_params'):    minfs_params_schema,
             Optional('minfs_selection_metric'): fs_selection_metric_schema,

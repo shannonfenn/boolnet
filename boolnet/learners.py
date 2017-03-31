@@ -16,13 +16,13 @@ LearnerResult = namedtuple('LearnerResult', [
     'optimisation_time', 'other_time'])
 
 
-def guiding_func_stop_criterion(func_id, limit=None):
+def fn_value_stop_criterion(func_id, name, limit=None):
     if limit is None:
         limit = fn.optimum(func_id)
     if fn.is_minimiser(func_id):
-        return lambda _, error: error <= limit
+        return lambda state: state.function_value(name) <= limit
     else:
-        return lambda _, error: error >= limit
+        return lambda state: state.function_value(name) >= limit
 
 
 class BasicLearner:
@@ -42,10 +42,10 @@ class BasicLearner:
         self.optimiser = optimiser
         self.opt_params = copy(parameters['optimiser'])
         gf_name = self.opt_params['guiding_function']
-        self.guiding_func_id = fn.function_from_name(gf_name)
-        self.guiding_func_params = self.opt_params.get(
+        self.guiding_fn_id = fn.function_from_name(gf_name)
+        self.guiding_fn_params = self.opt_params.get(
             'guiding_function_parameters', {})
-        self.opt_params['minimise'] = fn.is_minimiser(self.guiding_func_id)
+        self.opt_params['minimise'] = fn.is_minimiser(self.guiding_fn_id)
 
         # convert shorthands for target order
         if parameters['target_order'] == 'lsb':
@@ -65,16 +65,33 @@ class BasicLearner:
         self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
 
-        # add functors for evaluating the guiding func and stop criteria
-        self.gf_eval_name = 'guiding'
+        # add functor for evaluating the guiding func
+        self.guiding_fn_eval_name = 'guiding'
         self.opt_params['guiding_function'] = lambda x: x.function_value(
-            self.gf_eval_name)
-        # Check if user supplied cutoff point
-        limit = parameters.get('stopping_error', None)
-        self.opt_params['stopping_criterion'] = guiding_func_stop_criterion(
-            self.guiding_func_id, limit)
+            self.guiding_fn_eval_name)
 
-        if self.guiding_func_id not in fn.scalar_functions():
+        # Check if user supplied a stopping condition
+        condition = parameters.get('stopping_condition', None)
+        if condition:
+            if condition[0] == 'guiding':
+                self.stopping_fn_eval_name = self.guiding_fn_eval_name
+                self.stopping_fn_id = self.guiding_fn_id
+                if len(condition) > 2:
+                    self.stopping_fn_params = condition[2]
+                else:
+                    self.stopping_fn_params = self.guiding_fn_params
+            else:
+                self.stopping_fn_eval_name = 'stop'
+                self.stopping_fn_id = fn.function_from_name(condition[0])
+                if len(condition) > 2:
+                    self.stopping_fn_params = condition[2]
+                else:
+                    self.stopping_fn_params = {}
+        self.opt_params['stopping_criterion'] = fn_value_stop_criterion(
+            self.stopping_fn_id, self.stopping_fn_eval_name, condition[1])
+
+        # check parameters
+        if self.guiding_fn_id not in fn.scalar_functions():
             raise ValueError('Invalid guiding function: {}'.format(gf_name))
         if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
@@ -107,8 +124,13 @@ class BasicLearner:
 
         state = BNState(gates, self.problem_matrix)
         # add the guiding function to be evaluated
-        state.add_function(self.guiding_func_id, self.gf_eval_name,
-                           self.guiding_func_params)
+        state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name,
+                           self.guiding_fn_params)
+        # add the stopping critetion function to be evaluated
+        if self.stopping_fn_eval_name is not None:
+            state.add_function(self.stopping_fn_id,
+                               self.stopping_fn_eval_name,
+                               self.stopping_fn_params)
 
         t1 = time()
         # run the optimiser
@@ -299,7 +321,7 @@ class StratifiedLearner(BasicLearner):
             gates = self.next_gates(i, partial_instance)
             state = BNState(gates, partial_instance)
             # add the guiding function to be evaluated
-            state.add_function(self.guiding_func_id, self.gf_eval_name)
+            state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name)
 
             t1 = time()
 

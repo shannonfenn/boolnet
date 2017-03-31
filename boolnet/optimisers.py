@@ -99,7 +99,7 @@ class HC(RestartLocalSearch):
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
-            if self.stopping_criterion(state, error):
+            if self.stopping_criterion(state):
                 self.reached_stopping_criterion = True
                 break
 
@@ -156,7 +156,7 @@ class LAHC(RestartLocalSearch):
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
-        if self.stopping_criterion(state, best_error):
+        if self.stopping_criterion(state):
             self.reached_stopping_criterion = True
             return OptimiserResult(
                 representation=best_representation, error=best_error,
@@ -178,7 +178,7 @@ class LAHC(RestartLocalSearch):
                 best_iteration = iteration
 
             # Stop on user defined condition
-            if self.stopping_criterion(state, best_error):
+            if self.stopping_criterion(state):
                 self.reached_stopping_criterion = True
                 break
 
@@ -277,7 +277,7 @@ class LAHC_perc(LAHC):
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
-        if self.stopping_criterion(state, best_error):
+        if self.stopping_criterion(state):
             self.reached_stopping_criterion = True
             return OptimiserResult(
                 representation=best_representation, error=best_error,
@@ -302,6 +302,11 @@ class LAHC_perc(LAHC):
                 best_representation = copy(state.representation)
                 best_iteration = iteration
 
+            # Stop on user defined condition
+            if self.stopping_criterion(state):
+                self.reached_stopping_criterion = True
+                break
+
             # Determine whether to accept the new state
             if self.accept(new_error, error):
                 error = new_error
@@ -311,11 +316,6 @@ class LAHC_perc(LAHC):
             # Clear the move history to save memory and prevent accidentally
             # undoing accepted moves later
             state.clear_history()
-
-            # Stop on user defined condition
-            if self.stopping_criterion(state, best_error):
-                self.reached_stopping_criterion = True
-                break
 
         return OptimiserResult(
             representation=best_representation,
@@ -379,10 +379,6 @@ class SA(RestartLocalSearch):
 
         # annealing loop
         for iteration, temp in enumerate(self.temperatures):
-            # Stop on user defined condition
-            if self.stopping_criterion(state, best_error):
-                self.reached_stopping_criterion = True
-                break
 
             # Log error on new temperature if logging
             best_error_for_temp = min(best_error_for_temp, error)
@@ -403,6 +399,11 @@ class SA(RestartLocalSearch):
                 best_representation = copy(state.representation)
                 best_error = new_error
                 best_iteration = iteration
+
+            # Stop on user defined condition
+            if self.stopping_criterion(state):
+                self.reached_stopping_criterion = True
+                break
 
             # Determine whether to accept the new state
             if self.accept(error, new_error, temp):
