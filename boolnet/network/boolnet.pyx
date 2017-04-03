@@ -55,8 +55,9 @@ cdef class BoolNet:
     cpdef randomise(self):
         # this has the side effect of clearing the history since we don't
         # want to compute all the inverse moves
-        cdef size_t g, Ni
+        cdef size_t g, Ni, No
         Ni = self.Ni
+        No = self.No
         for g in range(self.Ng):
             self.gates[g, 0] = random_uniform_int(min(g, Ng - No) + Ni)
             self.gates[g, 1] = random_uniform_int(min(g, Ng - No) + Ni)
