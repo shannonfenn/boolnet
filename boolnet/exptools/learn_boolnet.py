@@ -254,9 +254,9 @@ def build_result_map(parameters, learner_result):
     for bit, v in enumerate(test_state.function_value('per_output_mcc')):
         key = 'test_mcc_tgt_{}'.format(bit)
         results[key] = v
-    for bit, v in enumerate(final_network.max_node_depths()):
-        key = 'max_depth_tgt_{}'.format(bit)
-        results[key] = v
+    # for bit, v in enumerate(final_network.max_node_depths()):
+    #     key = 'max_depth_tgt_{}'.format(bit)
+    #     results[key] = v
 
     # handle requests to log keys
     log_keys = parameters.get('log_keys', [])
