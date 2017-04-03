@@ -144,11 +144,11 @@ def run_tasks(tasks, num_processes, out_stream, batch_mode):
 
 def run_parallel(tasks, num_processes, out_stream, batch_mode):
     ''' runs the given configurations '''
+    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | eta: %(eta)ds'
     with Pool(processes=num_processes) as pool:
         if not batch_mode:
             bar = Bar('Parallelised ({})'.format(num_processes),
-                      max=len(tasks),
-                      suffix='%(index)d/%(max)d : %(elapsed)ds')
+                      max=len(tasks), suffix=suffix_fmt)
             bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
@@ -173,7 +173,7 @@ def scoop_worker_wrapper(*args, **kwargs):
 
 def run_scooped(tasks, out_stream, batch_mode):
     ''' runs the given configurations '''
-    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds'
+    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | eta: %(eta)ds'
     if not batch_mode:
         bar = Bar('Scooped', max=len(tasks), suffix=suffix_fmt)
         bar.update()
@@ -189,9 +189,9 @@ def run_scooped(tasks, out_stream, batch_mode):
 
 def run_sequential(tasks, out_stream, batch_mode):
     ''' runs the given configurations '''
+    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | eta: %(eta)ds'
     if not batch_mode:
-        bar = Bar('Sequential', max=len(tasks),
-                  suffix='%(index)d/%(max)d : %(elapsed)ds')
+        bar = Bar('Sequential', max=len(tasks), suffix=suffix_fmt)
         bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
