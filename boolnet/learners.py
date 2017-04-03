@@ -77,9 +77,7 @@ class BasicLearner:
                 self.stopping_fn_eval_name = self.guiding_fn_eval_name
                 self.stopping_fn_id = self.guiding_fn_id
                 if len(condition) > 2:
-                    self.stopping_fn_params = condition[2]
-                else:
-                    self.stopping_fn_params = self.guiding_fn_params
+                    print('Warning: cannot use custom params with guiding fn as stopping fn.')
             else:
                 self.stopping_fn_eval_name = 'stop'
                 self.stopping_fn_id = fn.function_from_name(condition[0])
@@ -132,8 +130,9 @@ class BasicLearner:
         # add the guiding function to be evaluated
         state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name,
                            self.guiding_fn_params)
-        # add the stopping critetion function to be evaluated
-        if self.stopping_fn_eval_name is not None:
+        # add the stopping function to be evaluated
+        if (self.stopping_fn_eval_name is not None and
+                self.stopping_fn_eval_name != self.guiding_fn_eval_name):
             state.add_function(self.stopping_fn_id,
                                self.stopping_fn_eval_name,
                                self.stopping_fn_params)
