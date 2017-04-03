@@ -58,8 +58,8 @@ cdef class BoolNet:
         cdef size_t g, Ni
         Ni = self.Ni
         for g in range(self.Ng):
-            self.gates[g, 0] = random_uniform_int(g + Ni)
-            self.gates[g, 1] = random_uniform_int(g + Ni)
+            self.gates[g, 0] = random_uniform_int(min(g, Ng - No) + Ni)
+            self.gates[g, 1] = random_uniform_int(min(g, Ng - No) + Ni)
         self.clear_history()
 
     cpdef connected_gates(self):
@@ -104,7 +104,7 @@ cdef class BoolNet:
         # (output gates cannot connect to each other)
         shift = random_uniform_int(min(gate, Ng - No) + Ni - 1) + 1
         # Get shifted connection
-        new_source = (cur_source + shift) % (gate + Ni)
+        new_source = (cur_source + shift) % (min(gate, Ng - No) + Ni)
 
         return Move(gate, terminal, new_source)
 
