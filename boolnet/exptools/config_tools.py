@@ -76,7 +76,7 @@ def build_filename(params, extension, key='filename'):
     return filename
 
 
-def load_samples(params, N, Ni):
+def load_samples(params, N, Ni, Nt=None):
     if params['type'] == 'given':
         training_indices = np.array(params['indices'], dtype=np.uintp)
         if 'test' in params:
@@ -105,10 +105,18 @@ def load_samples(params, N, Ni):
             params['seed'] = s
         random.seed(s)
         if 'test' in params:
-            Nt = params['test']
-            all_indices = np.array([
-                random.sample(range(N), Ne+Nt) for i in range(Ns)])
-            training_indices, test_indices = np.hsplit(all_indices, [Ne])
+            Ne_test = params['test']
+            if Nt is None:
+                # combined training and test data
+                all_indices = np.array([
+                    random.sample(range(N), Ne+Ne_test) for i in range(Ns)])
+                training_indices, test_indices = np.hsplit(all_indices, [Ne])
+            else:
+                # separate training and test data
+                training_indices = np.array([
+                    random.sample(range(N), Ne) for i in range(Ns)])
+                test_indices = np.array([
+                    random.sample(range(N), Ne_test) for i in range(Ns)])
         else:
             training_indices = np.array([
                 random.sample(range(N), Ne) for i in range(Ns)])
@@ -119,25 +127,38 @@ def load_samples(params, N, Ni):
 def load_dataset(settings):
     data_settings = settings['data']
 
-    if data_settings['type'] == 'file':
+    dtype = data_settings['type']
+
+    if dtype == 'file':
         instance, N, Ni = file_instance(data_settings)
-    elif data_settings['type'] == 'split':
-        instance, N, Ni = split_instance(data_settings)
-    elif data_settings['type'] == 'generated':
+    elif dtype == 'split':
+        instance, N, Ni, Nt = split_instance(data_settings)
+    elif dtype == 'generated':
         instance, N, Ni = generated_instance(data_settings)
 
-    # Only handle sampling if data is not alread split
-    if data_settings['type'] == 'split':
-        contexts = [instance]
-    else:
-        training_indices, test_indices = load_samples(settings['sampling'],
-                                                      N, Ni)
+    # check for problematic case
+    problematic = (dtype == 'split' and
+                   settings['sampling']['type'] == 'blank' and
+                   'test' not in settings['sampling'])
+    if problematic:
+        raise ValueError('Cannot use implicit test sampling with split data.')
 
-        contexts = []
-        for trg, test in zip(training_indices, test_indices):
-            context = instance.copy()
-            context.update({'training_indices': trg, 'test_indices': test})
-            contexts.append(context)
+    # Only handle sampling if necessary
+    if dtype == 'split':
+        if settings['sampling']['type'] == 'blank':
+            return [instance]
+        else:
+            training_indices, test_indices = load_samples(
+                settings['sampling'], N, Ni, Nt)
+    else:
+        training_indices, test_indices = load_samples(
+            settings['sampling'], N, Ni)
+
+    contexts = []
+    for trg, test in zip(training_indices, test_indices):
+        context = instance.copy()
+        context.update({'training_indices': trg, 'test_indices': test})
+        contexts.append(context)
     return contexts
 
 
@@ -162,14 +183,16 @@ def split_instance(params):
     trg_filename = build_filename(params, '.npz', key='training_filename')
     test_filename = build_filename(params, '.npz', key='test_filename')
     with np.load(trg_filename) as train, np.load(test_filename) as test:
+        Ne_trg, Ne_test = train['Ne'], test['Ne']
+        Ni = train['Ni']
+        assert test['Ni'] == Ni
         instance = {
             'type': 'raw_split',
-            'training_set': PackedMatrix(train['matrix'], train['Ne'],
-                                         train['Ni']),
-            'test_set': PackedMatrix(test['matrix'], test['Ne'], test['Ni'])
+            'training_set': PackedMatrix(train['matrix'], Ne_trg, Ni),
+            'test_set': PackedMatrix(test['matrix'], Ne_test, Ni)
             }
 
-    return instance, None, None
+    return instance, Ne_trg, Ni, Ne_test
 
 
 def generated_instance(params):

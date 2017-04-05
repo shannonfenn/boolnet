@@ -51,10 +51,16 @@ def random_network(Ng, Ni, No, node_funcs):
 
 def build_training_set(mapping):
     if mapping['type'] == 'raw_split':
-        return mapping['training_set']
+        trg_indices = mapping.get('training_indices', None)
+        if trg_indices is not None:
+            return utils.sample_packed(mapping['training_set'], trg_indices)
+        else:
+            return mapping['training_set']
+
     elif mapping['type'] == 'raw_unsplit':
         return utils.sample_packed(mapping['matrix'],
                                    mapping['training_indices'])
+
     elif mapping['type'] == 'operator':
         indices = mapping['training_indices']
         operator = mapping['operator']
@@ -138,10 +144,17 @@ def learn_bool_net(parameters):
 def build_states(mapping, gates, objectives):
     ''' objectives should be a list of (func_id, ordering, name) tuples.'''
     if mapping['type'] == 'raw_split':
+        trg_indices = mapping.get('training_indices', None)
+        test_indices = mapping.get('test_indices', None)
         M_trg = mapping['training_set']
         M_test = mapping['test_set']
+        if trg_indices is not None:
+            M_trg = utils.sample_packed(M_trg, mapping['training_indices'])
+        if test_indices is not None:
+            M_test = utils.sample_packed(M_test, mapping['test_indices'])
         S_trg = ns.BNState(gates, M_trg)
         S_test = ns.BNState(gates, M_test)
+
     elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
         trg_indices = mapping['training_indices']
@@ -153,6 +166,7 @@ def build_states(mapping, gates, objectives):
             M_test = utils.sample_packed(M, test_indices)
         S_trg = ns.BNState(gates, M_trg)
         S_test = ns.BNState(gates, M_test)
+
     elif mapping['type'] == 'operator':
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
@@ -166,6 +180,7 @@ def build_states(mapping, gates, objectives):
                                             exclude=True)
         else:
             S_test = ns.state_from_operator(gates, test_indices, Nb, No, op)
+
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
