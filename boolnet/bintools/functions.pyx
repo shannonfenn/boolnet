@@ -7,7 +7,8 @@ def all_functions():
 
 def scalar_functions():
     return [E1, E2, E3, E4, E5, E6, E7,
-            CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, E6_THRESHOLDED]
+            CORRECTNESS, E1_MCC, E2_MCC, E6_MCC,
+            E6_THRESHOLDED, E3_GENERAL, E6_GENERAL]
 
 
 def per_output_functions():
@@ -39,6 +40,8 @@ def function_from_name(name):
     elif name == 'e2_mcc':              return E2_MCC
     elif name == 'e6_mcc':              return E6_MCC
     elif name == 'e6_thresholded':      return E6_THRESHOLDED
+    elif name == 'e3_general':          return E3_GENERAL
+    elif name == 'e6_general':          return E6_GENERAL
     elif name == 'per_output_error':    return PER_OUTPUT_ERROR
     elif name == 'per_output_mcc':      return PER_OUTPUT_MCC
     else: raise ValueError('No function named \'{}\''.format(name))
@@ -57,13 +60,16 @@ def function_name(function_id):
     elif function_id == E2_MCC:             return 'e2_mcc'
     elif function_id == E6_MCC:             return 'e6_mcc'
     elif function_id == E6_THRESHOLDED:     return 'e6_thresholded'
+    elif function_id == E3_GENERAL:         return 'e3_general'
+    elif function_id == E6_GENERAL:         return 'e6_general'
     elif function_id == PER_OUTPUT_ERROR:   return 'per_output_error'
     elif function_id == PER_OUTPUT_MCC:     return 'per_output_mcc'
     else: raise ValueError('No function id \'{}\''.format(function_id))
 
 
 def is_minimiser(function_id):
-    if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR, E6_THRESHOLDED]:
+    if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR,
+                       E6_THRESHOLDED, E3_GENERAL, E6_GENERAL]:
         return True
     elif function_id in [CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return False
@@ -72,7 +78,8 @@ def is_minimiser(function_id):
 
 
 def optimum(function_id):
-    if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR, E6_THRESHOLDED]:
+    if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR,
+                       E6_THRESHOLDED, E3_GENERAL, E6_GENERAL]:
         return 0.0
     elif function_id in [CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return 1.0

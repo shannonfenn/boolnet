@@ -13,6 +13,8 @@ cpdef enum Function:
     E2_MCC,
     E6_MCC,
     E6_THRESHOLDED,
+    E3_GENERAL,
+    E6_GENERAL,
     CORRECTNESS,
     PER_OUTPUT_ERROR,
     PER_OUTPUT_MCC

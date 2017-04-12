@@ -63,6 +63,13 @@ cdef class E3(Evaluator):
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
+cdef class E3General(Evaluator):
+    cdef list dependencies
+    cdef packed_type_t[:, :] disjunctions
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
 cdef class E4(Evaluator):
     cdef size_t end_subtractor
 
@@ -87,6 +94,14 @@ cdef class E6MCC(Evaluator):
 
 cdef class E6Thresholded(Evaluator):
     cpdef double threshold
+    cdef PerOutputMean per_output_evaluator
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
+
+
+cdef class E6General(Evaluator):
+    cpdef double threshold
+    cdef list dependencies
     cdef PerOutputMean per_output_evaluator
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)

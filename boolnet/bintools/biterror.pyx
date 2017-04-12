@@ -22,6 +22,8 @@ EVALUATORS = {
     fn.E2_MCC: E2MCC,
     fn.E6_MCC: E6MCC,
     fn.E6_THRESHOLDED: E6Thresholded,
+    fn.E3_GENERAL: E3General,
+    fn.E6_GENERAL: E6General,
     fn.CORRECTNESS: Correctness,
     fn.PER_OUTPUT_ERROR: PerOutputMean,
     fn.PER_OUTPUT_MCC: PerOutputMCC
@@ -152,12 +154,17 @@ cdef class E1(Evaluator):
 
 
 cdef class E2(Evaluator):
-    def __init__(self, size_t Ne, size_t No):
+    def __init__(self, size_t Ne, size_t No, weights=None):
         cdef size_t i
         super().__init__(Ne, No)
-        # highest weight to earliest features - normalised to [0, 1]
-        self.weight_vector = np.arange(No, 0, -1, dtype=np.float64) / (0.5 * No * (No + 1.0))
-
+        if weights is None:
+            # highest weight to earliest features
+            weights = np.arange(No, 0, -1, dtype=np.float64)
+        else:
+            weights = np.array(weights, dtype=np.float64)
+        # normalise to [0, 1]
+        weights /= weights.sum()
+        self.weight_vector = weights
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
         cdef size_t i
@@ -170,7 +177,7 @@ cdef class E2(Evaluator):
 
 
 cdef class E2MCC(E2):
-    def __init__(self, size_t Ne, size_t No):
+    def __init__(self, size_t Ne, size_t No, weights=None):
         super().__init__(Ne, No)
         self.per_output_evaluator = PerOutputMCC(Ne, No)
 
@@ -200,6 +207,26 @@ cdef class E3(Evaluator):
             for c in range(self.cols):
                 self.row_disjunction[c] |= E[r, c]
             result += popcount_vector(self.row_disjunction)
+        return result / self.divisor
+
+
+cdef class E3General(Evaluator):
+    def __init__(self, size_t Ne, size_t No, dependencies):
+        super().__init__(Ne, No)
+        self.dependencies = [list(dep) for dep in dependencies]
+        self.disjunctions = np.zeros([self.No, self.cols], dtype=packed_type)
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t r, c, dep
+        cdef double result = 0.0
+        
+        for r in range(self.No):
+            for c in range(self.cols):
+                self.disjunctions[r, c] = E[r, c]
+            for dep in self.dependencies[r]:
+                for c in range(self.cols):
+                    self.disjunctions[r, c] |= E[dep, c]
+            result += popcount_vector(self.disjunctions[r])
         return result / self.divisor
 
 
@@ -285,6 +312,28 @@ cdef class E6Thresholded(Evaluator):
                 break
 
         return sum(per_output) / self.No
+
+
+cdef class E6General(Evaluator):
+    def __init__(self, size_t Ne, size_t No, dependencies, threshold=0.0):
+        super().__init__(Ne, No)
+        self.dependencies = [list(dep) for dep in dependencies]
+        self.per_output_evaluator = PerOutputMean(Ne, No)
+
+    cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
+        cdef size_t r, dep
+        cdef double result = 0.0, temp_result = 0.0
+        cdef double[:] per_output
+
+        per_output = self.per_output_evaluator.evaluate(E, T)
+
+        for r in range(self.No):
+            temp_result = per_output[r]
+            for dep in self.dependencies[r]:
+                if per_output[dep] > self.threshold:
+                    temp_result = 1.0
+            result += temp_result
+        return result / self.No
 
 
 cdef class E7(Evaluator):

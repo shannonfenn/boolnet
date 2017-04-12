@@ -1,3 +1,4 @@
+from bitpacking import packing as pk
 from boolnet.bintools.functions import function_from_name
 import numpy as np
 from boolnet.bintools.biterror import EVALUATORS
@@ -29,6 +30,70 @@ def test_function_value(error_matrix_harness):
         np.testing.assert_array_almost_equal(actual, expected)
 
 
+def test_e3_general():
+    E = np.array([[1, 0, 1, 1, 0],
+                  [0, 0, 0, 0, 0],
+                  [0, 1, 0, 0, 0],
+                  [0, 1, 0, 0, 0],
+                  [0, 1, 0, 0, 0],
+                  [0, 1, 0, 0, 1],
+                  [0, 0, 0, 0, 1],
+                  [0, 0, 1, 1, 0],
+                  [0, 0, 1, 1, 0]], dtype=np.uint8)
+    # E = np.array([[1, 0, 1, 1, 1],
+    #               [0, 0, 0, 0, 0],
+    #               [0, 1, 1, 1, 1],
+    #               [0, 1, 1, 1, 1],
+    #               [0, 1, 1, 1, 1],
+    #               [0, 1, 1, 1, 1],
+    #               [0, 0, 0, 0, 1],
+    #               [0, 0, 1, 1, 1],
+    #               [0, 0, 1, 1, 1]], dtype=np.uint8)
+
+    Ne, No = E.shape
+    Ep = pk.packmat(E)
+    Tp = np.zeros_like(Ep)
+
+    eval_class = EVALUATORS[function_from_name('e3_general')]
+
+    dependencies = [[], [], [0, 1], [0, 1, 2], [0, 1, 2]]
+
+    error_evaluator = eval_class(Ne, No, dependencies)
+    actual = error_evaluator.evaluate(Ep, Tp)
+    np.testing.assert_array_almost_equal(actual, 27/45)
+
+
+def test_e6_general():
+    E = np.array([[0, 0, 1, 1, 0, 0],
+                  [0, 0, 0, 0, 0, 1],
+                  [0, 1, 0, 0, 0, 1],
+                  [0, 1, 0, 0, 0, 0],
+                  [0, 1, 0, 0, 0, 1],
+                  [0, 1, 0, 0, 1, 0],
+                  [0, 0, 0, 0, 1, 1],
+                  [0, 0, 1, 1, 0, 0],
+                  [0, 0, 1, 1, 0, 1]], dtype=np.uint8)
+    # E = np.array([[0, 0, 1, 1, 1, 0],
+    #               [0, 0, 1, 1, 1, 1],
+    #               [0, 1, 1, 1, 1, 1],
+    #               [0, 1, 1, 1, 1, 0],
+    #               [0, 1, 1, 1, 1, 1],
+    #               [0, 1, 1, 1, 1, 0],
+    #               [0, 0, 1, 1, 1, 1],
+    #               [0, 0, 1, 1, 1, 0],
+    #               [0, 0, 1, 1, 1, 1]], dtype=np.uint8)
+
+    Ne, No = E.shape
+    Ep = pk.packmat(E)
+    Tp = np.zeros_like(Ep)
+
+    eval_class = EVALUATORS[function_from_name('e6_general')]
+
+    dependencies = [[], [], [0, 1], [0, 1, 2], [0, 1, 2], [0]]
+
+    error_evaluator = eval_class(Ne, No, dependencies)
+    actual = error_evaluator.evaluate(Ep, Tp)
+    np.testing.assert_array_almost_equal(actual, 36/54)
 # @pytest.mark.python
 # def test_error(error_matrix_harness, function):
 #     from BoolNet.BitError import function_value
