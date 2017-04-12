@@ -224,6 +224,8 @@ learner_schema = Schema(
             required=True),
         conditionally_required(
             'minfs_masking', True, 'minfs_selection_metric'),
+        conditionally_required(
+            'target_order', 'auto', 'minfs_selection_metric'),
         # if name = basic then minfs_masking is not allowed
         conditionally_forbidden(
             'name', 'basic', 'minfs_masking')
