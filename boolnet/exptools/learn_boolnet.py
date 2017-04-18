@@ -185,9 +185,9 @@ def build_states(mapping, gates, objectives):
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
     # add functions to be later called by name
-    for func, name in objectives:
-        S_trg.add_function(func, name)
-        S_test.add_function(func, name)
+    for func, name, params in objectives:
+        S_trg.add_function(func, name, params=params)
+        S_test.add_function(func, name, params=params)
 
     return S_trg, S_test
 
@@ -196,18 +196,20 @@ def build_result_map(parameters, learner_result):
 
     guiding_function = fn.function_from_name(
         parameters['learner']['optimiser']['guiding_function'])
+    guiding_function_params = parameters['learner']['optimiser'].get(
+            'guiding_function_parameters', {})
 
     final_network = learner_result.network
     gates = final_network.gates
 
     # build evaluators for training and test data
     objective_functions = [
-        (guiding_function, 'guiding'),
-        (fn.E1, 'e1'),
-        (fn.E1_MCC, 'e1_mcc'),
-        (fn.CORRECTNESS, 'correctness'),
-        (fn.PER_OUTPUT_ERROR, 'per_output_error'),
-        (fn.PER_OUTPUT_MCC, 'per_output_mcc')]
+        (guiding_function, 'guiding', guiding_function_params),
+        (fn.E1, 'e1', {}),
+        (fn.E1_MCC, 'e1_mcc', {}),
+        (fn.CORRECTNESS, 'correctness', {}),
+        (fn.PER_OUTPUT_ERROR, 'per_output_error', {}),
+        (fn.PER_OUTPUT_MCC, 'per_output_mcc', {})]
 
     train_state, test_state = build_states(
         parameters['mapping'], gates, objective_functions)
