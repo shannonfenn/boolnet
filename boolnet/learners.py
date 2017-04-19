@@ -159,6 +159,161 @@ class BasicLearner:
             other_time=t1-t0)
 
 
+class SplitLearner:
+    def _setup(self, optimiser, parameters):
+        # Gate generation
+        self.gate_generator = parameters['gate_generator']
+        self.node_funcs = parameters['network']['node_funcs']
+        self.budget = parameters['network']['Ng']
+        self.remaining_budget = self.budget
+        # Instance
+        self.problem_matrix = parameters['training_set']
+        self.Ni = self.problem_matrix.Ni
+        self.No = self.problem_matrix.No
+        self.input_matrix, self.target_matrix = np.split(
+            self.problem_matrix, [self.Ni])
+        self.Ne = self.problem_matrix.Ne
+        # Optimiser
+        self.optimiser = optimiser
+        self.opt_params = copy(parameters['optimiser'])
+        gf_name = self.opt_params['guiding_function']
+        self.guiding_fn_id = fn.function_from_name(gf_name)
+        self.guiding_fn_params = self.opt_params.get(
+            'guiding_function_parameters', {})
+        self.opt_params['minimise'] = fn.is_minimiser(self.guiding_fn_id)
+
+        # add functor for evaluating the guiding func
+        self.guiding_fn_eval_name = 'guiding'
+        self.opt_params['guiding_function'] = lambda x: x.function_value(
+            self.guiding_fn_eval_name)
+
+        # Check if user supplied a stopping condition
+        condition = self.opt_params.get('stopping_condition', None)
+        if condition and condition[0] != 'guiding':
+            limit = condition[1]
+            self.stopping_fn_eval_name = 'stop'
+            self.stopping_fn_id = fn.function_from_name(condition[0])
+            if len(condition) > 2:
+                self.stopping_fn_params = condition[2]
+            else:
+                self.stopping_fn_params = {}
+        else:
+            if condition:
+                limit = condition[1]
+            self.stopping_fn_eval_name = self.guiding_fn_eval_name
+            self.stopping_fn_id = self.guiding_fn_id
+            self.stopping_fn_params = self.guiding_fn_params
+            limit = None
+
+        self.opt_params['stopping_condition'] = fn_value_stop_criterion(
+            self.stopping_fn_id, self.stopping_fn_eval_name, limit)
+        # check parameters
+        if self.guiding_fn_id not in fn.scalar_functions():
+            raise ValueError('Invalid guiding function: {}'.format(gf_name))
+        if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
+            raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
+                             format(self.node_funcs))
+
+    def next_gates(self, t):
+        size = self.remaining_budget // (self.No - t)
+        self.remaining_budget -= size
+        return self.gate_generator(size, self.Ni, 1, self.node_funcs)
+
+    def join_networks(self, base, new):
+
+        # build a map for replacing sources
+        new_input_map = list(range(self.Ni))
+        # difference in input sizes plus # of non-output base gates
+        # offset = base.Ni - new.Ni + base.Ng - base.No
+        offset = base.Ni + base.Ng - base.No
+        new_gate_map = list(range(offset,
+                                  offset + new.Ng - new.No))
+        new_output_map = list(range(offset + new.Ng - new.No + base.No,
+                                    offset + new.Ng + base.No))
+        sources_map = new_input_map + new_gate_map + new_output_map
+
+        # apply to all but the last column (transfer functions) of the gate
+        # matrix. Use numpy array: cython memoryview slicing is broken
+        remapped_new_gates = np.array(new.gates)
+        for gate in remapped_new_gates:
+            for i in range(gate.size - 1):
+                gate[i] = sources_map[gate[i]]
+
+        accumulated_gates = np.vstack((base.gates[:-base.No, :],
+                                       remapped_new_gates[:-new.No, :],
+                                       base.gates[-base.No:, :],
+                                       remapped_new_gates[-new.No:, :]))
+
+        new_target = np.vstack((base.target_matrix, new.target_matrix))
+
+        new_problem_matrix = PackedMatrix(np.vstack((self.input_matrix,
+                                                     new_target)),
+                                          Ne=self.Ne, Ni=self.Ni)
+        return BNState(accumulated_gates, new_problem_matrix)
+
+    def make_partial_instance(self, target_index):
+        target = self.target_matrix[target_index]
+        return PackedMatrix(np.vstack((self.input_matrix, target)),
+                            Ne=self.Ne, Ni=self.Ni)
+
+    def run(self, optimiser, parameters):
+        self._setup(optimiser, parameters)
+
+        opt_results = []
+        optimisation_times = []
+        other_times = []
+
+        # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
+        accumulated_network = BNState(np.empty((0, 3)), self.input_matrix)
+
+        for target_index in range(self.No):
+            t0 = time()
+
+            partial_instance = self.make_partial_instance(target_index)
+            
+            # build the network state
+            gates = self.next_gates(target_index)
+            state = BNState(gates, partial_instance)
+            # add the guiding function to be evaluated
+            state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name,
+                               self.guiding_fn_params)
+            # add the stopping function to be evaluated
+            if (self.stopping_fn_eval_name is not None and
+                    self.stopping_fn_eval_name != self.guiding_fn_eval_name):
+                state.add_function(self.stopping_fn_id,
+                                   self.stopping_fn_eval_name,
+                                   self.stopping_fn_params)
+
+            t1 = time()
+            # run the optimiser
+            partial_result = self.optimiser.run(state, self.opt_params)
+            t2 = time()
+
+            # record result
+            opt_results.append(partial_result)
+
+            # build up final network by inserting this partial result
+            result_state = BNState(partial_result.representation.gates,
+                                   partial_instance)
+            accumulated_network = self.join_networks(accumulated_network,
+                                                     result_state)
+
+            t3 = time()
+            optimisation_times.append(t2 - t1)
+            other_times.append(t3 - t2 + t1 - t0)
+
+        return LearnerResult(
+            network=accumulated_network.representation,
+            partial_networks=[r.representation for r in opt_results],
+            best_errors=[r.error for r in opt_results],
+            best_iterations=[r.best_iteration for r in opt_results],
+            final_iterations=[r.iteration for r in opt_results],
+            target_order=list(range(self.No)),
+            feature_sets=None,
+            restarts=[r.restarts for r in opt_results],
+            optimisation_time=optimisation_times,
+            other_time=other_times)
+
 class StratifiedLearner(BasicLearner):
 
     def _setup(self, optimiser, parameters):

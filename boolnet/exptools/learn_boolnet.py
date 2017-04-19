@@ -25,6 +25,7 @@ OPTIMISERS = {
 LEARNERS = {
     'basic': learners.BasicLearner(),
     'stratified': learners.StratifiedLearner(),
+    'split': learners.SplitLearner(),
     }
 
 
