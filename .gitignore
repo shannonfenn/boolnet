@@ -11,6 +11,7 @@ py*.cpp
 *.html
 *.pytest.restart
 /boolnet.sublime-workspace
+/boolnet.sublime-project
 compilelog
 *_bak.*
 
