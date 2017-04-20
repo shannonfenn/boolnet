@@ -57,24 +57,27 @@ data_schema = Any(
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
         Optional('window_size'):    All(int, Range(min=1)),
-        Optional('add_noise'):      Range(min=0.0)
+        Optional('add_noise'):      Range(min=0.0),
+        # Optional('targets'):        [All(int, Range(min=0))],
         },
         required=True),
     # read from file
     Schema({
-        'type':                'file',
-        'filename':            str,
-        Optional('dir'):       IsDir(),
-        Optional('add_noise'): Range(min=0.0)
+        'type':                 'file',
+        'filename':             str,
+        Optional('dir'):        IsDir(),
+        Optional('add_noise'):  Range(min=0.0),
+        Optional('targets'):    [All(int, Range(min=0))],
         },
         required=True),
     # pre-split, read from file
     Schema({
-        'type':                'split',
-        'training_filename':   str,
-        'test_filename':       str,
-        Optional('dir'):       IsDir(),
-        Optional('add_noise'): Range(min=0.0)
+        'type':                 'split',
+        'training_filename':    str,
+        'test_filename':        str,
+        Optional('dir'):        IsDir(),
+        Optional('add_noise'):  Range(min=0.0),
+        Optional('targets'):    [All(int, Range(min=0))],
         },
         required=True)
     )
