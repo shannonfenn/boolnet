@@ -271,7 +271,6 @@ def split_variables_from_base(settings):
 def insert_default_log_keys(settings):
     defaults = [
         ['learner', True, ['learner', 'name']],
-        ['sample_seed', True, ['sampling', 'seed']],
         ['learner_seed', True, ['learner', 'seed']],
         ['config_num', True, ['configuration_number']],
         ['trg_set_num', True, ['training_set_number']],
@@ -279,6 +278,7 @@ def insert_default_log_keys(settings):
         ['guiding_function', True, ['learner', 'optimiser',
                                     'guiding_function']],
         ['given_tgt_order', True, ['learner', 'target_order']],
+        ['sample_seed', False, ['sampling', 'seed']],
         ['fs_sel_metric', False, ['learner', 'minfs_selection_metric']],
         ['fs_masking', False, ['learner', 'minfs_masking']],
         ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
