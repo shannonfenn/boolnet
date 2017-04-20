@@ -276,6 +276,9 @@ def build_result_map(parameters, learner_result):
     #     key = 'max_depth_tgt_{}'.format(bit)
     #     results[key] = v
 
+    if 'notes' in parameters:
+        results['notes'] = ''.join(parameters['notes'].values())
+
     # handle requests to log keys
     log_keys = parameters.get('log_keys', [])
 
@@ -289,7 +292,7 @@ def build_result_map(parameters, learner_result):
     for key, _, _ in log_keys:
         if key in results:
             logging.warning(
-                'log_keys: %s ignored - reserved for results.', key)
+                'log_keys: %s ignored - reserved key.', key)
 
     # Generating warnings for missing but required patterns
     for key, required, pattern in log_keys:
