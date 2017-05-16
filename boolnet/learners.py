@@ -207,6 +207,14 @@ class SplitLearner:
 
         self.opt_params['stopping_condition'] = fn_value_stop_criterion(
             self.stopping_fn_id, self.stopping_fn_eval_name, limit)
+
+        # Optional feature selection params
+        self.use_minfs_selection = parameters.get('minfs_masking', False)
+        self.mfs_metric = parameters.get('minfs_selection_metric', None)
+        self.minfs_params = parameters.get('minfs_solver_params', {})
+        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
+        self.feature_sets = np.empty(self.No, dtype=list)
+
         # check parameters
         if self.guiding_fn_id not in fn.scalar_functions():
             raise ValueError('Invalid guiding function: {}'.format(gf_name))
@@ -221,8 +229,12 @@ class SplitLearner:
 
     def join_networks(self, base, new):
 
-        # build a map for replacing sources
-        new_input_map = list(range(self.Ni))
+        if self.use_minfs_selection:
+            # build a map for replacing sources
+            new_input_map = list(fs)
+        else:
+            # build a map for replacing sources
+            new_input_map = list(range(self.Ni))
         # difference in input sizes plus # of non-output base gates
         # offset = base.Ni - new.Ni + base.Ng - base.No
         offset = base.Ni + base.Ng - base.No
@@ -237,6 +249,7 @@ class SplitLearner:
         remapped_new_gates = np.array(new.gates)
         for gate in remapped_new_gates:
             for i in range(gate.size - 1):
+                # gate.size-1 since the last entry is the transfer function
                 gate[i] = sources_map[gate[i]]
 
         accumulated_gates = np.vstack((base.gates[:-base.No, :],
@@ -253,8 +266,22 @@ class SplitLearner:
 
     def make_partial_instance(self, target_index):
         target = self.target_matrix[target_index]
-        return PackedMatrix(np.vstack((self.input_matrix, target)),
-                            Ne=self.Ne, Ni=self.Ni)
+
+        if self.use_minfs_selection:
+            # unpack inputs to minFS solver
+            mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
+            mfs_target = pk.unpackvec(target, self.Ne)
+            fs, _ = mfs.best_feature_set(
+                mfs_features, mfs_target, self.mfs_metric,
+                self.minfs_solver, self.minfs_params)
+            if len(fs) == 0:
+                fs = list(range(inputs.shape[0]))
+            self.feature_sets[target_index] = fs
+            return PackedMatrix(np.vstack((self.input_matrix[fs, :], target)),
+                                Ne=self.Ne, Ni=len(fs))
+        else:
+            return PackedMatrix(np.vstack((self.input_matrix, target)),
+                                Ne=self.Ne, Ni=self.Ni)
 
     def run(self, optimiser, parameters):
         self._setup(optimiser, parameters)
