@@ -213,7 +213,7 @@ target_order_schema = Any('auto', 'msb', 'lsb',
 learner_schema = Schema(
     All(
         Schema({
-            'name':         Any('basic', 'stratified', 'split'),
+            'name':         Any('monolithic', 'stratified', 'split'),
             'network':      network_schema,
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
@@ -229,8 +229,8 @@ learner_schema = Schema(
             'minfs_masking', True, 'minfs_selection_metric'),
         conditionally_required(
             'target_order', 'auto', 'minfs_selection_metric'),
-        # if name basic then minfs_masking is not allowed
-        conditionally_forbidden('name', 'basic', 'minfs_masking'),
+        # if name monolithic then minfs_masking is not allowed
+        conditionally_forbidden('name', 'monolithic', 'minfs_masking'),
         )
     )
 

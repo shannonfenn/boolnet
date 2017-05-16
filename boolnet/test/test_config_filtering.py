@@ -20,7 +20,7 @@ sampling:
   Ns: 20
 
 learner:
-  name: basic
+  name: monolithic
   target_order: lsb
   network:
     method: generated
@@ -66,7 +66,7 @@ def test_path_value_pairs():
         (['learner', 'optimiser', 'cost_list_length'], 1000),
         (['learner', 'optimiser', 'max_restarts'], 20),
         (['learner', 'optimiser', 'name'], 'LAHC'),
-        (['learner', 'name'], 'basic'),
+        (['learner', 'name'], 'monolithic'),
         (['name'], 'varNe_add4_all_short')])
     actual = sorted(cf.path_value_pairs(config))
     assert expected == actual
@@ -86,7 +86,7 @@ def test_list_regex_match():
 
 def test_filter_keys():
     expected = {'given_tgt_order': 'lsb',
-                'learner': 'basic',
+                'learner': 'monolithic',
                 'tfs': [7],
                 'opt_name': 'LAHC',
                 'opt_cost_list_length': 1000,

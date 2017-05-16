@@ -25,7 +25,7 @@ def fn_value_stop_criterion(func_id, name, limit=None):
         return lambda state: state.function_value(name) >= limit
 
 
-class BasicLearner:
+class MonolithicLearner:
     def _setup(self, optimiser, parameters):
         # Gate generation
         self.gate_generator = parameters['gate_generator']
@@ -341,7 +341,7 @@ class SplitLearner:
             optimisation_time=optimisation_times,
             other_time=other_times)
 
-class StratifiedLearner(BasicLearner):
+class StratifiedLearner(MonolithicLearner):
 
     def _setup(self, optimiser, parameters):
         super()._setup(optimiser, parameters)
