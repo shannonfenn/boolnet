@@ -225,13 +225,14 @@ class SplitLearner:
     def next_gates(self, t):
         size = self.remaining_budget // (self.No - t)
         self.remaining_budget -= size
-        return self.gate_generator(size, self.Ni, 1, self.node_funcs)
+        fs = self.feature_sets[t]
+        return self.gate_generator(size, len(fs), 1, self.node_funcs)
 
-    def join_networks(self, base, new):
+    def join_networks(self, base, new, t):
 
         if self.use_minfs_selection:
             # build a map for replacing sources
-            new_input_map = list(fs)
+            new_input_map = list(self.feature_sets[t])
         else:
             # build a map for replacing sources
             new_input_map = list(range(self.Ni))
@@ -264,24 +265,27 @@ class SplitLearner:
                                           Ne=self.Ne, Ni=self.Ni)
         return BNState(accumulated_gates, new_problem_matrix)
 
-    def make_partial_instance(self, target_index):
-        target = self.target_matrix[target_index]
+    def get_feature_sets(self):
+        # default - in case of empty fs or fs-selection not enabled
+        for t in range(self.No):
+            self.feature_sets[t] = list(range(self.Ni))
 
         if self.use_minfs_selection:
             # unpack inputs to minFS solver
             mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
-            mfs_target = pk.unpackvec(target, self.Ne)
-            fs, _ = mfs.best_feature_set(
-                mfs_features, mfs_target, self.mfs_metric,
+            mfs_targets = pk.unpackmat(self.target_matrix, self.Ne)
+            _, F = mfs.ranked_feature_sets(
+                mfs_features, mfs_targets, self.mfs_metric,
                 self.minfs_solver, self.minfs_params)
-            if len(fs) == 0:
-                fs = list(range(inputs.shape[0]))
-            self.feature_sets[target_index] = fs
-            return PackedMatrix(np.vstack((self.input_matrix[fs, :], target)),
-                                Ne=self.Ne, Ni=len(fs))
-        else:
-            return PackedMatrix(np.vstack((self.input_matrix, target)),
-                                Ne=self.Ne, Ni=self.Ni)
+            for t, fs in enumerate(F):
+                if fs:
+                    self.feature_sets[t] = fs            
+
+    def make_partial_instance(self, target_index):
+        target = self.target_matrix[target_index]
+        fs = self.feature_sets[target_index]
+        inp = self.input_matrix[fs, :]
+        return PackedMatrix(np.vstack((inp, target)), Ne=self.Ne, Ni=len(fs))
 
     def run(self, optimiser, parameters):
         self._setup(optimiser, parameters)
@@ -292,6 +296,8 @@ class SplitLearner:
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
         accumulated_network = BNState(np.empty((0, 3)), self.input_matrix)
+
+        self.get_feature_sets()
 
         for target_index in range(self.No):
             t0 = time()
@@ -322,8 +328,8 @@ class SplitLearner:
             # build up final network by inserting this partial result
             result_state = BNState(partial_result.representation.gates,
                                    partial_instance)
-            accumulated_network = self.join_networks(accumulated_network,
-                                                     result_state)
+            accumulated_network = self.join_networks(
+                accumulated_network, result_state, target_index)
 
             t3 = time()
             optimisation_times.append(t2 - t1)
