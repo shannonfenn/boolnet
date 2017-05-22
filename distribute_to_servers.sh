@@ -23,4 +23,4 @@ pip install -e .
 EOF
 
 printf "distributing ${MAG}runexp.py${NC}\n"
-scp runexp.py fisher:HMRI/scripts/
+scp runexp.py $CIBM_SERVER:HMRI/scripts/
