@@ -1,7 +1,7 @@
 from datetime import datetime       # for date for result dir
 from multiprocessing import Pool    # non-distributed parallellism
 from time import time               # timing
-from progress.bar import Bar        # progress indicators
+from progress.bar import IncrementalBar        # progress indicators
 import os                           # for mkdir
 import os.path                      # for path manipulation
 import yaml                         # for loading experiment files
@@ -14,6 +14,16 @@ import scoop                        # for distributed parallellism
 
 from boolnet.exptools.learn_boolnet import learn_bool_net
 import boolnet.exptools.config_tools as cfg
+
+
+class BetterETABar(IncrementalBar):
+    suffix = '%(remaining_hours)d hours remaining'
+    suffix = ('completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | '
+              'eta: %(better_eta)ds')
+
+    @property
+    def better_eta(self):
+        return self.elapsed / self.index * self.remaining
 
 
 def initialise_logging(settings, result_dir):
@@ -140,11 +150,10 @@ def run_tasks(tasks, num_processes, out_stream, batch_mode):
 
 def run_parallel(tasks, num_processes, out_stream, batch_mode):
     ''' runs the given configurations '''
-    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | eta: %(eta)ds'
     with Pool(processes=num_processes) as pool:
         if not batch_mode:
-            bar = Bar('Parallelised ({})'.format(num_processes),
-                      max=len(tasks), suffix=suffix_fmt)
+            barname = 'Parallelised ({})'.format(num_processes)
+            bar = BetterETABar(barname, max=len(tasks))
             bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
@@ -169,9 +178,8 @@ def scoop_worker_wrapper(*args, **kwargs):
 
 def run_scooped(tasks, out_stream, batch_mode):
     ''' runs the given configurations '''
-    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | eta: %(eta)ds'
     if not batch_mode:
-        bar = Bar('Scooped', max=len(tasks), suffix=suffix_fmt)
+        bar = BetterETABar('Scooped', max=len(tasks))
         bar.update()
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
@@ -185,9 +193,8 @@ def run_scooped(tasks, out_stream, batch_mode):
 
 def run_sequential(tasks, out_stream, batch_mode):
     ''' runs the given configurations '''
-    suffix_fmt = 'completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | eta: %(eta)ds'
     if not batch_mode:
-        bar = Bar('Sequential', max=len(tasks), suffix=suffix_fmt)
+        bar = BetterETABar('Sequential', max=len(tasks))
         bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
