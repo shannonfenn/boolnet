@@ -32,22 +32,13 @@ def initialise_logging(settings, result_dir):
 def initialise_notifications(args):
     if args.notify:
         try:
-            import requests
-            import instapush
-            try:
-                with open(args.ip_config) as f:
-                    ip_settings = yaml.load(f, Loader=yaml.CSafeLoader)
-                appid = ip_settings['appid']
-                secret = ip_settings['secret']
-                return instapush.App(appid=appid, secret=secret)
-            except FileNotFoundError:
-                print('Instapush config not found: {}'.format(args.ip_config))
-            except yaml.YAMLError as err:
-                print('Invalid instapush config: {}'.format(err))
-            except requests.exceptions.RequestException as err:
-                print('Failed to initialise notifications: {}'.format(err))
-        except ImportError as err:
-            print('Failed to import notification APIs: {}'.format(err))
+            with open(args.email_config) as f:
+                settings = yaml.load(f, Loader=yaml.CSafeLoader)
+            return settings
+        except FileNotFoundError:
+            print('Email config not found: {}'.format(args.email_config))
+        except yaml.YAMLError as err:
+            print('Invalid email config: {}'.format(err))
         # disable notifications in the event of any errors
         print('Notifications disabled.\n')
         return None
@@ -56,19 +47,24 @@ def initialise_notifications(args):
 
 
 def notify(notifier, settings, total_time, notes='none'):
-    if notifier is not None:
-        import requests
-        try:
-            message = {'name': str(settings['name']),
-                       'time': str(total_time),
-                       'num warnings': str(0),  # not implemented
-                       'notes': str(notes)}
-            ret = notifier.notify(event_name='experiment_complete',
-                                  trackers=message)
-            if ret.get('error', False):
-                print('Notification error: {}'.format(ret))
-        except requests.exceptions.RequestException as err:
-            print('Failed to send notification: {}.'.format(err))
+    if notifier:
+        import smtplib
+        fromaddr = notifier['fromaddr']
+        toaddr = notifier['toaddr']
+        # init SMTP server
+        server = smtplib.SMTP('smtp.gmail.com:587')
+        server.starttls()
+        server.login(notifier['usr'], notifier['psw'])
+        # compose email
+        date = datetime.strftime(datetime.now(), '%Y-%m-%d')
+        subject = 'Experiment completed'
+        header = ('Date: {}\r\nFrom: {}\r\nTo: {}\r\nSubject: {}\r\nX-Mailer: '
+                  'My-Mail\r\n\r\n').format(date, fromaddr, toaddr, subject)
+        body = 'name: {}\ntime: {}\nwarnings: {}\nnotes: {}'.format(
+            settings['name'], total_time, 0, notes)
+        # send
+        server.sendmail(fromaddr, toaddr, header+body)
+        server.quit()
 
 
 def parse_arguments():
@@ -82,9 +78,9 @@ def parse_arguments():
                              'scoop).')
     parser.add_argument('-p', '--notify', action='store_true',
                         help='enable push notifications.')
-    parser.add_argument('-c', '--ip-config', metavar='file', type=str,
-                        default='instapush.cfg',
-                        help='instapush config file path (for notifications).')
+    parser.add_argument('-c', '--email-config', metavar='file', type=str,
+                        default='email.cfg',
+                        help='email config file path (for notifications).')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='HMRI/experiments/results',
                         help='directory to store results in (in own subdir).')
