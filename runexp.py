@@ -23,7 +23,7 @@ class BetterETABar(IncrementalBar):
 
     @property
     def better_eta(self):
-        return self.elapsed / self.index * self.remaining
+        return self.elapsed / (self.index + 1) * self.remaining
 
 
 def initialise_logging(settings, result_dir):
