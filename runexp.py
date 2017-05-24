@@ -56,7 +56,7 @@ def initialise_notifications(args):
         return None
 
 
-def notify(notifier, settings, total_time, notes='none'):
+def notify(notifier, settings, runtime, notes='none'):
     if notifier:
         import smtplib
         fromaddr = notifier['fromaddr']
@@ -67,11 +67,12 @@ def notify(notifier, settings, total_time, notes='none'):
         server.login(notifier['usr'], notifier['psw'])
         # compose email
         date = datetime.strftime(datetime.now(), '%Y-%m-%d')
+        runtime = str(datetime.timedelta(seconds=runtime))
         subject = 'Experiment completed'
         header = ('Date: {}\r\nFrom: {}\r\nTo: {}\r\nSubject: {}\r\nX-Mailer: '
                   'My-Mail\r\n\r\n').format(date, fromaddr, toaddr, subject)
-        body = 'name: {}\ntime: {}\nwarnings: {}\nnotes: {}'.format(
-            settings['name'], total_time, 0, notes)
+        body = 'name: {}\nruntime: {}\nwarnings: {}\nnotes: {}'.format(
+            settings['name'], runtime, 0, notes)
         # send
         server.sendmail(fromaddr, toaddr, header+body)
         server.quit()
