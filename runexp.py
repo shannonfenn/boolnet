@@ -1,4 +1,5 @@
 from datetime import datetime       # for date for result dir
+from datetime import timedelta       # for date for result dir
 from multiprocessing import Pool    # non-distributed parallellism
 from time import time               # timing
 from progress.bar import IncrementalBar        # progress indicators
@@ -67,7 +68,7 @@ def notify(notifier, settings, runtime, notes='none'):
         server.login(notifier['usr'], notifier['psw'])
         # compose email
         date = datetime.strftime(datetime.now(), '%Y-%m-%d')
-        runtime = str(datetime.timedelta(seconds=runtime))
+        runtime = str(timedelta(seconds=runtime))
         subject = 'Experiment completed'
         header = ('Date: {}\r\nFrom: {}\r\nTo: {}\r\nSubject: {}\r\nX-Mailer: '
                   'My-Mail\r\n\r\n').format(date, fromaddr, toaddr, subject)
