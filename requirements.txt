@@ -1,4 +1,4 @@
-Cython==0.23.5
+Cython
 good
 numpy
 scipy
