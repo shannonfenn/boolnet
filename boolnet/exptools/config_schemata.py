@@ -1,6 +1,6 @@
-from voluptuous import (
-    Schema, message, All, Any, Range, IsDir, ALLOW_EXTRA,
-    In, Optional, Required, Exclusive, Length, Invalid)
+from good import (
+    Schema, message, All, Any, Range, IsDir, Allow, Default, Match, Msg,
+    In, Optional, Required, Exclusive, Length, Invalid, Entire, truth)
 import boolnet.bintools.functions as fn
 import re
 
@@ -35,13 +35,10 @@ def permutation(l):
     return l
 
 
-def integer_multiplier_string(msg=None):
-    def f(v):
-        if re.fullmatch("[1-9][0-9]*n", str(v)):
-            return str(v)
-        else:
-            raise Invalid(msg or ("invalid integer multiplier string"))
-    return f
+@truth('log keys must be [<key>, <T/F>, [<path>]')
+def valid_log_key(v):
+    return (len(v) == 3 and isinstance(v[0], str) and 
+            isinstance(v[1], bool) and isinstance(v[2], list))
 
 
 guiding_functions = fn.scalar_function_names()
@@ -59,8 +56,7 @@ data_schema = Any(
         Optional('window_size'):    All(int, Range(min=1)),
         Optional('add_noise'):      Range(min=0.0),
         # Optional('targets'):        [All(int, Range(min=0))],
-        },
-        required=True),
+        }),
     # read from file
     Schema({
         'type':                 'file',
@@ -68,8 +64,7 @@ data_schema = Any(
         Optional('dir'):        IsDir(),
         Optional('add_noise'):  Range(min=0.0),
         Optional('targets'):    [All(int, Range(min=0))],
-        },
-        required=True),
+        }),
     # pre-split, read from file
     Schema({
         'type':                 'split',
@@ -78,8 +73,7 @@ data_schema = Any(
         Optional('dir'):        IsDir(),
         Optional('add_noise'):  Range(min=0.0),
         Optional('targets'):    [All(int, Range(min=0))],
-        },
-        required=True)
+        })
     )
 
 sampling_schema = Any(
@@ -90,8 +84,7 @@ sampling_schema = Any(
         'Ne':             All(int, Range(min=1)),
         'seed':           seed_schema,
         Optional('test'): All(int, Range(min=0))
-        },
-        required=True),
+        }),
     # read from file
     Schema({
         'type':             'file',
@@ -100,8 +93,7 @@ sampling_schema = Any(
         Optional('dir'):    IsDir(),
         # allow for now, but don't force
         Optional('seed'):   seed_schema,
-        },
-        required=True),
+        }),
     # given in config file
     Schema({
         'type':             'given',
@@ -109,21 +101,18 @@ sampling_schema = Any(
         Optional('test'):   [[All(int, Range(min=0))]],
         # allow for now, but don't force
         Optional('seed'):   seed_schema,
-        },
-        required=True),
+        }),
     # blank - data is already split
-    Schema({'type': 'blank'}, required=True)
+    Schema({'type': 'blank'})
     )
 
 
 network_schema = All(
     Schema({
         'method':       'generated',
-        'Ng':           Any(All(int, Range(min=1)),
-                            integer_multiplier_string()),
+        'Ng':           Any(All(int, Range(min=1)), Match('[1-9][0-9]*n')),
         'node_funcs':   [All(int, Range(min=0, max=15))]
-        },
-        required=True),
+        }),
     # Schema({
     #     'method':   'given',
     #     'gates':    [All([All(int, Range(min=0))], Length(min=3, max=3))],
@@ -142,35 +131,32 @@ optimiser_schema = Any(
         'temp_rate':                             Range(min=0.0, max=1.0),
         'steps_per_temp':                        All(int, Range(min=1)),
         'guiding_function':                      In(guiding_functions),
-        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
+        Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return'):                      In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
-        },
-        required=True),
+        }),
     # Hill Climbing
     Schema({
         'name':                                  'HC',
         'max_iterations':                        All(int, Range(min=1)),
         'guiding_function':                      In(guiding_functions),
-        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
+        Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return'):                      In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
-        },
-        required=True),
+        }),
     # Late-Acceptance Hill Climbing
     Schema({
         'name':                                  'LAHC',
         'cost_list_length':                      All(int, Range(min=1)),
         'max_iterations':                        All(int, Range(min=1)),
         'guiding_function':                      In(guiding_functions),
-        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
+        Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return'):                      In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
-        },
-        required=True),
+        }),
     # LAHC with periodic percolation
     Schema({
         'name':                                  'LAHC_perc',
@@ -178,12 +164,11 @@ optimiser_schema = Any(
         'max_iterations':                        All(int, Range(min=1)),
         'percolation_period':                    All(int, Range(min=1)),
         'guiding_function':                      In(guiding_functions),
-        Optional('guiding_function_parameters'): Schema({}, extra=ALLOW_EXTRA),
+        Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return'):                      In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
-        },
-        required=True)
+        })
     )
 
 
@@ -217,14 +202,12 @@ learner_schema = Schema(
             'network':      network_schema,
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
-            Required('seed', default=None): Any(
-                None, All(int, Range(min=0))),
+            'seed':         Any(None, All(int, Range(min=0)), Default(None)),
             Optional('minfs_masking'):          bool,
             Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
             Optional('minfs_solver_params'):    minfs_params_schema,
             Optional('minfs_selection_metric'): fs_selection_metric_schema,
-            },
-            required=True),
+            }),
         conditionally_required(
             'minfs_masking', True, 'minfs_selection_metric'),
         conditionally_required(
@@ -236,7 +219,7 @@ learner_schema = Schema(
 
 
 log_keys_schema = Schema(
-    [All(Schema([], extra=ALLOW_EXTRA), Length(min=3, max=3))]
+    [All([str, bool, list], Length(min=3, max=3), valid_log_key)]
     )
 
 
@@ -245,13 +228,12 @@ instance_schema = Schema({
     'learner':  learner_schema,
     'sampling': sampling_schema,
     'log_keys': log_keys_schema,
-    Optional('notes'):  Schema({}, extra=ALLOW_EXTRA),
+    Optional('notes'):  Schema({}, extra_keys=Allow),
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
     Optional('record_intermediate_nets'):   bool,
-    },
-    required=True)
+    })
 
 
 # ########## Schemata for base configs ########## #
@@ -260,16 +242,17 @@ prod_msg = '\'product\' must be a length 2 sequence of sequences of mappings.'
 experiment_schema = Schema({
     'name':                     str,
     # Must be any dict
-    'base_config':              Schema({}, extra=ALLOW_EXTRA),
+    'base_config':              Schema({}, extra_keys=Allow),
     # only one of 'list_config' or 'product_config' are allowed
     # Must be a list of dicts
-    Exclusive('list', 'config', msg=list_msg):    All(
-        Schema([{}], extra=ALLOW_EXTRA), Length(min=1)),
+    Optional('list'):    Msg(All(Schema([Schema({}, extra_keys=Allow)]),
+                                 Length(min=1)), list_msg),
     # Must be a length 2 list of lists of dicts
-    Exclusive('product', 'config', msg=prod_msg): All([
-        All(Schema([{}], extra=ALLOW_EXTRA), Length(min=1))],
-                                    Length(min=2, max=2)),
+    Optional('product'): Msg(All([All(Schema([Schema({}, extra_keys=Allow)]),
+                                      Length(min=1))],
+                                 Length(min=2, max=2)), prod_msg),
     # optional level of debug logging
     Optional('debug_level'):        In(['none', 'warning', 'info', 'debug']),
-    },
-    required=True)
+    Entire: Exclusive('list', 'product')
+
+    })

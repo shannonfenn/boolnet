@@ -1,5 +1,5 @@
 Cython==0.23.5
-voluptuous
+good
 numpy
 scipy
 progress

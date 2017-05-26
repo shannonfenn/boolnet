@@ -1,7 +1,7 @@
 from copy import deepcopy
 from collections import MutableMapping
 from progress.bar import Bar
-import voluptuous as vol
+from good import Invalid
 import numpy as np
 import os
 import json
@@ -243,10 +243,9 @@ def generated_instance(params):
 def validate_schema(config, schema, config_num, msg):
     try:
         schema(config)
-    except vol.MultipleInvalid as err:
-        msg = ('Experiment instance {} invalid: {}\nerror: {}\npath: {}\n'
-               '\nConfig generation aborted.').format(
-            config_num + 1, err, err.error_message, err.path)
+    except Invalid as err:
+        msg = ('Experiment instance {} invalid: {}'
+               '\nConfig generation aborted.').format(config_num + 1, err)
         raise ValidationError(msg)
 
 
@@ -295,10 +294,9 @@ def generate_configurations(settings, batch_mode):
     # validate the given schema
     try:
         sch.experiment_schema(settings)
-    except vol.MultipleInvalid as err:
+    except Invalid as err:
         raise ValidationError(
-            'Top-level config invalid: {}\nerror: {}\npath: {}'.format(
-                err, err.error_message, err.path))
+            'Top-level config invalid: {}'.format(err))
 
     # insert default log_keys values into base config
     insert_default_log_keys(settings)
