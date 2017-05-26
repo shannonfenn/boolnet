@@ -39,5 +39,5 @@ EOF
 tail -n 1 uni_server_build.log
 
 printf "distributing ${MAG}runexp.py${NC}\n"
-scp runexp.py fisher:HMRI/scripts/
-cp -f runexp.py $HOME/HMRI/scripts/
+scp runexp.py $CIBM_SERVER:HMRI/scripts/
+
