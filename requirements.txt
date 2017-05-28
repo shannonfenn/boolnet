@@ -1,7 +1,8 @@
-Cython
+cython
 good
 numpy
 scipy
 progress
 pyyaml
 networkx
+cythongsl
