@@ -4,5 +4,4 @@ numpy
 scipy
 progress
 pyyaml
-scoop
 networkx
