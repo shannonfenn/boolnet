@@ -6,6 +6,10 @@ from progress.bar import IncrementalBar        # progress indicators
 import os                           # for mkdir
 import os.path                      # for path manipulation
 import yaml                         # for loading experiment files
+try:
+    from yaml import CSafeLoader as Loader
+except ImportError:
+    from yaml import SafeLoader as Loader
 import sys                          # for path, exit
 import shutil                       # file copying
 import logging                      # for logging, duh
@@ -44,7 +48,7 @@ def initialise_notifications(args):
     if args.notify:
         try:
             with open(args.email_config) as f:
-                settings = yaml.load(f, Loader=yaml.CSafeLoader)
+                settings = yaml.load(f, Loader=Loader)
             return settings
         except FileNotFoundError:
             print('Email config not found: {}'.format(args.email_config))
@@ -127,7 +131,7 @@ def initialise(args):
         sys.exit("Requires python 3.")
 
     # load experiment file
-    settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
+    settings = yaml.load(args.experiment, Loader=Loader)
 
     # create result directory
     result_dir = create_result_dir(args.result_dir, settings['name'])
