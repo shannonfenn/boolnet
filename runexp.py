@@ -15,7 +15,6 @@ import shutil                       # file copying
 import logging                      # for logging, duh
 import argparse                     # CLI
 import itertools                    # imap and count
-import scoop                        # for distributed parallellism
 
 from boolnet.exptools.learn_boolnet import learn_bool_net
 import boolnet.exptools.config_tools as cfg
@@ -183,6 +182,7 @@ def scoop_worker_wrapper(*args, **kwargs):
 
 
 def run_scooped(tasks, out_stream, batch_mode):
+    import scoop
     ''' runs the given configurations '''
     if not batch_mode:
         bar = BetterETABar('Scooped', max=len(tasks))
