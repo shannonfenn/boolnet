@@ -18,7 +18,7 @@ def main(args):
             status = sp.run(cmd, stdout=sp.PIPE)
             ids.append(status.stdout)
     finally:
-        print(ids)
+        print('\n'.join(ids))
 
 
 if __name__ == '__main__':
