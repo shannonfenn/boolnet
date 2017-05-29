@@ -190,7 +190,7 @@ def split_instance(params):
     with np.load(trg_filename) as train, np.load(test_filename) as test:
         Mp_trg = train['matrix']
         Mp_test = test['matrix']
-        
+
         Ne_trg, Ne_test = train['Ne'], test['Ne']
         Ni = train['Ni']
         assert test['Ni'] == Ni

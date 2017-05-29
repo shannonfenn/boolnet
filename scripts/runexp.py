@@ -12,7 +12,7 @@ except ImportError:
     from yaml import SafeLoader as Loader
 import sys                          # for path, exit
 import shutil                       # file copying
-import logging                      # for logging, duh
+import logging                      # cleaner logging
 import argparse                     # CLI
 import itertools                    # imap and count
 
