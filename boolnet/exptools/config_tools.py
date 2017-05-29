@@ -64,12 +64,12 @@ def update_nested(d, u):
 
 
 def build_filename(params, extension, key='filename'):
-    ''' complicated filename helper.'''
-    filename = params[key]
+    ''' filename helper with optional directory'''
+    filename = os.path.expanduser(params[key])
     location = params.get('dir', None)
     # if 'filename' is absolute then ignore 'dir'
-    if location and not os.path.isabs(params[key]):
-        filename = os.path.join(location, params[key])
+    if location and not os.path.isabs(filename):
+        filename = os.path.join(location, filename)
     # add extension if missing
     if os.path.splitext(filename)[-1] == '':
         filename += extension
