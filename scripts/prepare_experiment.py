@@ -20,7 +20,7 @@ def parse_arguments():
                         type=argparse.FileType('r'),
                         help='experiment config filename.')
     parser.add_argument('-d', '--directory', type=str, metavar='dir',
-                        default='HMRI/experiments/results',
+                        default='~/HMRI/experiments/results',
                         help='working directory to dump configurations in.')
     parser.add_argument('-b', '--batch-mode', action='store_true',
                         help='suppress progress bars.')
@@ -31,6 +31,8 @@ def create_result_dir(base_dir, exp_name):
     ''' Generates a new timestamped directory for the results and copies
         the experiment script, experiment file and git hash into it.'''
     # make directory for the results
+    base_dir = os.path.expanduser(base_dir)
+
     working_dir = os.path.join(base_dir, '{}_{}_'.format(
         exp_name, datetime.now().strftime('%y-%m-%d')))
 
