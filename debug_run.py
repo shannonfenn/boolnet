@@ -5,6 +5,10 @@ import boolnet.optimisers as optimisers
 import numpy as np
 import argparse
 import yaml
+try:
+    from yaml import CSafeLoader as Loader
+except ImportError:
+    from yaml import SafeLoader as Loader
 
 # params = {
 #     'data': {
@@ -89,7 +93,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    config = yaml.load(args.file, Loader=yaml.CSafeLoader)
+    config = yaml.load(args.file, Loader=Loader)
 
     config['learner']['inter_file_base'] = '/home/shannon/HMRI/shan_test/'
     config['data']['dir'] = '/home/shannon/HMRI/experiments/datasets/'

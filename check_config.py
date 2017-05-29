@@ -1,4 +1,8 @@
 import yaml                         # for loading experiment files
+try:
+    from yaml import CSafeLoader as Loader
+except ImportError:
+    from yaml import SafeLoader as Loader
 import argparse                     # CLI
 
 import boolnet.exptools.config_tools as config_tools
@@ -20,7 +24,7 @@ def main():
     args = parser.parse_args()
 
     # load experiment file
-    settings = yaml.load(args.experiment, Loader=yaml.CSafeLoader)
+    settings = yaml.load(args.experiment, Loader=Loader)
 
     # test generation of tasks
     try:
