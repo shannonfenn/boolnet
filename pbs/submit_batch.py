@@ -14,22 +14,24 @@ def main(args):
 
     try:
         for i in range(args.low_index, args.high_index + 1):
-            cmd = [script, args.dir, str(i), args.jobname, args.queue]
-            status = sp.run(cmd, stdout=sp.PIPE)
+            # cmd = [script, args.dir, str(i), args.jobname, args.queue]
+            cmd = [script, args.dir, str(i), args.jobname]
+            status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
             ids.append(status.stdout)
     finally:
-        print('\n'.join(ids))
+        print('\n'.join(str(s) for s in ids))
 
 
 if __name__ == '__main__':
-    queues = ['computeq', 'xeon3q', 'xeon4q']
+    # queues = ['computeq', 'xeon3q', 'xeon4q']
+    queues = ['xeon3q', 'xeon4q']
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('dir', type=str)
     parser.add_argument('low_index', type=int)
     parser.add_argument('high_index', type=int)
-    parser.add_argument('--queue', '-q', type=str, metavar='queue',
-                        default='computeq', choices=queues)
+    # parser.add_argument('--queue', '-q', type=str, metavar='queue',
+    #                     default='xeon3q', choices=queues)
     parser.add_argument('--jobname', '-n', type=str, default='SKF')
     args = parser.parse_args()
 
