@@ -6,7 +6,7 @@ from os.path import (join, isfile, isdir, expanduser, realpath, normpath,
 
 def main(args):
     ids = []
-    script = './j_submit_single.sh'
+    script = expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
 
     if not isfile(script):
         print('Error: must be run in pbs directory. Aborting.')
@@ -14,8 +14,7 @@ def main(args):
 
     try:
         for i in range(args.low_index, args.high_index + 1):
-            # cmd = [script, args.dir, str(i), args.jobname, args.queue]
-            cmd = [script, args.dir, str(i), args.jobname]
+            cmd = [script, args.dir, str(i), args.jobname, args.queue]
             status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
             ids.append(status.stdout)
     finally:
@@ -30,8 +29,8 @@ if __name__ == '__main__':
     parser.add_argument('dir', type=str)
     parser.add_argument('low_index', type=int)
     parser.add_argument('high_index', type=int)
-    # parser.add_argument('--queue', '-q', type=str, metavar='queue',
-    #                     default='xeon3q', choices=queues)
+    parser.add_argument('--queue', '-q', type=str, metavar='queue',
+                        default='xeon3q', choices=queues)
     parser.add_argument('--jobname', '-n', type=str, default='SKF')
     args = parser.parse_args()
 

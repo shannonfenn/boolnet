@@ -5,7 +5,7 @@
 SKF_EXP_DIR=$1
 SKF_EXP_INDEX=$2
 SKF_EXP_NAME_BASE=$3
-# QUEUE=$4
+QUEUE=$4
 
 ######################################################################################################
 #1. Prepping args
@@ -14,6 +14,5 @@ SOUT=${SKF_EXP_DIR}/working/${SKF_EXP_INDEX}.stdout
 SERR=${SKF_EXP_DIR}/working/${SKF_EXP_INDEX}.stderr
 
 #2. Running the job
-# jnum=$(qsub -q ${QUEUE} -N ${JOB_NAME} -o ${SOUT} -e ${SERR} -v SKF_EXP_DIR=${SKF_EXP_DIR},SKF_EXP_INDEX=${SKF_EXP_INDEX} j_single.sh)
-jnum=$(qsub -N ${JOB_NAME} -o ${SOUT} -e ${SERR} -v SKF_EXP_DIR=${SKF_EXP_DIR},SKF_EXP_INDEX=${SKF_EXP_INDEX} j_single.sh)
+jnum=$(qsub -q ${QUEUE} -N ${JOB_NAME} -o ${SOUT} -e ${SERR} -v SKF_EXP_DIR=${SKF_EXP_DIR},SKF_EXP_INDEX=${SKF_EXP_INDEX} ${HOME}/HMRI/code/boolnet/pbs/j_single.sh)
 echo ${jnum}
