@@ -13,7 +13,7 @@ def main(args):
         return
 
     try:
-        resources = 'walltime={},mem={}'.format(args.walltime, args.memory)
+        resources = 'walltime={}'.format(args.walltime)
         for i in range(args.low_index, args.high_index + 1):
             cmd = [script, args.dir, str(i), args.jobname, args.queue,
                    resources]
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                         default='xeon3q', choices=queues)
     parser.add_argument('--jobname', '-n', type=str, default='SKF')
     parser.add_argument('--walltime', '-t', type=str, default='04:00:00')
-    parser.add_argument('--memory', '-m', type=str, default='500mb')
+    # parser.add_argument('--memory', '-m', type=str, default='500mb')
     
     args = parser.parse_args()
 
