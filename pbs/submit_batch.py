@@ -15,7 +15,6 @@ def main(args):
     try:
         resources = 'walltime={},mem={}'.format(args.walltime, args.memory)
         for i in range(args.low_index, args.high_index + 1):
-            cmd[2] = str(i)
             cmd = [script, args.dir, str(i), args.jobname, args.queue,
                    resources]
             status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
