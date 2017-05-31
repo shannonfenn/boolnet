@@ -6,11 +6,15 @@ from boolnet.exptools.config_tools import ExperimentJSONEncoder
 
 
 def main(directory, index):
+    # use streams instead
+
     expfile = '{}/working/{}.exp'.format(directory, index)
     resultfile = '{}/working/{}.json'.format(directory, index)
 
     with open(expfile, 'rb') as f:
         task = pickle.load(f)
+
+    ## Prep data here
 
     result = learn_bool_net(task)
 

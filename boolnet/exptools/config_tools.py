@@ -313,18 +313,15 @@ def generate_configurations(settings, batch_mode):
                   suffix='%(index)d/%(max)d : %(eta)ds')
         bar.update()
     try:
-        for config_num, variables in enumerate(variable_sets):
+        for conf_num, variables in enumerate(variable_sets):
             # keep contexts isolated
             context = deepcopy(base_settings)
             # update the settings dict with the values for this configuration
             update_nested(context, variables)
             # check the given config is a valid experiment
-            validate_schema(context, sch.instance_schema,
-                            config_num, variables)
+            validate_schema(context, sch.instance_schema, conf_num, variables)
             # record the config number for debugging
-            context['configuration_number'] = config_num
-            # !!REMOVED!! load initial network from file if required
-            # handle_initial_network(context)
+            context['configuration_number'] = conf_num
             # load the data for this configuration
             instances = load_dataset(context)
 

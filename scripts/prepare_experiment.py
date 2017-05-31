@@ -79,10 +79,9 @@ def main():
     try:
         configurations = cfg.generate_configurations(settings,
                                                      args.batch_mode)
-        print('Done: {} configurations generated.'.format(
-            len(configurations)))
+        print('{} configurations generated.'.format(len(configurations)))
         tasks = cfg.generate_tasks(configurations, args.batch_mode)
-        print('Done: {} tasks generated.\n'.format(len(tasks)))
+        print('{} tasks generated.\n'.format(len(tasks)))
 
         os.makedirs(os.path.join(working_dir, 'working'))
 
