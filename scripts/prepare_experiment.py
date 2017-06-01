@@ -10,6 +10,7 @@ import shutil                       # file copying
 import argparse                     # CLI
 import itertools                    # imap and count
 import pickle
+import gzip
 
 from boolnet.utils import BetterETABar
 import boolnet.exptools.config_tools as cfg
@@ -68,8 +69,9 @@ def dump_tasks(tasks, working_dir, batch_mode):
     try:
         for i, task in enumerate(tasks):
             fname = '{}/working/{}.exp'.format(working_dir, i)
-            with open(fname, 'wb') as f:
-                pickle.dump(task, f)
+            # with open(fname, 'wb') as f:
+            with gzip.open(fname, 'wb') as f:
+                pickle.dump(task, f, pickle.HIGHEST_PROTOCOL)
             if not batch_mode:
                 bar.next()
     finally:
