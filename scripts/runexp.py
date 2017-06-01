@@ -2,7 +2,6 @@ from datetime import datetime       # for date for result dir
 from datetime import timedelta       # for date for result dir
 from multiprocessing import Pool    # non-distributed parallellism
 from time import time               # timing
-from progress.bar import IncrementalBar        # progress indicators
 import os                           # for mkdir
 import os.path                      # for path manipulation
 import yaml                         # for loading experiment files
@@ -16,18 +15,9 @@ import logging                      # cleaner logging
 import argparse                     # CLI
 import itertools                    # imap and count
 
+from boolnet.utils import BetterETABar
 from boolnet.exptools.learn_boolnet import learn_bool_net
 import boolnet.exptools.config_tools as cfg
-
-
-class BetterETABar(IncrementalBar):
-    suffix = '%(remaining_hours)d hours remaining'
-    suffix = ('completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | '
-              'eta: %(better_eta)ds')
-
-    @property
-    def better_eta(self):
-        return self.elapsed / (self.index + 1) * self.remaining
 
 
 def initialise_logging(settings, result_dir):

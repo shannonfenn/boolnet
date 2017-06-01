@@ -1,6 +1,5 @@
 from copy import deepcopy
 from collections import MutableMapping
-from progress.bar import Bar
 from good import Invalid
 import numpy as np
 import os
@@ -10,6 +9,7 @@ import random
 import boolnet.exptools.config_schemata as sch
 import boolnet.bintools.operator_iterator as op
 from boolnet.utils import PackedMatrix
+from boolnet.utils import BetterETABar
 
 
 def get_seed(key):
@@ -309,8 +309,7 @@ def generate_configurations(settings, batch_mode):
     configurations = []
 
     if not batch_mode:
-        bar = Bar('Generating configurations', max=len(variable_sets),
-                  suffix='%(index)d/%(max)d : %(eta)ds')
+        bar = BetterETABar('Generating configurations', max=len(variable_sets))
         bar.update()
     try:
         for conf_num, variables in enumerate(variable_sets):
@@ -340,8 +339,8 @@ def generate_tasks(configurations, batch_mode):
     tasks = []
 
     if not batch_mode:
-        bar = Bar('Generating training tasks', max=len(configurations),
-                  suffix='%(index)d/%(max)d : %(eta)ds')
+        bar = BetterETABar('Generating training tasks',
+                           max=len(configurations))
         bar.update()
     try:
         for context, instances in configurations:

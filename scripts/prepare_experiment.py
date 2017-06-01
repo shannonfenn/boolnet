@@ -11,6 +11,7 @@ import argparse                     # CLI
 import itertools                    # imap and count
 import pickle
 
+from boolnet.utils import BetterETABar
 import boolnet.exptools.config_tools as cfg
 
 
@@ -60,10 +61,21 @@ def initialise(args):
     return settings, working_dir
 
 
-def dump_tasks(tasks, working_dir):
-    for i, task in enumerate(tasks):
-        with open('{}/working/{}.exp'.format(working_dir, i), 'wb') as f:
-            pickle.dump(task, f)
+def dump_tasks(tasks, working_dir, batch_mode):
+    if not batch_mode:
+        bar = BetterETABar('Dumping tasks', max=len(tasks))
+        bar.update()
+    try:
+        for i, task in enumerate(tasks):
+            fname = '{}/working/{}.exp'.format(working_dir, i)
+            with open(fname, 'wb') as f:
+                pickle.dump(task, f)
+            if not batch_mode:
+                bar.next()
+    finally:
+        # clean up progress bar before printing anything else
+        if not batch_mode:
+            bar.finish()
 
 
 # ############################## MAIN ####################################### #
@@ -85,7 +97,7 @@ def main():
 
         os.makedirs(os.path.join(working_dir, 'working'))
 
-        dump_tasks(tasks, working_dir)
+        dump_tasks(tasks, working_dir, args.batch_mode)
     except cfg.ValidationError as err:
         print(err)
         print('\nFailed to prep experiment.')

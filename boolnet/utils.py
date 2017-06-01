@@ -1,5 +1,16 @@
 import numpy as np
 import bitpacking.packing as pk
+from progress.bar import IncrementalBar
+
+
+class BetterETABar(IncrementalBar):
+    suffix = '%(remaining_hours)d hours remaining'
+    suffix = ('completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | '
+              'eta: %(better_eta)ds')
+
+    @property
+    def better_eta(self):
+        return self.elapsed / (self.index + 1) * self.remaining
 
 
 class PackedMatrix(np.ndarray):
