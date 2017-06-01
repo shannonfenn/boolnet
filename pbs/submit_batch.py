@@ -58,7 +58,7 @@ def main(experiments, base_jobname, queue, walltime):
             status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
             ids.append(status.stdout)
     finally:
-        print('\n'.join(str(s) for s in ids))
+        print(''.join(str(s) for s in ids))
 
 
 if __name__ == '__main__':
