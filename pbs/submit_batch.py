@@ -40,12 +40,27 @@ def parse_args():
     return args
 
 
-def main(experiments, base_jobname, queue, walltime):
+def get_remaining_experiments(directory):
+    all_exp = set(splitext(f)[0] for f in glob.iglob(
+        '{}/working/*.exp'.format(directory)))
+    all_json = set(splitext(f)[0] for f in glob.iglob(
+        '{}/working/*.json'.format(directory)))
+    remaining = all_exp - all_json
+    return remaining
+
+
+def submit(experiments, base_jobname, queue, walltime):
     ids = []
     script = expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
 
     if not isfile(script):
-        print('Error: must be run in pbs directory. Aborting.')
+        print('Error: script does not exist. Aborting.')
+        print('Bad script path: ' + script)
+        return
+    # pbs job limit
+    if len(experiments) > 7500:
+        print('Error: cannot submit {} jobs. Aborting.'.format(
+            len(experiments)))
         return
 
     try:
@@ -61,8 +76,7 @@ def main(experiments, base_jobname, queue, walltime):
         print(''.join(str(s) for s in ids))
 
 
-if __name__ == '__main__':
-
+def main():
     args = parse_args()
 
     if args.list:
@@ -72,6 +86,11 @@ if __name__ == '__main__':
         experiments = [join(args.dir, 'working', '{}.exp'.format(i))
                        for i in range(args.range[0], args.range[1] + 1)]
     else:
-        experiments = glob.glob('{}/working/*.exp'.format(args.dir))
+        experiments = get_remaining_experiments(args.dir)
+        experiments = experiments[:min(7500, len(experiments))]
 
-    main(experiments, args.jobname, args.queue, args.walltime)
+    submit(experiments, args.jobname, args.queue, args.walltime)
+
+
+if __name__ == '__main__':
+    main()
