@@ -37,7 +37,3 @@ printf "building on ${GRN}$UNI_SERVER${NC}\n"
 EOF
 } > uni_server_build.log 2>&1
 tail -n 1 uni_server_build.log
-
-printf "distributing ${MAG}runexp.py${NC}\n"
-scp scripts/runexp.py $CIBM_SERVER:HMRI/scripts/
-

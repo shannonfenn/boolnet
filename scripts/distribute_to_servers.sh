@@ -21,6 +21,3 @@ cd /home/cibm01/shannon/dar/HMRI/code/boolnet
 git pull
 pip install -e .
 EOF
-
-printf "distributing ${MAG}runexp.py${NC}\n"
-scp scripts/runexp.py $CIBM_SERVER:HMRI/scripts/
