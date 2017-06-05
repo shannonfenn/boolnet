@@ -11,7 +11,6 @@ ssh -T $CIBM_SERVER << EOF
 source scoop_setup.sh
 cd /home/cibm01/shannon/sf/HMRI/code/boolnet
 git pull
-pip install -e .
 EOF
 
 printf "distributing to ${GRN}$UNI_SERVER${NC}\n"
@@ -19,5 +18,4 @@ ssh -T $UNI_SERVER << EOF
 source scoop_setup.sh
 cd /home/cibm01/shannon/dar/HMRI/code/boolnet
 git pull
-pip install -e .
 EOF
