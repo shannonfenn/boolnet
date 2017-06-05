@@ -183,7 +183,6 @@ def main():
                        for i in range(args.range[0], args.range[1] + 1)]
     else:
         experiments = get_remaining_experiments(args.dir)
-        experiments = experiments[:min(7500, len(experiments))]
 
     print('{} unprocessed .exp files found.'.format(len(experiments)))
 
