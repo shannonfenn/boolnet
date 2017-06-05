@@ -34,7 +34,7 @@ def initialise_logging(settings, result_dir):
 
 
 def initialise_notifications(args):
-    if args.notify:
+    if args.email:
         try:
             with open(args.email_config) as f:
                 settings = yaml.load(f, Loader=Loader)
@@ -81,11 +81,10 @@ def parse_arguments():
                         default=8, choices=range(0, 17),
                         help='how many parallel processes to use (give 0 for '
                              'scoop).')
-    parser.add_argument('-p', '--notify', action='store_true',
-                        help='enable push notifications.')
+    parser.add_argument('-e', '--email', action='store_true',
+                        help='enable email notifications.')
     parser.add_argument('-c', '--email-config', metavar='file', type=str,
-                        default='email.cfg',
-                        help='email config file path (for notifications).')
+                        default='email.cfg', help='email config file path.')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='HMRI/experiments/results',
                         help='directory to store results in (in own subdir).')
@@ -152,7 +151,7 @@ def run_parallel(tasks, num_processes, out_stream, batch_mode):
             bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
-            cfg.dump_results_partial(result, out_stream, i == 0)
+            cfg.dump_partial_results(result, out_stream, i == 0)
             if not batch_mode:
                 bar.next()
         if not batch_mode:
@@ -180,7 +179,7 @@ def run_scooped(tasks, out_stream, batch_mode):
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
             scoop_worker_wrapper, tasks)):
-        cfg.dump_results_partial(result, out_stream, i == 0)
+        cfg.dump_partial_results(result, out_stream, i == 0)
         if not batch_mode:
             bar.next()
     if not batch_mode:
@@ -194,7 +193,7 @@ def run_sequential(tasks, out_stream, batch_mode):
         bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
-        cfg.dump_results_partial(result, out_stream, i == 0)
+        cfg.dump_partial_results(result, out_stream, i == 0)
         if not batch_mode:
             bar.next()
     if not batch_mode:

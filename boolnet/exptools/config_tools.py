@@ -3,13 +3,11 @@ from collections import MutableMapping
 from good import Invalid
 import numpy as np
 import os
-import json
 import random
 
 import boolnet.exptools.config_schemata as sch
 import boolnet.bintools.operator_iterator as op
-from boolnet.utils import PackedMatrix
-from boolnet.utils import BetterETABar
+from boolnet.utils import PackedMatrix, BetterETABar, ExperimentJSONEncoder
 
 
 def get_seed(key):
@@ -31,23 +29,6 @@ def get_seed(key):
 # (with custom message formatting)
 class ValidationError(Exception):
     pass
-
-
-class ExperimentJSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
-
-
-def dump_results_partial(results, stream, first):
-    if not first:
-        stream.write(',')
-    json.dump(results, stream, cls=ExperimentJSONEncoder)
-    stream.write('\n')
-    # ensure data is written to disk immediately
-    stream.flush()
-    os.fsync(stream.fileno())
 
 
 def update_nested(d, u):

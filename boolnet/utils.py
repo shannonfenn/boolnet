@@ -1,6 +1,26 @@
 import numpy as np
 import bitpacking.packing as pk
 from progress.bar import IncrementalBar
+import json
+import os
+from os.path import splitext
+
+
+class NumpyAwareJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
+def dump_partial_result(results, stream, first):
+    if not first:
+        stream.write(',')
+    json.dump(results, stream, cls=NumpyAwareJSONEncoder)
+    stream.write('\n')
+    # ensure data is written to disk immediately
+    stream.flush()
+    os.fsync(stream.fileno())
 
 
 class BetterETABar(IncrementalBar):
