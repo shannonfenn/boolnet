@@ -7,7 +7,7 @@ import random
 
 import boolnet.exptools.config_schemata as sch
 import boolnet.bintools.operator_iterator as op
-from boolnet.utils import PackedMatrix, BetterETABar, ExperimentJSONEncoder
+from boolnet.utils import PackedMatrix, BetterETABar
 
 
 def get_seed(key):
