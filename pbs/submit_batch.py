@@ -46,7 +46,7 @@ def get_remaining_experiments(directory):
     all_json = set(splitext(f)[0] for f in glob.iglob(
         '{}/working/*.json'.format(directory)))
     remaining = all_exp - all_json
-    return list(remaining)
+    return [f + '.exp' for f in remaining]
 
 
 def submit(experiments, base_jobname, queue, walltime):
