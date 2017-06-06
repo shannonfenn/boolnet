@@ -11,12 +11,13 @@ def parse_args():
 
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('dir', type=str)
+    parser.add_argument('--num', '-n', type=int)
     parser.add_argument('--range', '-r', type=int, nargs=2)
     parser.add_argument('--list', '-l', type=str,
                         help='list of files (absolute or relative to dir)')
     parser.add_argument('--queue', '-q', type=str, metavar='queue',
                         default='xeon3q', choices=queues)
-    parser.add_argument('--jobname', '-n', type=str, default='SKF')
+    parser.add_argument('--jobname', '-j', type=str, default='SKF')
     parser.add_argument('--walltime', '-t', type=str, default='04:00:00')
     # parser.add_argument('--memory', '-m', type=str, default='500mb')
 
@@ -30,8 +31,11 @@ def parse_args():
     if len(args.jobname) > 10:
         parser.error('jobname ({}) must be 10 char or less.'.format(
             args.jobname))
-    if args.range and args.list:
-        parser.error('--range and --list are mutually exclusive.')
+    if ((args.num and args.range) or (args.range and args.list) or
+        (args.num and args.list)):
+        parser.error('--num, --range and --list are mutually exclusive.')
+    if args.num and not (0 < args.num <= 7500):
+        parser.error('--num must be in [1..7500].')
     if args.list and not isfile(args.list):
         parser.error('--list requires a filename.')
     if args.range and not(0 <= args.range[0] <= args.range[1]):
@@ -86,8 +90,10 @@ def main():
         experiments = [join(args.dir, 'working', '{}.exp'.format(i))
                        for i in range(args.range[0], args.range[1] + 1)]
     else:
+        if not args.num:
+            args.num = 7500
         experiments = get_remaining_experiments(args.dir)
-        experiments = experiments[:min(7500, len(experiments))]
+        experiments = experiments[:min(args.num, len(experiments))]
 
     submit(experiments, args.jobname, args.queue, args.walltime)
 
