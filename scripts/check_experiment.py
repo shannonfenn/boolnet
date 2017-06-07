@@ -2,8 +2,8 @@ import re
 import glob
 import argparse
 from os.path import abspath, expanduser, isdir, splitext
+from natsort import natsorted
 
-FAILED_PATTERN = re.compile('trg_error": 0\.0(,|\})')
 
 def directory_type(directory):
     # Handle tilde
@@ -20,15 +20,15 @@ def get_remaining_experiments(directory):
 
     all_exp = set(splitext(f)[0] for f in exp_iter)
     all_json = set(splitext(f)[0] for f in json_iter)
-    remaining = [f + '.exp' for f in all_exp - all_json]
-    for f in remaining:
-        print(f)
+    remaining = natsorted(f + '.exp' for f in all_exp - all_json)
+    print('\n'.join(remaining))
 
 
 def get_failed_experiments(directory):
+    failed_pattern = re.compile('trg_error": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
     for f in json_iter:
-        if FAILED_PATTERN.search(open(f, 'r').read()) is None:
+        if failed_pattern.search(open(f, 'r').read()) is None:
             print(splitext(f)[0] + '.exp')
 
 

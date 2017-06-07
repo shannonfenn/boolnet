@@ -8,6 +8,12 @@ from boolnet.utils import NumpyAwareJSONEncoder
 from boolnet.exptools.learn_boolnet import learn_bool_net
 
 
+def run_multiple_experiments(explistfile):
+    with open(explistfile) as f:
+        for line in f:
+            run_single_experiment(line)
+
+
 def run_single_experiment(expfile):
     resultfile = splitext(expfile)[0] + '.json'
 
@@ -22,10 +28,16 @@ def run_single_experiment(expfile):
 
 def main():
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('experiment', type=str, help='.exp file to run.')
+    parser.add_argument('experiment', type=str,
+                        help='.exp or .explist file to run.')
     args = parser.parse_args()
 
-    run_single_experiment(args.experiment)
+    if args.experiment.endswith('.explist'):
+        run_multiple_experiments(args.experiment)
+    elif args.experiment.endswith('.exp'):
+        run_single_experiment(args.experiment)
+    else:
+        parser.error('[experiment] must be .exp or .explist')
 
 
 if __name__ == '__main__':

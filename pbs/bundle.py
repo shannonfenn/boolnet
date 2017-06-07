@@ -1,0 +1,72 @@
+import argparse
+import glob
+from os.path import isdir, expanduser, abspath, splitext
+from natsort import natsorted
+
+
+def directory_type(directory):
+    # Handle tilde
+    directory = abspath(expanduser(directory))
+    if isdir(directory):
+        return directory
+    else:
+        raise Exception('{0} is not a valid directory.'.format(directory))
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('dir', type=directory_type)
+    parser.add_argument('--num', '-n', type=int)
+    parser.add_argument('--file', '-f', type=argparse.FileType())
+
+    args = parser.parse_args()
+
+    if len(args.jobname) > 10:
+        parser.error('jobname ({}) must be 10 char or less.'.format(
+            args.jobname))
+    if not args.num:
+        args.num = 7500
+    elif not (0 < args.num <= 7500):
+        parser.error('--num must be in [1..7500].')
+
+    return args
+
+
+def get_experiments_from_file(stream):
+    experiments = stream.read().splitlines()
+    stream.close()
+    return experiments
+
+
+def get_remaining_experiments(directory):
+    exp_iter = glob.iglob('{}/working/*.exp'.format(directory))
+    json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    all_exp = set(splitext(f)[0] for f in exp_iter)
+    all_json = set(splitext(f)[0] for f in json_iter)
+    return natsorted(f + '.exp' for f in all_exp - all_json)
+
+
+def strided(l, n):
+    sublists = [[] for i in range(n)]
+    for i, item in enumerate(l):
+        sublists[i % n].append(item)
+    return sublists
+
+
+def main():
+    args = parse_args()
+
+    if args.file:
+        experiments = get_experiments_from_file(args.file)
+    else:
+        experiments = get_remaining_experiments(args.dir)
+
+    bundles = strided(experiments, args.num)
+
+    for i, bundle in enumerate(bundles):
+        with open('{}/working/{}.explist'.format(args.dir, i)) as f:
+            f.writelines(bundle)
+
+
+if __name__ == '__main__':
+    main()
