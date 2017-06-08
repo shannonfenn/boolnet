@@ -30,7 +30,7 @@ def get_failed_experiments(directory):
     for fname in json_iter:
         with open(fname, 'r') as f:
             if failed_pattern.search(f.read()) is None:
-                print(splitext(f)[0] + '.exp')
+                print(splitext(fname)[0] + '.exp')
 
 
 def main():
