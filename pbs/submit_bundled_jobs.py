@@ -1,8 +1,8 @@
 import argparse
 import glob
 import re
+import os.path
 import subprocess as sp
-from os.path import isfile, basename, expanduser, splitext
 
 
 def walltime_arg_type(s):
@@ -28,20 +28,11 @@ def parse_args():
     return args
 
 
-def get_remaining_experiments(directory):
-    all_exp = set(splitext(f)[0] for f in glob.iglob(
-        '{}/working/*.exp'.format(directory)))
-    all_json = set(splitext(f)[0] for f in glob.iglob(
-        '{}/working/*.json'.format(directory)))
-    remaining = all_exp - all_json
-    return [f + '.exp' for f in remaining]
-
-
 def submit(bundles, queue, walltime, joblistfile):
     ids = []
-    script = expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
+    script = os.path.expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
 
-    if not isfile(script):
+    if not os.path.isfile(script):
         print('Error: script does not exist. Aborting.')
         print('Bad script path: ' + script)
         return
@@ -54,15 +45,11 @@ def submit(bundles, queue, walltime, joblistfile):
     try:
         resources = 'walltime={}'.format(walltime)
         for i, expfile in enumerate(bundles):
-            sout = 'b{}.sout'.format(splitext(expfile)[0])
-            serr = 'b{}.serr'.format(splitext(expfile)[0])
+            sout = '{}.sout'.format(expfile)
+            serr = '{}.serr'.format(expfile)
             cmd = [script, expfile, sout, serr, queue, resources]
-            # status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
-            # ids.append(status.stdout + '\n')
-            # DEUBG
-            ids.append(str(i) + '.jobby\n')
-            print(' '.join(cmd))
-            #DEBUG
+            status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
+            ids.append(status.stdout + '\n')
     finally:
         print('{} jobs submitted.'.format(len(ids)))
         if joblistfile:
@@ -75,7 +62,7 @@ def main():
     bundles = args.file.read().splitlines()
     args.file.close()
 
-    submit(bundles, args.jobname, args.queue, args.walltime, args.out)
+    submit(bundles, args.queue, args.walltime, args.out)
 
 
 if __name__ == '__main__':
