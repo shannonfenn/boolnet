@@ -21,6 +21,8 @@ def parse_args():
     parser.add_argument('--queue', '-q', type=str, metavar='queue',
                         default='xeon3q', choices=queues)
     parser.add_argument('--jobname', '-j', type=str)
+    parser.add_argument('--out', '-o', type=argparse.FileType('w'),
+                        help='optional file to dump job ids.')
 
     args = parser.parse_args()
 
@@ -43,7 +45,7 @@ def get_remaining_experiments(directory):
     return [f + '.exp' for f in remaining]
 
 
-def submit(bundles, base_jobname, queue, walltime):
+def submit(bundles, base_jobname, queue, walltime, joblistfile):
     ids = []
     script = expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
 
@@ -67,7 +69,9 @@ def submit(bundles, base_jobname, queue, walltime):
             status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
             ids.append(status.stdout)
     finally:
-        print(''.join(str(s) for s in ids))
+        print('{} jobs submitted.'.format(len(ids)))
+        if joblistfile:
+            joblistfile.writelines(ids)
 
 
 def main():
@@ -77,6 +81,7 @@ def main():
     args.file.close()
 
     submit(bundles, args.jobname, args.queue, args.walltime)
+    submit(bundles, args.jobname, args.queue, args.walltime, args.out)
 
 
 if __name__ == '__main__':
