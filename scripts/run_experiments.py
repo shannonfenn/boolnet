@@ -11,7 +11,7 @@ from boolnet.exptools.learn_boolnet import learn_bool_net
 def run_multiple_experiments(explistfile):
     with open(explistfile) as f:
         for line in f:
-            run_single_experiment(line)
+            run_single_experiment(line.strip())
 
 
 def run_single_experiment(expfile):
