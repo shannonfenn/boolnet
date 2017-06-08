@@ -20,18 +20,10 @@ def parse_args():
     parser.add_argument('walltime', type=walltime_arg_type)
     parser.add_argument('--queue', '-q', type=str, metavar='queue',
                         default='xeon3q', choices=queues)
-    parser.add_argument('--jobname', '-j', type=str)
     parser.add_argument('--out', '-o', type=argparse.FileType('w'),
                         help='optional file to dump job ids.')
 
     args = parser.parse_args()
-
-    if not args.jobname:
-        args.jobname = basename(splitext(args.file.name)[1])
-        args.jobname = args.jobname[:min(10, len(args.jobname))]
-    elif len(args.jobname) > 10:
-        parser.error('jobname ({}) must be 10 char or less.'.format(
-            args.jobname))
 
     return args
 
@@ -45,7 +37,7 @@ def get_remaining_experiments(directory):
     return [f + '.exp' for f in remaining]
 
 
-def submit(bundles, base_jobname, queue, walltime, joblistfile):
+def submit(bundles, queue, walltime, joblistfile):
     ids = []
     script = expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
 
@@ -64,10 +56,13 @@ def submit(bundles, base_jobname, queue, walltime, joblistfile):
         for i, expfile in enumerate(bundles):
             sout = 'b{}.sout'.format(splitext(expfile)[0])
             serr = 'b{}.serr'.format(splitext(expfile)[0])
-            jobname = '{}_j{}'.format(base_jobname, i)
-            cmd = [script, expfile, jobname, sout, serr, queue, resources]
-            status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
-            ids.append(status.stdout)
+            cmd = [script, expfile, sout, serr, queue, resources]
+            # status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
+            # ids.append(status.stdout + '\n')
+            # DEUBG
+            ids.append(str(i) + '.jobby\n')
+            print(' '.join(cmd))
+            #DEBUG
     finally:
         print('{} jobs submitted.'.format(len(ids)))
         if joblistfile:
@@ -80,7 +75,6 @@ def main():
     bundles = args.file.read().splitlines()
     args.file.close()
 
-    submit(bundles, args.jobname, args.queue, args.walltime)
     submit(bundles, args.jobname, args.queue, args.walltime, args.out)
 
 
