@@ -27,23 +27,23 @@ def get_remaining_experiments(directory):
 def get_failed_experiments(directory):
     failed_pattern = re.compile('trg_error": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
-    for f in json_iter:
-        if failed_pattern.search(open(f, 'r').read()) is None:
-            print(splitext(f)[0] + '.exp')
+    for fname in json_iter:
+        with open(fname, 'r') as f:
+            if failed_pattern.search(f.read()) is None:
+                print(splitext(f)[0] + '.exp')
 
 
 def main():
     parser = argparse.ArgumentParser(
         description='Tools for filtering experiment (.exp/.json) files')
+    parser.add_argument('dir', type=directory_type)
 
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
     parser_remaining = subparsers.add_parser('r')
-    parser_remaining.add_argument('dir', type=directory_type)
     parser_remaining.set_defaults(func=get_remaining_experiments)
 
     parser_failed = subparsers.add_parser('f')
-    parser_failed.add_argument('dir', type=directory_type)
     parser_failed.set_defaults(func=get_failed_experiments)
 
     args = parser.parse_args()
