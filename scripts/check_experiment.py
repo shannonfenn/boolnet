@@ -27,10 +27,13 @@ def get_remaining_experiments(directory):
 def get_failed_experiments(directory):
     failed_pattern = re.compile('trg_error": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    failed = []
     for fname in json_iter:
         with open(fname, 'r') as f:
             if failed_pattern.search(f.read()) is None:
-                print(splitext(fname)[0] + '.exp')
+                failed.append(splitext(fname)[0] + '.exp')
+    failed = natsorted(failed)
+    print('\n'.join(failed))
 
 
 def main():
