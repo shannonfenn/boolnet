@@ -279,7 +279,7 @@ class SplitLearner:
                 self.minfs_solver, self.minfs_params)
             for t, fs in enumerate(F):
                 if fs:
-                    self.feature_sets[t] = fs            
+                    self.feature_sets[t] = fs
 
     def make_partial_instance(self, target_index):
         target = self.target_matrix[target_index]
@@ -347,6 +347,7 @@ class SplitLearner:
             optimisation_time=optimisation_times,
             other_time=other_times)
 
+
 class StratifiedLearner(MonolithicLearner):
 
     def _setup(self, optimiser, parameters):
@@ -360,8 +361,7 @@ class StratifiedLearner(MonolithicLearner):
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
         self.learned_targets = []
-        self.feature_sets = np.empty((self.No, self.No),
-                                     dtype=list)
+        self.feature_sets = np.empty((self.No, self.No), dtype=list)
 
     def determine_next_target(self, strata, inputs):
         if self.auto_target:
