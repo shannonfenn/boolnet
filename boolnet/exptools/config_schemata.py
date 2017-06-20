@@ -2,7 +2,6 @@ from good import (
     Schema, message, All, Any, Range, IsDir, Allow, Default, Match, Msg,
     In, Optional, Required, Exclusive, Length, Invalid, Entire, truth)
 import boolnet.bintools.functions as fn
-import re
 
 
 def conditionally_required(trigger_key, trigger_val, required_key):
@@ -176,6 +175,10 @@ fs_selection_metric_schema = Any(
     'cardinality>first', 'cardinality>random', 'cardinality>entropy',
     'cardinality>feature_diversity', 'cardinality>pattern_diversity')
 
+fs_prefilter_schema = Any(
+    'all',  # 'prev-strata',   # Not implemented
+    'prev-strata+input', 'prev-strata+prev-fs', 'prev-strata+prev-fs+input')
+
 minfs_params_schema = Any(
     # CPLEX
     Schema({
@@ -207,11 +210,17 @@ learner_schema = Schema(
             Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
             Optional('minfs_solver_params'):    minfs_params_schema,
             Optional('minfs_selection_metric'): fs_selection_metric_schema,
+            Optional('minfs_tie_handling'):     'random',
+            Optional('minfs_prefilter'):        fs_prefilter_schema,
             }),
         conditionally_required(
             'minfs_masking', True, 'minfs_selection_metric'),
         conditionally_required(
+            'minfs_masking', True, 'minfs_prefilter'),
+        conditionally_required(
             'target_order', 'auto', 'minfs_selection_metric'),
+        conditionally_required(
+            'target_order', 'auto', 'minfs_prefilter'),
         # if name monolithic then minfs_masking is not allowed
         conditionally_forbidden('name', 'monolithic', 'minfs_masking'),
         )

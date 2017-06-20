@@ -260,6 +260,8 @@ def insert_default_log_keys(settings):
         ['given_tgt_order', True, ['learner', 'target_order']],
         ['sample_seed', False, ['sampling', 'seed']],
         ['fs_sel_metric', False, ['learner', 'minfs_selection_metric']],
+        ['fs_prefilt', False, ['learner', 'minfs_prefilter']],
+        ['fs_tie', False, ['learner', 'minfs_tie_handling']],
         ['fs_masking', False, ['learner', 'minfs_masking']],
         ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
         ['fs_solver', False, ['learner', 'minfs_solver']],

@@ -25,6 +25,97 @@ def fn_value_stop_criterion(func_id, name, limit=None):
         return lambda state: state.function_value(name) >= limit
 
 
+def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
+                     prefilter_method, metric, solver, solver_params,
+                     tie_handling='random', provide_prior_soln=False):
+    if strata == 0:
+        prev_strata_range = []
+    else:
+        strata_limits = (sum(strata_sizes[:strata-1]) + Ni,
+                         sum(strata_sizes[:strata]) + Ni)
+        prev_strata_range = list(range(*strata_limits))
+
+    input_range = list(range(Ni))
+
+    if prefilter_method == 'all':
+        # bound on Nf: none
+        F_in = list(range(Xp.shape[0]))
+    elif prefilter_method == 'prev-strata':
+        # bound on Nf: L
+        # Note: no guarantee that the prior strata contains a valid fs
+        raise NotImplementedError(
+            'Not implemented since can result in invalid minFS instance.')
+    elif prefilter_method == 'prev-strata+input':
+        # bound on Nf: L + Ni
+        F_in = input_range + prev_strata_range
+    elif prefilter_method == 'prev-strata+prev-fs':
+        # bound on Nf: L + Ni
+        # this actually produces a list of feature matrices
+        if strata == 0:
+            # there is no prior fs
+            F_in = input_range
+        else:
+            F_in = []
+            for t in targets:
+                prev_fs = set(fs_table[strata - 1][t])
+                f = prev_fs.union(prev_strata_range)
+                f = sorted(f)
+                F_in.append(f)
+
+    elif prefilter_method == 'prev-strata+prev-fs+input':
+        # bound on Nf: L + 2xNi
+        # this actually produces a list of feature matrices
+        if strata == 0:
+            # there is no prior fs
+            F_in = input_range
+        else:
+            F_in = []
+            for t in targets:
+                prev_fs = set(fs_table[strata - 1][t])
+                f = prev_fs.union(input_range, prev_strata_range)
+                f = sorted(f)
+                F_in.append(f)
+
+    # unpack inputs to minFS solver
+    if isinstance(F_in[0], int):
+        mfs_X = pk.unpackmat(Xp[F_in, :], Ne)
+    else:
+        mfs_X = [pk.unpackmat(Xp[fs, :], Ne) for fs in F_in]
+    mfs_Y = pk.unpackmat(Yp[targets, :], Ne)
+
+    ranking, result_feature_sets = mfs.ranked_feature_sets(
+        mfs_X, mfs_Y, metric, solver, solver_params)
+
+    # remap feature sets using given feature indices
+    if isinstance(F_in[0], int):
+        fs_maps = (F_in for i in range(len(targets)))
+    else:
+        fs_maps = F_in
+    for fs, fsmap in zip(result_feature_sets, fs_maps):
+        for i, f in enumerate(fs):
+            fs[i] = fsmap[f]
+
+    # update feature set table
+    for t, fs in zip(targets, result_feature_sets):
+        if len(fs) == 0:
+            # replace empty feature sets
+            fs_table[strata, t] = list(range(Xp.shape[0]))
+        else:
+            fs_table[strata, t] = fs
+
+    if tie_handling == 'random':
+        # randomly pick from top ranked targets
+        next_target = targets[np.random.choice(np.where(ranking == 0)[0])]
+    elif tie_handling == 'min_depth':
+        # can do using a tuple to sort where the second element is the
+        # inverse of the largest feature (i.e. the greatest depth)
+        raise NotImplementedError('min_depth tie handling not available.')
+    else:
+        raise ValueError('Invalid choice for tie_handling.')
+
+    return next_target
+
+
 class MonolithicLearner:
     def _setup(self, optimiser, parameters):
         # Gate generation
@@ -57,13 +148,15 @@ class MonolithicLearner:
         elif parameters['target_order'] == 'auto':
             self.target_order = None
             # this key is only required if auto-targetting
-            self.mfs_metric = parameters['minfs_selection_metric']
+            self.minfs_metric = parameters['minfs_selection_metric']
         else:
             self.target_order = np.array(parameters['target_order'],
                                          dtype=np.uintp)
         # Optional minfs solver time limit
         self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
+        self.minfs_tie_handling = parameters.get('minfs_tie_handling',
+                                                 'random')
 
         # add functor for evaluating the guiding func
         self.guiding_fn_eval_name = 'guiding'
@@ -108,11 +201,19 @@ class MonolithicLearner:
 
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_metric,
+                mfs_features, mfs_targets, self.minfs_metric,
                 self.minfs_solver, self.minfs_params)
 
-            # randomly pick from possible exact orders
-            self.target_order = order_from_rank(rank)
+            if self.minfs_tie_handling == 'random':
+                # randomly pick from possible exact orders
+                self.target_order = order_from_rank(rank)
+            elif self.minfs_tie_handling == 'min_depth':
+                # can do using a tuple to sort where the second element is the
+                # inverse of the largest feature (i.e. the greatest depth)
+                raise NotImplementedError(
+                    'min_depth tie breaking not implemented.')
+            else:
+                raise ValueError('Invalid choice for tie_handling.')
 
         # build the network state
         gates = self.gate_generator(self.budget, self.Ni,
@@ -210,7 +311,7 @@ class SplitLearner:
 
         # Optional feature selection params
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.mfs_metric = parameters.get('minfs_selection_metric', None)
+        self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
         self.feature_sets = np.empty(self.No, dtype=list)
@@ -275,7 +376,7 @@ class SplitLearner:
             mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
             mfs_targets = pk.unpackmat(self.target_matrix, self.Ne)
             _, F = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_metric,
+                mfs_features, mfs_targets, self.minfs_metric,
                 self.minfs_solver, self.minfs_params)
             for t, fs in enumerate(F):
                 if fs:
@@ -303,7 +404,7 @@ class SplitLearner:
             t0 = time()
 
             partial_instance = self.make_partial_instance(target_index)
-            
+
             # build the network state
             gates = self.next_gates(target_index)
             state = BNState(gates, partial_instance)
@@ -356,58 +457,31 @@ class StratifiedLearner(MonolithicLearner):
         self.auto_target = (parameters['target_order'] == 'auto')
         # Optional
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.mfs_metric = parameters.get('minfs_selection_metric', None)
+        self.minfs_metric = parameters.get('minfs_selection_metric', None)
+        self.minfs_prefilter = parameters.get('minfs_prefilter', None)
         # Initialise
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
+        self.strata_sizes = []
         self.learned_targets = []
         self.feature_sets = np.empty((self.No, self.No), dtype=list)
 
     def determine_next_target(self, strata, inputs):
         if self.auto_target:
             # get unlearned targets
-            all_targets = np.arange(self.No, dtype=int)
-            not_learned = np.setdiff1d(all_targets, self.learned_targets)
-
-            # unpack inputs to minFS solver
-            mfs_features = pk.unpackmat(inputs, self.Ne)
-            mfs_targets = pk.unpackmat(
-                self.target_matrix[not_learned, :], self.Ne)
-
-            # use external solver for minFS
-            if strata > 0 and False:  # disabled for now
-                prior_solns = self.feature_sets[strata-1, not_learned]
-            else:
-                prior_solns = None
-
-            rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.mfs_metric,
-                self.minfs_solver, self.minfs_params, prior_solns)
-
-            # replace empty feature sets
-            for i in range(len(feature_sets)):
-                if len(feature_sets[i]) == 0:
-                    feature_sets[i] = list(range(inputs.shape[0]))
-
-            self.feature_sets[strata, not_learned] = feature_sets
-
-            # randomly pick from top ranked targets
-            return not_learned[np.random.choice(np.where(rank == 0)[0])]
-        else:
+            to_learn = np.setdiff1d(range(self.No), self.learned_targets)
+        elif self.use_minfs_selection:
             # get next target from given ordering
-            t = self.target_order[strata]
-            if self.use_minfs_selection:
-                # unpack inputs to minFS solver
-                mfs_features = pk.unpackmat(inputs, self.Ne)
-                mfs_target = pk.unpackvec(self.target_matrix[t], self.Ne)
-                fs, _ = mfs.best_feature_set(
-                    mfs_features, mfs_target, self.mfs_metric,
-                    self.minfs_solver, self.minfs_params)
-                if len(fs) == 0:
-                    fs = list(range(inputs.shape[0]))
+            to_learn = [self.target_order[strata]]
+        else:
+            return self.target_order[strata]
+        next_target = ranked_fs_helper(
+            inputs, self.target_matrix, self.Ne, self.Ni, self.strata_sizes,
+            strata, to_learn, self.feature_sets, self.minfs_prefilter,
+            self.minfs_metric, self.minfs_solver, self.minfs_params,
+            self.minfs_tie_handling, False)
 
-                self.feature_sets[strata, t] = fs
-            return t
+        return next_target
 
     def make_partial_instance(self, strata, target_index, inputs):
         if self.use_minfs_selection:
@@ -422,6 +496,7 @@ class StratifiedLearner(MonolithicLearner):
 
     def next_gates(self, strata, problem_matrix):
         size = self.remaining_budget // (self.No - strata)
+        self.strata_sizes.append(size - 1)  # don't count output gate
         self.remaining_budget -= size
         return self.gate_generator(size, problem_matrix.Ni,
                                    problem_matrix.No, self.node_funcs)
