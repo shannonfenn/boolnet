@@ -216,8 +216,6 @@ learner_schema = Schema(
         conditionally_required(
             'minfs_masking', True, 'minfs_selection_metric'),
         conditionally_required(
-            'minfs_masking', True, 'minfs_prefilter'),
-        conditionally_required(
             'target_order', 'auto', 'minfs_selection_metric'),
         # if name monolithic then some minfs keys are not allowed
         conditionally_forbidden('name', 'monolithic', 'minfs_masking'),
