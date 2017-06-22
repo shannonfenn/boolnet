@@ -25,12 +25,24 @@ def get_remaining_experiments(directory):
 
 
 def get_failed_experiments(directory):
-    failed_pattern = re.compile('trg_error": 0\.0(,|\})')
+    pattern = re.compile('trg_error": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
     failed = []
     for fname in json_iter:
         with open(fname, 'r') as f:
-            if failed_pattern.search(f.read()) is None:
+            if pattern.search(f.read()) is None:
+                failed.append(splitext(fname)[0] + '.exp')
+    failed = natsorted(failed)
+    print('\n'.join(failed))
+
+
+def get_succeeded_experiments(directory):
+    pattern = re.compile('trg_error": 0\.0(,|\})')
+    json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    failed = []
+    for fname in json_iter:
+        with open(fname, 'r') as f:
+            if pattern.search(f.read()) is not None:
                 failed.append(splitext(fname)[0] + '.exp')
     failed = natsorted(failed)
     print('\n'.join(failed))
@@ -48,6 +60,9 @@ def main():
 
     parser_failed = subparsers.add_parser('f')
     parser_failed.set_defaults(func=get_failed_experiments)
+
+    parser_succeeded = subparsers.add_parser('s')
+    parser_succeeded.set_defaults(func=get_succeeded_experiments)
 
     args = parser.parse_args()
 
