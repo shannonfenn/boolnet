@@ -24,7 +24,7 @@ def get_remaining_experiments(directory):
     print('\n'.join(remaining))
 
 
-def get_failed_experiments(directory):
+def get_non_memorised_experiments(directory):
     pattern = re.compile('trg_error": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
     failed = []
@@ -36,16 +36,34 @@ def get_failed_experiments(directory):
     print('\n'.join(failed))
 
 
-def get_succeeded_experiments(directory):
+def get_memorised_experiments(directory):
     pattern = re.compile('trg_error": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
-    failed = []
+    memorised = []
     for fname in json_iter:
         with open(fname, 'r') as f:
             if pattern.search(f.read()) is not None:
-                failed.append(splitext(fname)[0] + '.exp')
-    failed = natsorted(failed)
-    print('\n'.join(failed))
+                memorised.append(splitext(fname)[0] + '.exp')
+    memorised = natsorted(memorised)
+    print('\n'.join(memorised))
+
+
+def summary(directory):
+    pattern = re.compile('trg_error": 0\.0(,|\})')
+    exp_iter = glob.iglob('{}/working/*.exp'.format(directory))
+    json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    all_exp = set(splitext(f)[0] for f in exp_iter)
+    all_json = set(splitext(f)[0] for f in json_iter)
+    num_remaining = len(all_exp - all_json)
+    num_failed = num_succeeded = 0
+    for fname in all_json:
+        with open(fname + '.json', 'r') as f:
+            if pattern.search(f.read()) is None:
+                num_failed += 1
+            else:
+                num_succeeded += 1
+    print('remaining: {} memorised: {} not-memorised: {}'.format(
+        num_remaining, num_succeeded, num_failed))
 
 
 def main():
@@ -55,14 +73,17 @@ def main():
 
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
-    parser_remaining = subparsers.add_parser('r')
+    parser_remaining = subparsers.add_parser('rem')
     parser_remaining.set_defaults(func=get_remaining_experiments)
 
-    parser_failed = subparsers.add_parser('f')
-    parser_failed.set_defaults(func=get_failed_experiments)
+    parser_failed = subparsers.add_parser('not')
+    parser_failed.set_defaults(func=get_non_memorised_experiments)
 
-    parser_succeeded = subparsers.add_parser('s')
-    parser_succeeded.set_defaults(func=get_succeeded_experiments)
+    parser_succeeded = subparsers.add_parser('mem')
+    parser_succeeded.set_defaults(func=get_memorised_experiments)
+
+    parser_succeeded = subparsers.add_parser('sum')
+    parser_succeeded.set_defaults(func=summary)
 
     args = parser.parse_args()
 
