@@ -75,6 +75,8 @@ def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
                 f = prev_fs.union(input_range, prev_strata_range)
                 f = sorted(f)
                 F_in.append(f)
+    else:
+        raise ValueError('Invalid prefilter: {}'.format(prefilter_method))
 
     # unpack inputs to minFS solver
     if isinstance(F_in[0], int):
