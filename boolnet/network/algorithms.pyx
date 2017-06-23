@@ -1,4 +1,5 @@
 from boolnet.exptools.fastrand cimport random_uniform_int
+import networkx as nx
 import numpy as np
 cimport numpy as np
 import cython
@@ -60,7 +61,7 @@ cdef size_t sample_bool(np.uint8_t[:] M, size_t end=0):
 @cython.nonecheck(False)
 @cython.cdivision(True)
 cpdef connected_sources(np.uint32_t[:, :] gates, np.uint8_t[:] connected,
-                      size_t Ni, size_t No):
+                        size_t Ni, size_t No):
     ''' This detects which gates and inputs are connected to the output
         and returns the gate indices as a sorted list. This
         is just the union of the connected components in the
@@ -83,3 +84,26 @@ cpdef connected_sources(np.uint32_t[:, :] gates, np.uint8_t[:] connected,
         if connected[g + Ni]:
             connected[gates[g, 0]] = 1
             connected[gates[g, 1]] = 1
+
+
+cpdef filter_connected(np.uint32_t[:, :] gates, size_t Ni, size_t No):
+    Ng = gates.shape[0]
+    connected = np.zeros(Ng + Ni, dtype=np.uint8)
+    connected_sources(gates, connected, Ni, No)
+
+    new_gates = []
+    source_map = np.arange(Ni + Ng)
+    for old_index in range(Ni, Ni + Ng):
+        if connected[old_index]:
+            source_map[old_index] = len(new_gates) + Ni
+            old_gate = gates[old_index - Ni]
+            # remapped connections
+            new_gate = [source_map[s] for s in old_gate[:-1]]
+            # transfer function
+            new_gate.append(old_gate[-1])
+            new_gates.append(new_gate)
+        else:
+            # this source is being deleted
+            source_map[old_index] = -1
+
+    return np.array(new_gates, dtype=np.uint32)
