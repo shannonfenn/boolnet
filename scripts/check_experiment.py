@@ -69,20 +69,23 @@ def summary(directory):
 def main():
     parser = argparse.ArgumentParser(
         description='Tools for filtering experiment (.exp/.json) files')
-    parser.add_argument('dir', type=directory_type)
 
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
     parser_remaining = subparsers.add_parser('rem')
+    parser_remaining.add_argument('dir', type=directory_type)
     parser_remaining.set_defaults(func=get_remaining_experiments)
 
     parser_failed = subparsers.add_parser('not')
+    parser_failed.add_argument('dir', type=directory_type)
     parser_failed.set_defaults(func=get_non_memorised_experiments)
 
     parser_succeeded = subparsers.add_parser('mem')
+    parser_succeeded.add_argument('dir', type=directory_type)
     parser_succeeded.set_defaults(func=get_memorised_experiments)
 
     parser_succeeded = subparsers.add_parser('sum')
+    parser_succeeded.add_argument('dir', type=directory_type)
     parser_succeeded.set_defaults(func=summary)
 
     args = parser.parse_args()
