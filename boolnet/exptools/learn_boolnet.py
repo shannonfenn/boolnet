@@ -17,7 +17,6 @@ import boolnet.exptools.config_filtering as cf
 OPTIMISERS = {
     'SA': optimisers.SA(),
     'LAHC': optimisers.LAHC(),
-    'LAHC_perc': optimisers.LAHC_perc(),
     'HC': optimisers.HC(),
     }
 
