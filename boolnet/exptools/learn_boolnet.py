@@ -214,13 +214,31 @@ def build_result_map(parameters, learner_result):
     train_state, test_state = build_states(
         parameters['mapping'], gates, objective_functions)
 
+    # Optional results
+    if parameters.get('record_final_net', True):
+        learner_result.extra['final_net'] = np.array(gates)
+
+    if 'partial_networks' in learner_result.extra:
+        if parameters.get('record_intermediate_nets', False):
+            for i, net in enumerate(learner_result.partial_networks):
+                key = 'net_{}'.format(i)
+                learner_result.extra[key] = np.array(net.gates)
+        learner_result.extra.pop('partial_networks')
+
+    if 'feature_sets' in learner_result.extra:
+        F = learner_result.extra['feature_sets']
+        for strata, strata_f_sets in enumerate(F):
+            for target, fs in enumerate(strata_f_sets):
+                # only record FSes if they exist
+                if fs is not None:
+                    key = 'fs_s{}_t{}'.format(strata, target)
+                    learner_result.extra[key] = fs
+        learner_result.extra.pop('feature_sets')
+
     results = {
         'Ni':           final_network.Ni,
         'No':           final_network.No,
         'Ng':           final_network.Ng,
-        'best_step':    learner_result.best_iterations,
-        'steps':        learner_result.final_iterations,
-        'best_err':     learner_result.best_errors,
         'trg_error':    train_state.function_value('e1'),
         'trg_cor':      train_state.function_value('correctness'),
         'trg_mcc':      train_state.function_value('e1_mcc'),
@@ -231,29 +249,8 @@ def build_result_map(parameters, learner_result):
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
         'tgt_order':    np.array(learner_result.target_order, dtype=np.uintp),
-        'opt_time':     learner_result.optimisation_time,
-        'other_time':   learner_result.other_time
         }
-
-    # Optional results
-    if parameters.get('record_final_net', True):
-        results['final_net'] = np.array(final_network.gates)
-
-    if parameters.get('record_intermediate_nets', False):
-        for i, net in enumerate(learner_result.partial_networks):
-            key = 'net_{}'.format(i)
-            results[key] = np.array(net.gates)
-
-    if learner_result.feature_sets is not None:
-        for strata, strata_f_sets in enumerate(learner_result.feature_sets):
-            for target, fs in enumerate(strata_f_sets):
-                # only record FSes if they exist
-                if fs is not None:
-                    key = 'fs_s{}_t{}'.format(strata, target)
-                    results[key] = fs
-
-    if learner_result.restarts is not None:
-        results['restarts'] = learner_result.restarts
+    results.update(learner_result.extra)
 
     if 'actual_noise' in parameters:
         results['actual_noise'] = parameters['actual_noise']

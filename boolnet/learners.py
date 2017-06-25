@@ -12,9 +12,7 @@ from time import time
 
 
 LearnerResult = namedtuple('LearnerResult', [
-    'network', 'partial_networks', 'best_errors', 'best_iterations',
-    'final_iterations', 'target_order', 'feature_sets', 'restarts',
-    'optimisation_time', 'other_time'])
+    'network', 'target_order', 'extra'])
 
 
 def fn_value_stop_criterion(func_id, name, limit=None):
@@ -252,15 +250,15 @@ class MonolithicLearner:
 
         return LearnerResult(
             network=opt_result.representation,
-            best_errors=[opt_result.error],
-            best_iterations=[opt_result.best_iteration],
-            final_iterations=[opt_result.iteration],
-            restarts=[opt_result.restarts],
             target_order=self.target_order,
-            feature_sets=None,
-            partial_networks=[],
-            optimisation_time=t2-t1,
-            other_time=t1-t0)
+            extra={
+                'best_err': [opt_result.error],
+                'best_step': [opt_result.best_iteration],
+                'steps': [opt_result.iteration],
+                'restarts': [opt_result.restarts],
+                'opt_time': t2-t1,
+                'other_time': t1-t0,
+            })
 
 
 class SplitLearner:
@@ -441,15 +439,16 @@ class SplitLearner:
 
         return LearnerResult(
             network=accumulated_network.representation,
-            partial_networks=[r.representation for r in opt_results],
-            best_errors=[r.error for r in opt_results],
-            best_iterations=[r.best_iteration for r in opt_results],
-            final_iterations=[r.iteration for r in opt_results],
             target_order=list(range(self.No)),
-            feature_sets=None,
-            restarts=[r.restarts for r in opt_results],
-            optimisation_time=optimisation_times,
-            other_time=other_times)
+            extra={
+                'best_err': [r.error for r in opt_results],
+                'best_step': [r.best_iteration for r in opt_results],
+                'steps': [r.iteration for r in opt_results],
+                'restarts': [r.restarts for r in opt_results],
+                'partial_networks': [r.representation for r in opt_results],
+                'opt_time': optimisation_times,
+                'other_time': other_times,
+            })
 
 
 class StratifiedLearner(MonolithicLearner):
@@ -631,15 +630,18 @@ class StratifiedLearner(MonolithicLearner):
 
         return LearnerResult(
             network=accumulated_network.representation,
-            partial_networks=[r.representation for r in opt_results],
-            best_errors=[r.error for r in opt_results],
-            best_iterations=[r.best_iteration for r in opt_results],
-            final_iterations=[r.iteration for r in opt_results],
             target_order=self.learned_targets,
-            feature_sets=self.feature_sets,
-            restarts=[r.restarts for r in opt_results],
-            optimisation_time=optimisation_times,
-            other_time=other_times)
+            extra={
+                'partial_networks': [r.representation for r in opt_results],
+                'best_err': [r.error for r in opt_results],
+                'best_step': [r.best_iteration for r in opt_results],
+                'steps': [r.iteration for r in opt_results],
+                'feature_sets': self.feature_sets,
+                'restarts': [r.restarts for r in opt_results],
+                'opt_time': optimisation_times,
+                'other_time': other_times,
+                'strata_sizes': self.strata_sizes,
+            })
 
     # def handle_single_FS(self, feature, target):
     #     # When we have a 1FS we have already learned the target,

@@ -261,6 +261,8 @@ def insert_default_log_keys(settings):
         ['sample_seed', False, ['sampling', 'seed']],
         ['fs_sel_metric', False, ['learner', 'minfs_selection_metric']],
         ['fs_prefilt', False, ['learner', 'minfs_prefilter']],
+        ['shrink_subnets', False, ['learner', 'shrink_subnets']],
+        ['reuse_gates', False, ['learner', 'reuse_gates']],
         ['fs_tie', False, ['learner', 'minfs_tie_handling']],
         ['fs_masking', False, ['learner', 'minfs_masking']],
         ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
