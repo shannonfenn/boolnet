@@ -5,6 +5,7 @@ import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
 import boolnet.bintools.functions as fn
+import boolnet.network.algorithms as alg
 from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
 from boolnet.network.networkstate import BNState
 from time import time
@@ -461,6 +462,7 @@ class StratifiedLearner(MonolithicLearner):
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_prefilter = parameters.get('minfs_prefilter', None)
+        self.reuse_gates = parameters.get('reuse_gates', False)
         # Initialise
         self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
@@ -495,13 +497,6 @@ class StratifiedLearner(MonolithicLearner):
 
         return PackedMatrix(np.vstack((inputs, target)),
                             Ne=self.Ne, Ni=inputs.shape[0])
-
-    def next_gates(self, strata, problem_matrix):
-        size = self.remaining_budget // (self.No - strata)
-        self.strata_sizes.append(size - 1)  # don't count output gate
-        self.remaining_budget -= size
-        return self.gate_generator(size, problem_matrix.Ni,
-                                   problem_matrix.No, self.node_funcs)
 
     def join_networks(self, base, new, strata, target_index):
         # simple: build up a map for all sources, for sources after the
@@ -582,8 +577,11 @@ class StratifiedLearner(MonolithicLearner):
 
             partial_instance = self.make_partial_instance(i, target, inputs)
 
-            # build state to be optimised
-            gates = self.next_gates(i, partial_instance)
+            # ### build state to be optimised ### #
+            # next batch of gates
+            size = self.remaining_budget // (self.No - i)
+            gates = self.gate_generator(size, partial_instance.Ni,
+                                        partial_instance.No, self.node_funcs)
             state = BNState(gates, partial_instance)
             # add the guiding function to be evaluated
             state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name)
@@ -597,9 +595,20 @@ class StratifiedLearner(MonolithicLearner):
             # record result
             opt_results.append(partial_result)
 
-            # build up final network by inserting this partial result
-            result_state = BNState(
-                partial_result.representation.gates, partial_instance)
+            net = partial_result.representation
+            if self.reuse_gates:
+                # percolate
+                new_gates = alg.filter_connected(net.gates, net.Ni, net.No)
+                result_state = BNState(new_gates, partial_instance)
+                # make to account for modified strata size
+                size = new_gates.shape[0]
+            else:
+                result_state = BNState(net.gates, partial_instance)
+
+            # update node budget and strata sizes
+            self.strata_sizes.append(size - 1)  # don't count output gate
+            self.remaining_budget -= size
+
             accumulated_network = self.join_networks(
                 accumulated_network, result_state, i, target)
 
