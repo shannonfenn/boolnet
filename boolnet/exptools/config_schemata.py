@@ -200,6 +200,7 @@ learner_schema = Schema(
             Optional('minfs_selection_metric'): fs_selection_metric_schema,
             Optional('minfs_tie_handling'):     'random',
             Optional('minfs_prefilter'):        fs_prefilter_schema,
+            Optional('shrink_subnets'):            bool,
             Optional('reuse_gates'):            bool,
             }),
         conditionally_required(
@@ -214,6 +215,8 @@ learner_schema = Schema(
         conditionally_forbidden('name', 'split', 'minfs_prefilter'),
         conditionally_forbidden('name', 'monolithic', 'reuse_gates'),
         conditionally_forbidden('name', 'split', 'reuse_gates'),
+        conditionally_forbidden('name', 'monolithic', 'shrink_subnets'),
+        conditionally_forbidden('name', 'split', 'shrink_subnets'),
         )
     )
 

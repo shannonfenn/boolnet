@@ -462,6 +462,7 @@ class StratifiedLearner(MonolithicLearner):
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_prefilter = parameters.get('minfs_prefilter', None)
+        self.shrink_subnets = parameters.get('shrink_subnets', True)
         self.reuse_gates = parameters.get('reuse_gates', False)
         # Initialise
         self.No, _ = self.target_matrix.shape
@@ -596,18 +597,18 @@ class StratifiedLearner(MonolithicLearner):
             opt_results.append(partial_result)
 
             net = partial_result.representation
-            if self.reuse_gates:
+            if self.shrink_subnets:
                 # percolate
                 new_gates = alg.filter_connected(net.gates, net.Ni, net.No)
                 result_state = BNState(new_gates, partial_instance)
-                # make to account for modified strata size
-                size = new_gates.shape[0]
+                if self.reuse_gates:
+                    size = new_gates.shape[0]
             else:
                 result_state = BNState(net.gates, partial_instance)
 
             # update node budget and strata sizes
-            self.strata_sizes.append(size - 1)  # don't count output gate
             self.remaining_budget -= size
+            self.strata_sizes.append(result_state.Ng - result_state.No)
 
             accumulated_network = self.join_networks(
                 accumulated_network, result_state, i, target)
