@@ -191,11 +191,13 @@ class MonolithicLearner:
             raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                              format(self.node_funcs))
 
-    def run(self, optimiser, parameters):
+    def run(self, optimiser, parameters, verbose=False):
         t0 = time()
         self._setup(optimiser, parameters)
 
         if self.target_order is None:
+            if verbose:
+                print('Determining target order...')
             # determine the target order by ranking feature sets
             mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
             mfs_targets = pk.unpackmat(self.target_matrix, self.Ne)
@@ -216,6 +218,9 @@ class MonolithicLearner:
             else:
                 raise ValueError('Invalid choice for tie_handling.')
 
+            if verbose:
+                print('done. Time taken: {}'.format(time() - t0))
+
         # build the network state
         gates = self.gate_generator(self.budget, self.Ni,
                                     self.No, self.node_funcs)
@@ -235,9 +240,16 @@ class MonolithicLearner:
                                self.stopping_fn_params)
 
         t1 = time()
+
+        if verbose:
+            print('Optimising...')
+
         # run the optimiser
         opt_result = self.optimiser.run(state, self.opt_params)
         t2 = time()
+
+        if verbose:
+            print('done. Time taken: {}'.format(t2 - t1))
 
         # undo ordering
         inverse_order = inverse_permutation(self.target_order)
@@ -389,7 +401,9 @@ class SplitLearner:
         inp = self.input_matrix[fs, :]
         return PackedMatrix(np.vstack((inp, target)), Ne=self.Ne, Ni=len(fs))
 
-    def run(self, optimiser, parameters):
+    def run(self, optimiser, parameters, verbose=False):
+        t0 = time()
+
         self._setup(optimiser, parameters)
 
         opt_results = []
@@ -399,7 +413,15 @@ class SplitLearner:
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
         accumulated_network = BNState(np.empty((0, 3)), self.input_matrix)
 
+        if verbose:
+            print('Getting feature sets...')
+
         self.get_feature_sets()
+
+        feature_selection_time = time() - t0
+
+        if verbose:
+            print('done. Time taken: {}'.format(feature_selection_time))
 
         for target_index in range(self.No):
             t0 = time()
@@ -420,9 +442,15 @@ class SplitLearner:
                                    self.stopping_fn_params)
 
             t1 = time()
+
+            if verbose:
+                print('Target {} Optimising...'.format(target_index))
             # run the optimiser
             partial_result = self.optimiser.run(state, self.opt_params)
             t2 = time()
+
+            if verbose:
+                print('done. Time taken: {}'.format(t2 - t1))
 
             # record result
             opt_results.append(partial_result)
@@ -448,6 +476,7 @@ class SplitLearner:
                 'partial_networks': [r.representation for r in opt_results],
                 'opt_time': optimisation_times,
                 'other_time': other_times,
+                'fs_time': feature_selection_time
             })
 
 
@@ -550,7 +579,7 @@ class StratifiedLearner(MonolithicLearner):
         new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
         network.set_gates(new_gates)
 
-    def run(self, optimiser, parameters):
+    def run(self, optimiser, parameters, verbose=False):
         # setup accumulated network
         # loop:
         #   make partial network
@@ -571,9 +600,18 @@ class StratifiedLearner(MonolithicLearner):
         other_times = []
 
         for i in range(self.No):
+            if verbose:
+                print('Strata {}'.format(i))
             t0 = time()
+
+            if verbose:
+                print('  Determining target...')
+
             # determine next target index
             target = self.determine_next_target(i, inputs)
+
+            if verbose:
+                print('  done. Target {} selected.'.format(target))
 
             partial_instance = self.make_partial_instance(i, target, inputs)
 
@@ -588,10 +626,19 @@ class StratifiedLearner(MonolithicLearner):
 
             t1 = time()
 
+            if verbose:
+                print('  time taken: {}'.format(t1 - t0))
+                print('  Optimising...')
+
             # optimise
             partial_result = self.optimiser.run(state, self.opt_params)
 
             t2 = time()
+
+            if verbose:
+                print('  done. Error: {}'.format(partial_result.error))
+                print('  time taken: {}'.format(t2 - t1))
+
             # record result
             opt_results.append(partial_result)
 

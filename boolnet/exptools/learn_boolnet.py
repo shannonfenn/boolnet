@@ -92,7 +92,7 @@ def add_noise(mapping, rate):
     return effective_rate
 
 
-def learn_bool_net(parameters):
+def learn_bool_net(parameters, verbose=False):
     start_time = time.monotonic()
 
     seed = seed_rng(parameters['learner'].get('seed', None))
@@ -123,7 +123,7 @@ def learn_bool_net(parameters):
     setup_end_time = time.monotonic()
 
     # learn the network
-    learner_result = learner.run(optimiser, learner_params)
+    learner_result = learner.run(optimiser, learner_params, verbose)
 
     learning_end_time = time.monotonic()
 
