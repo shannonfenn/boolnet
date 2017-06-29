@@ -35,12 +35,13 @@ def initialise_logging(settings, result_dir):
 
 def initialise_notifications(args):
     if args.email:
+        config_path = os.path.expanduser(args.email_config)
         try:
-            with open(args.email_config) as f:
+            with open(config_path) as f:
                 settings = yaml.load(f, Loader=Loader)
             return settings
         except FileNotFoundError:
-            print('Email config not found: {}'.format(args.email_config))
+            print('Email config not found: {}'.format(config_path))
         except yaml.YAMLError as err:
             print('Invalid email config: {}'.format(err))
         # disable notifications in the event of any errors
@@ -84,7 +85,7 @@ def parse_arguments():
     parser.add_argument('-e', '--email', action='store_true',
                         help='enable email notifications.')
     parser.add_argument('-c', '--email-config', metavar='file', type=str,
-                        default='email.cfg', help='email config file path.')
+                        default='~/email.cfg', help='email config file path.')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='HMRI/experiments/results',
                         help='directory to store results in (in own subdir).')
