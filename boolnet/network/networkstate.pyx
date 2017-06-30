@@ -7,21 +7,19 @@ cimport numpy as np
 from copy import copy
 from math import ceil
 
-from bitpacking.packing import packed_type
-from bitpacking.packing cimport (
-    packed_type_t, generate_end_mask, f_type, function_list, PACKED_SIZE)
+import bitpacking.packing as pk
+cimport bitpacking.packing as pk
 
-from boolnet.network.boolnet cimport BoolNet, Move
-from boolnet.bintools.functions import function_name
+import boolnet.bintools.functions as fn
+import boolnet.bintools.biterror as be
+cimport boolnet.bintools.example_generator as exgen
+
 from boolnet.bintools.functions cimport Function
-from boolnet.bintools.biterror import EVALUATORS
-from boolnet.bintools.operator_iterator cimport OpExampleIterFactory
-from boolnet.bintools.example_generator cimport (
-    PackedExampleGenerator, packed_from_operator)
+from boolnet.network.boolnet cimport BoolNet, Move
 
 
 cpdef state_from_operator(gates, indices, Nb, No, operator, order=None, exclude=False):
-    M = packed_from_operator(indices, Nb, No, operator, exclude)
+    M = exgen.packed_from_operator(indices, Nb, No, operator, exclude)
 
     if order is None:
         order = np.arange(No, dtype=np.uintp)
@@ -35,8 +33,8 @@ cdef class BNState:
     cdef:
         readonly BoolNet network
         readonly size_t Ne, cols
-        packed_type_t[:, :] activation, inputs, outputs, target, error
-        readonly packed_type_t zero_mask
+        pk.packed_type_t[:, :] activation, inputs, outputs, target, error
+        readonly pk.packed_type_t zero_mask
         dict err_evaluators
         readonly size_t invalid_start
         readonly bint evaluated
@@ -56,19 +54,19 @@ cdef class BNState:
         self.Ne = Ne
         self.cols = cols
 
-        self.zero_mask = generate_end_mask(Ne)
+        self.zero_mask = pk.generate_end_mask(Ne)
 
         # instantiate a matrix for activation
-        self.activation = np.zeros((Ng + Ni, cols), dtype=packed_type)
+        self.activation = np.zeros((Ng + Ni, cols), dtype=pk.packed_type)
 
         # create input and output view into activation matrix
         self.inputs = self.activation[:Ni, :]
         if No != 0:
             self.outputs = self.activation[-<int>No:, :]
         else:
-            self.outputs = np.empty((No, cols), dtype=packed_type)
+            self.outputs = np.empty((No, cols), dtype=pk.packed_type)
 
-        self.target = np.zeros((No, cols), dtype=packed_type)
+        self.target = np.zeros((No, cols), dtype=pk.packed_type)
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
 
@@ -79,7 +77,7 @@ cdef class BNState:
         self._check_state_invariants()
 
         # buffer view for copying
-        cdef packed_type_t[:, :] P = problem_matrix
+        cdef pk.packed_type_t[:, :] P = problem_matrix
 
         self.inputs[...] = P[:Ni, :]
         self.target[...] = P[Ni:, :]
@@ -147,9 +145,9 @@ cdef class BNState:
         return self.network.connected_sources()
 
     cpdef add_function(self, Function function, name='', params={}):
-        eval_class = EVALUATORS[function]
+        eval_class = be.EVALUATORS[function]
         if not name:
-            name = function_name(function)
+            name = fn.function_name(function)
         self.err_evaluators[name] = eval_class(self.Ne, self.No, **params)
         self.evaluated = False
         return name
@@ -218,9 +216,9 @@ cdef class BNState:
             getting node TFs from network. '''
         cdef:
             size_t Ni, No, Ng, cols, c, g, o, src1, src2, start
-            packed_type_t[:, :] activation, outputs, error, target
+            pk.packed_type_t[:, :] activation, outputs, error, target
             np.uint32_t[:, :] gates
-            f_type func
+            pk.f_type func
 
         if self.evaluated:
             return
@@ -243,7 +241,7 @@ cdef class BNState:
         for g in range(start, Ng):
             src1 = gates[g, 0]
             src2 = gates[g, 1]
-            func = function_list[gates[g, 2]]
+            func = pk.function_list[gates[g, 2]]
             for c in range(cols):
                 activation[Ni+g, c] = func(activation[src1, c], activation[src2, c])
 
@@ -258,7 +256,7 @@ cdef class BNState:
 
         self.evaluated = True
 
-    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
+    cdef void _apply_zero_mask(self, pk.packed_type_t[:,:] matrix):
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
         cdef size_t r, rows, cols
