@@ -6,8 +6,8 @@ import os
 import random
 
 import boolnet.exptools.config_schemata as sch
-import boolnet.bintools.operator_iterator as op
-from boolnet.utils import PackedMatrix, BetterETABar
+import boolnet.bintools.operator_iterator as opit
+import boolnet.utils as utils
 
 
 def get_seed(key):
@@ -159,7 +159,7 @@ def file_instance(params):
 
     instance = {
         'type': 'raw_unsplit',
-        'matrix': PackedMatrix(Mp, N, Ni)
+        'matrix': utils.PackedMatrix(Mp, N, Ni)
         }
 
     return instance, N, Ni
@@ -186,8 +186,8 @@ def split_instance(params):
 
         instance = {
             'type': 'raw_split',
-            'training_set': PackedMatrix(Mp_trg, Ne_trg, Ni),
-            'test_set': PackedMatrix(Mp_test, Ne_test, Ni)
+            'training_set': utils.PackedMatrix(Mp_trg, Ne_trg, Ni),
+            'test_set': utils.PackedMatrix(Mp_test, Ne_test, Ni)
             }
 
     return instance, Ne_trg, Ni, Ne_test
@@ -195,7 +195,7 @@ def split_instance(params):
 
 def generated_instance(params):
     Nb = params['bits']
-    operator = op.operator_from_name(params['operator'])
+    operator = params['operator']
 
     instance = {
         'type': 'operator',
@@ -203,7 +203,7 @@ def generated_instance(params):
         'Nb': Nb,
         'No': params.get('out_width', Nb),  # defaults to operand width
     }
-    Ni = op.num_operands(operator) * Nb
+    Ni = opit.num_operands[operator] * Nb
 
     return instance, 2**Ni, Ni
 
@@ -293,7 +293,8 @@ def generate_configurations(settings, batch_mode):
     configurations = []
 
     if not batch_mode:
-        bar = BetterETABar('Generating configurations', max=len(variable_sets))
+        bar = utils.BetterETABar('Generating configurations',
+                                 max=len(variable_sets))
         bar.update()
     try:
         for conf_num, variables in enumerate(variable_sets):
@@ -323,8 +324,8 @@ def generate_tasks(configurations, batch_mode):
     tasks = []
 
     if not batch_mode:
-        bar = BetterETABar('Generating training tasks',
-                           max=len(configurations))
+        bar = utils.BetterETABar('Generating training tasks',
+                                 max=len(configurations))
         bar.update()
     try:
         for context, instances in configurations:

@@ -12,7 +12,7 @@ cimport bitpacking.packing as pk
 
 import boolnet.bintools.functions as fn
 import boolnet.bintools.biterror as be
-cimport boolnet.bintools.example_generator as exgen
+import boolnet.bintools.example_generator as exgen
 
 from boolnet.bintools.functions cimport Function
 from boolnet.network.boolnet cimport BoolNet, Move

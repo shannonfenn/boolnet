@@ -6,27 +6,13 @@ from collections import namedtuple
 from pytest import mark, raises, fixture
 
 import bitpacking.packing as pk
-from bitpacking.packing import PACKED_SIZE_PY as PACKED_SIZE
 
-from boolnet.utils import PackedMatrix, partition_packed
-from boolnet.bintools.functions import (
-    function_name, all_functions, function_from_name)
-from boolnet.bintools.operator_iterator import (
-    ZERO, AND, OR, UNARY_AND, UNARY_OR, ADD, SUB, MUL,
-    OpExampleIterFactory)
-from boolnet.bintools.example_generator import (packed_from_operator,
-                                                PackedExampleGenerator)
-from boolnet.network.networkstate import BNState, state_from_operator
+import boolnet.utils as utils
+import boolnet.bintools.functions as fn
+import boolnet.network.networkstate as ns
 
 
 TEST_NETWORKS = glob.glob('boolnet/test/networks/*.yaml')
-
-
-operator_map = {
-    'and': AND, 'or': OR,
-    'add': ADD, 'sub': SUB, 'mul': MUL,
-    'zero': ZERO, 'unary_and': UNARY_AND, 'unary_or': UNARY_OR
-}
 
 
 # ############# General helpers ################# #
@@ -105,18 +91,18 @@ def harness_to_fixture(fname):
     test['error matrix']['test'] = error[samples_t]
 
     # generate sample versions
-    Mf = PackedMatrix(
+    Mf = utils.PackedMatrix(
         np.vstack((pk.packmat(inputs),
                    pk.packmat(target))),
         Ne=inputs.shape[0], Ni=Ni)
 
-    Ms, Mt = partition_packed(Mf, samples)
+    Ms, Mt = utils.partition_packed(Mf, samples)
 
     # add states to test
     test['state'] = {
-        'full': BNState(gates, Mf),
-        'sample': BNState(gates, Ms),
-        'test': BNState(gates, Mt)
+        'full': ns.BNState(gates, Mf),
+        'sample': ns.BNState(gates, Ms),
+        'test': ns.BNState(gates, Mt)
     }
 
     return test
@@ -147,7 +133,7 @@ def state_params(request):
         test['Nb'] = Ni
     else:
         test['Nb'] = Ni // 2
-    test['operator'] = operator_map[test['target function']]
+    test['operator'] = test['target function']
 
     indices_s = np.array(test['samples'], dtype=np.uint32)
     indices_f = np.arange(2**Ni, dtype=np.uint32)
@@ -166,20 +152,22 @@ def state_params(request):
     Ne_t = Ne_f - Ne_s
 
     test['window_size'] = {
-        'sample': np.random.randint(1, max(2, Ne_s // PACKED_SIZE)),
-        'full': np.random.randint(1, max(2, Ne_f // PACKED_SIZE)),
-        'test': np.random.randint(1, max(2, Ne_t // PACKED_SIZE))
+        'sample': np.random.randint(1, max(2, Ne_s // pk.PACKED_SIZE_PY)),
+        'full': np.random.randint(1, max(2, Ne_f // pk.PACKED_SIZE_PY)),
+        'test': np.random.randint(1, max(2, Ne_t // pk.PACKED_SIZE_PY))
     }
 
     return test
 
 
-@fixture(params=list(harnesses_with_property('invariant under single move')))
+@fixture(params=list(harnesses_with_property(
+    'invariant under single move')))
 def single_move_invariant(request):
     return harness_to_fixture(request.param)
 
 
-@fixture(params=list(harnesses_with_property('invariant under multiple moves')))
+@fixture(params=list(harnesses_with_property(
+    'invariant under multiple moves')))
 def multiple_move_invariant(request):
     return harness_to_fixture(request.param)
 
@@ -204,7 +192,7 @@ def output_different(instance):
 
 
 def run_instance(instance, state):
-    func_id = function_from_name(instance['function'])
+    func_id = fn.function_from_name(instance['function'])
     expected = instance['value']
     name = state.add_function(func_id)
     actual = state.function_value(name)
@@ -244,11 +232,11 @@ def single_layer_zero():
     (2, (2, 4), 4)      # both
 ])
 def test_construction_exceptions(Ni, Tshape, Ne):
-    M = PackedMatrix(np.vstack((
+    M = utils.PackedMatrix(np.vstack((
         all_possible_inputs(Ni),
         packed_zeros(Tshape))), Ne, Ni)
     with raises(ValueError):
-        BNState([(0, 1, 3)], M)
+        ns.BNState([(0, 1, 3)], M)
 
 
 # ################### Functionality Testing ################### #
@@ -363,7 +351,7 @@ def test_pre_evaluated_network(state):
 
 
 def test_from_operator_combined_attributes(state_params, sample_type):
-    state = state_from_operator(
+    state = ns.state_from_operator(
         gates=state_params['gates'],
         indices=state_params['indices'][sample_type],
         Nb=state_params['Nb'],
@@ -380,7 +368,7 @@ def test_from_operator_combined_attributes(state_params, sample_type):
 
 def test_from_operator_func_value(state_params, sample_type):
     for instance in state_params['instances'][sample_type]:
-        state = state_from_operator(
+        state = ns.state_from_operator(
             gates=state_params['gates'],
             indices=state_params['indices'][sample_type],
             Nb=state_params['Nb'], No=state_params['No'],

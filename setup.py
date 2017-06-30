@@ -21,8 +21,6 @@ if "clean" in args:
     # C
     to_remove += glob.glob('boolnet/bintools/functions.c')
     to_remove += glob.glob('boolnet/bintools/biterror.c')
-    to_remove += glob.glob('boolnet/bintools/operator_iterator.c')
-    to_remove += glob.glob('boolnet/bintools/example_generator.c')
     to_remove += glob.glob('boolnet/exptools/fastrand.c')
     # C++
     to_remove += glob.glob('boolnet/network/algorithms.cpp')
@@ -46,12 +44,6 @@ extensions = [
               include_dirs=include_dirs),
     Extension('boolnet.bintools.biterror',
               ['boolnet/bintools/biterror.pyx'],
-              include_dirs=include_dirs),
-    Extension('boolnet.bintools.operator_iterator',
-              ['boolnet/bintools/operator_iterator.pyx'],
-              include_dirs=include_dirs),
-    Extension('boolnet.bintools.example_generator',
-              ['boolnet/bintools/example_generator.pyx'],
               include_dirs=include_dirs),
     Extension('boolnet.exptools.fastrand',
               ['boolnet/exptools/fastrand.pyx'],
