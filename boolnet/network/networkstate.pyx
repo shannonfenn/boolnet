@@ -10,6 +10,7 @@ from math import ceil
 import bitpacking.packing as pk
 cimport bitpacking.packing as pk
 
+import boolnet.utils as utils
 import boolnet.bintools.functions as fn
 import boolnet.bintools.biterror as be
 import boolnet.bintools.example_generator as exgen
@@ -24,7 +25,9 @@ cpdef state_from_operator(gates, indices, Nb, No, operator, order=None, exclude=
     if order is None:
         order = np.arange(No, dtype=np.uintp)
 
-    M[-No:, :] = M[-No:, :][order, :]
+    X, Y = np.split(M, [M.Ni])
+    Y = np.array(Y[order, :])
+    utils.PackedMatrix(np.vstack((X, Y)), M.Ne, M.Ni),
 
     return BNState(gates, M)
 

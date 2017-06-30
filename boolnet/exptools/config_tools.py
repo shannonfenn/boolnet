@@ -202,6 +202,7 @@ def generated_instance(params):
         'operator': operator,
         'Nb': Nb,
         'No': params.get('out_width', Nb),  # defaults to operand width
+        'targets': params.get('targets', None)
     }
     Ni = opit.num_operands[operator] * Nb
 
@@ -257,6 +258,7 @@ def insert_default_log_keys(settings):
         ['guiding_function', True, ['learner', 'optimiser',
                                     'guiding_function']],
         ['given_tgt_order', True, ['learner', 'target_order']],
+        ['targets', False, ['data', 'targets']],
         ['sample_seed', False, ['sampling', 'seed']],
         ['fs_sel_metric', False, ['learner', 'minfs_selection_metric']],
         ['fs_prefilt', False, ['learner', 'minfs_prefilter']],

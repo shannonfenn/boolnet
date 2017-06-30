@@ -53,7 +53,7 @@ data_schema = Any(
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
         Optional('add_noise'):      Range(min=0.0),
-        # Optional('targets'):        [All(int, Range(min=0))],
+        Optional('targets'):        [All(int, Range(min=0))],
         }),
     # read from file
     Schema({

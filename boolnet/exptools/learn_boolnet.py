@@ -66,7 +66,8 @@ def build_training_set(mapping):
         operator = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
-        return gen.packed_from_operator(indices, Nb, No, operator)
+        targets = mapping['targets']
+        return gen.packed_from_operator(indices, Nb, No, operator, targets)
 
 
 def add_noise(mapping, rate):
@@ -173,13 +174,14 @@ def build_states(mapping, gates, objectives):
         op = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
-        # window_size = mapping['window_size']
-        S_trg = ns.state_from_operator(gates, trg_indices, Nb, No, op)
+        tgts = mapping['targets']
+        S_trg = ns.state_from_operator(gates, trg_indices, Nb, No, op, tgts)
         if test_indices is None:
             S_test = ns.state_from_operator(gates, trg_indices, Nb, No, op,
-                                            exclude=True)
+                                            tgts, exclude=True)
         else:
-            S_test = ns.state_from_operator(gates, test_indices, Nb, No, op)
+            S_test = ns.state_from_operator(gates, test_indices, Nb, No, op,
+                                            tgts)
 
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
