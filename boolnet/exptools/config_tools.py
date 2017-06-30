@@ -202,7 +202,6 @@ def generated_instance(params):
         'operator': operator,
         'Nb': Nb,
         'No': params.get('out_width', Nb),  # defaults to operand width
-        'window_size': params.get('window_size', 4)  # arbitrary default
     }
     Ni = op.num_operands(operator) * Nb
 

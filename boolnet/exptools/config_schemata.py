@@ -52,7 +52,6 @@ data_schema = Any(
         'operator':                 str,
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
-        Optional('window_size'):    All(int, Range(min=1)),
         Optional('add_noise'):      Range(min=0.0),
         # Optional('targets'):        [All(int, Range(min=0))],
         }),
