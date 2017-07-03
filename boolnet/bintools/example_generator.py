@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import bitpacking.packing as pk
 import boolnet.bintools.operator_iterator as opit
-from boolnet.utils import PackedMatrix
+import boolnet.utils as utils
 
 
 def grouper(iterable, n, fillvalue=None):
@@ -13,7 +13,7 @@ def grouper(iterable, n, fillvalue=None):
     return itertools.zip_longest(*args, fillvalue=fillvalue)
 
 
-def packed_from_operator(indices, Nb, No, operator, exclude=False):
+def packed_from_operator(indices, Nb, No, operator, order=None, exclude=False):
     ex_iter = opit.operator_example_iterator(operator, Nb, indices, exclude)
 
     Ni = opit.num_operands[operator] * Nb
@@ -21,11 +21,15 @@ def packed_from_operator(indices, Nb, No, operator, exclude=False):
 
     chunks = int(math.ceil(Ne / float(pk.PACKED_SIZE_PY)))
 
-    M = PackedMatrix(np.empty((Ni+No, chunks), dtype=pk.packed_type), Ne, Ni)
+    M = np.empty((Ni+No, chunks), dtype=pk.packed_type)
 
     X, Y = np.split(M, [Ni])
     pack_examples(ex_iter, X, Y)
-    return M
+
+    if order is None:
+        order = np.arange(No, dtype=np.uintp)
+    Y = np.array(Y[order, :])
+    return utils.PackedMatrix(np.vstack((X, Y)), Ne, Ni)
 
 
 def pack_examples(example_iter, X, Y):

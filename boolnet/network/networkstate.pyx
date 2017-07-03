@@ -10,26 +10,11 @@ from math import ceil
 import bitpacking.packing as pk
 cimport bitpacking.packing as pk
 
-import boolnet.utils as utils
 import boolnet.bintools.functions as fn
 import boolnet.bintools.biterror as be
-import boolnet.bintools.example_generator as exgen
 
 from boolnet.bintools.functions cimport Function
 from boolnet.network.boolnet cimport BoolNet, Move
-
-
-cpdef state_from_operator(gates, indices, Nb, No, operator, order=None, exclude=False):
-    M = exgen.packed_from_operator(indices, Nb, No, operator, exclude)
-
-    if order is None:
-        order = np.arange(No, dtype=np.uintp)
-
-    X, Y = np.split(M, [M.Ni])
-    Y = np.array(Y[order, :])
-    utils.PackedMatrix(np.vstack((X, Y)), M.Ne, M.Ni),
-
-    return BNState(gates, M)
 
 
 cdef class BNState:

@@ -171,17 +171,20 @@ def build_states(mapping, gates, objectives):
     elif mapping['type'] == 'operator':
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
+        if test_indices is None:
+            test_indices = trg_indices
+            exclude = True
+        else:
+            exclude = False
         op = mapping['operator']
         Nb = mapping['Nb']
         No = mapping['No']
         tgts = mapping['targets']
-        S_trg = ns.state_from_operator(gates, trg_indices, Nb, No, op, tgts)
-        if test_indices is None:
-            S_test = ns.state_from_operator(gates, trg_indices, Nb, No, op,
-                                            tgts, exclude=True)
-        else:
-            S_test = ns.state_from_operator(gates, test_indices, Nb, No, op,
-                                            tgts)
+        M_trg = gen.packed_from_operator(trg_indices, Nb, No, op, tgts)
+        M_test = gen.packed_from_operator(test_indices, Nb, No, op, tgts,
+                                          exclude)
+        S_trg = ns.BNState(gates, M_trg)
+        S_test = ns.BNState(gates, M_test)
 
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))

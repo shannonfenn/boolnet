@@ -10,6 +10,7 @@ import bitpacking.packing as pk
 import boolnet.utils as utils
 import boolnet.bintools.functions as fn
 import boolnet.network.networkstate as ns
+import boolnet.bintools.example_generator as gen
 
 
 TEST_NETWORKS = glob.glob('boolnet/test/networks/*.yaml')
@@ -351,13 +352,15 @@ def test_pre_evaluated_network(state):
 
 
 def test_from_operator_combined_attributes(state_params, sample_type):
-    state = ns.state_from_operator(
+    state = ns.BNState(
         gates=state_params['gates'],
-        indices=state_params['indices'][sample_type],
-        Nb=state_params['Nb'],
-        No=state_params['No'],
-        operator=state_params['operator'],
-        exclude=state_params['exclude'][sample_type]
+        problem_matrix=gen.packed_from_operator(
+            indices=state_params['indices'][sample_type],
+            Nb=state_params['Nb'],
+            No=state_params['No'],
+            operator=state_params['operator'],
+            exclude=state_params['exclude'][sample_type]
+        )
     )
 
     assert state.Ni == state_params['Ni']
@@ -368,12 +371,15 @@ def test_from_operator_combined_attributes(state_params, sample_type):
 
 def test_from_operator_func_value(state_params, sample_type):
     for instance in state_params['instances'][sample_type]:
-        state = ns.state_from_operator(
+        state = ns.BNState(
             gates=state_params['gates'],
-            indices=state_params['indices'][sample_type],
-            Nb=state_params['Nb'], No=state_params['No'],
-            operator=state_params['operator'],
-            exclude=state_params['exclude'][sample_type])
+            problem_matrix=gen.packed_from_operator(
+                indices=state_params['indices'][sample_type],
+                Nb=state_params['Nb'], No=state_params['No'],
+                operator=state_params['operator'],
+                exclude=state_params['exclude'][sample_type]
+            )
+        )
         run_instance(instance, state)
 
 

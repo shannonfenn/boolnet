@@ -81,6 +81,12 @@ class TestExampleGenerator:
             inp[expected_indices, :],
             tgt[expected_indices, :])))
 
-        actual = exgen.packed_from_operator(indices, Ni//2, No, op, exclude)
+        actual = exgen.packed_from_operator(
+            indices=indices,
+            Nb=Ni//2,
+            No=No,
+            operator=op,
+            exclude=exclude
+        )
 
         assert_array_equal(expected, actual)
