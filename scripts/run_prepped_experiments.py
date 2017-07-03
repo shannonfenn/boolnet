@@ -187,14 +187,15 @@ def main():
 
     print('{} unprocessed .exp files found.'.format(len(experiments)))
 
-    # Run the actual learning as a parallel process
-    if args.numprocs == 1:
-        run_sequential(experiments, args.batch_mode)
-    elif args.numprocs < 1:
-        run_scooped(experiments, args.batch_mode)
-    else:
+    if len(experiments) > 0:
         # Run the actual learning as a parallel process
-        run_parallel(experiments, args.numprocs, args.batch_mode)
+        if args.numprocs == 1:
+            run_sequential(experiments, args.batch_mode)
+        elif args.numprocs < 1:
+            run_scooped(experiments, args.batch_mode)
+        else:
+            # Run the actual learning as a parallel process
+            run_parallel(experiments, args.numprocs, args.batch_mode)
 
     total_time = time() - start_time
 
