@@ -153,8 +153,13 @@ def file_instance(params):
         Ni = dataset['Ni']
 
     if 'targets' in params:
+        targets = params['targets']
+        if targets == 'random':
+            # create a random permutation of size No
+            No = Mp.shape[0] - Ni
+            targets = np.random.permutation(No)
         Tp = Mp[Ni:, :]
-        Tp = Tp[params['targets'], :]
+        Tp = Tp[targets, :]
         Mp = np.vstack((Mp[:Ni, :], Tp))
 
     instance = {
@@ -177,11 +182,16 @@ def split_instance(params):
         assert test['Ni'] == Ni
 
         if 'targets' in params:
+            targets = params['targets']
+            if targets == 'random':
+                # create a random permutation of size No
+                No = Mp_trg.shape[0] - Ni
+                targets = np.random.permutation(No)
             Tp_trg = Mp_trg[Ni:, :]
-            Tp_trg = Tp_trg[params['targets'], :]
+            Tp_trg = Tp_trg[targets, :]
             Mp_trg = np.vstack((Mp_trg[:Ni, :], Tp_trg))
             Tp_test = Mp_test[Ni:, :]
-            Tp_test = Tp_test[params['targets'], :]
+            Tp_test = Tp_test[targets, :]
             Mp_test = np.vstack((Mp_test[:Ni, :], Tp_test))
 
         instance = {
@@ -197,12 +207,18 @@ def generated_instance(params):
     Nb = params['bits']
     operator = params['operator']
 
+    No = params.get('out_width', Nb)  # defaults to operand width
+    targets = params.get('targets', None)
+    if targets == 'random':
+        # create a random permutation of size No
+        targets = np.random.permutation(No)
+
     instance = {
         'type': 'operator',
         'operator': operator,
         'Nb': Nb,
-        'No': params.get('out_width', Nb),  # defaults to operand width
-        'targets': params.get('targets', None)
+        'No': No,
+        'targets': targets
     }
     Ni = opit.num_operands[operator] * Nb
 

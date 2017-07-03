@@ -36,7 +36,7 @@ def permutation(l):
 
 @truth('log keys must be [<key>, <T/F>, [<path>]')
 def valid_log_key(v):
-    return (len(v) == 3 and isinstance(v[0], str) and 
+    return (len(v) == 3 and isinstance(v[0], str) and
             isinstance(v[1], bool) and isinstance(v[2], list))
 
 
@@ -44,6 +44,8 @@ guiding_functions = fn.scalar_function_names()
 
 
 seed_schema = Any(None, str, All(int, Range(min=0)))
+
+target_subset_schema = Any('random', [All(int, Range(min=0))])
 
 data_schema = Any(
     # generated from operator
@@ -53,7 +55,7 @@ data_schema = Any(
         'bits':                     All(int, Range(min=1)),
         Optional('out_width'):      All(int, Range(min=1)),
         Optional('add_noise'):      Range(min=0.0),
-        Optional('targets'):        [All(int, Range(min=0))],
+        Optional('targets'):        target_subset_schema,
         }),
     # read from file
     Schema({
@@ -61,7 +63,7 @@ data_schema = Any(
         'filename':             str,
         Optional('dir'):        IsDir(),
         Optional('add_noise'):  Range(min=0.0),
-        Optional('targets'):    [All(int, Range(min=0))],
+        Optional('targets'):    target_subset_schema,
         }),
     # pre-split, read from file
     Schema({
@@ -70,7 +72,7 @@ data_schema = Any(
         'test_filename':        str,
         Optional('dir'):        IsDir(),
         Optional('add_noise'):  Range(min=0.0),
-        Optional('targets'):    [All(int, Range(min=0))],
+        Optional('targets'):    target_subset_schema,
         })
     )
 
