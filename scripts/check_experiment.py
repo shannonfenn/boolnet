@@ -25,7 +25,7 @@ def get_remaining_experiments(directory):
 
 
 def get_non_memorised_experiments(directory):
-    pattern = re.compile('trg_error": 0\.0(,|\})')
+    pattern = re.compile('trg_err": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
     failed = []
     for fname in json_iter:
@@ -37,7 +37,7 @@ def get_non_memorised_experiments(directory):
 
 
 def get_memorised_experiments(directory):
-    pattern = re.compile('trg_error": 0\.0(,|\})')
+    pattern = re.compile('trg_err": 0\.0(,|\})')
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
     memorised = []
     for fname in json_iter:
@@ -49,7 +49,7 @@ def get_memorised_experiments(directory):
 
 
 def summary(directory):
-    pattern = re.compile('trg_error": 0\.0(,|\})')
+    pattern = re.compile('trg_err": 0\.0(,|\})')
     exp_iter = glob.iglob('{}/working/*.exp'.format(directory))
     json_iter = glob.iglob('{}/working/*.json'.format(directory))
     all_exp = set(splitext(f)[0] for f in exp_iter)
