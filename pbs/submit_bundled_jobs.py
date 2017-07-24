@@ -1,13 +1,15 @@
 import argparse
-import glob
 import re
 import os.path
 import subprocess as sp
 
 
 def walltime_arg_type(s):
-    if re.fullmatch('[0-9]?[0-9]:[0-9][0-9]:[0-9][0-9]|[0-9]+', s):
+    if re.fullmatch('[0-9]*[0-9]:[0-9][0-9]:[0-9][0-9]|[0-9]+', s):
         return s
+    else:
+        msg = 'Invalid walltime: {}'.format(s)
+        raise argparse.ArgumentTypeError(msg)
 
 
 def parse_args():
