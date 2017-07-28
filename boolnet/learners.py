@@ -56,7 +56,11 @@ def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
         else:
             F_in = []
             for t in targets:
-                prev_fs = set(fs_table[strata - 1][t])
+                prev_fs = fs_table[strata - 1][t]
+                if prev_fs is None:
+                    prev_fs = set()
+                else:
+                    prev_fs = set(prev_fs)
                 f = prev_fs.union(prev_strata_range)
                 f = sorted(f)
                 F_in.append(f)
@@ -70,7 +74,11 @@ def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
         else:
             F_in = []
             for t in targets:
-                prev_fs = set(fs_table[strata - 1][t])
+                prev_fs = fs_table[strata - 1][t]
+                if prev_fs is None:
+                    prev_fs = set()
+                else:
+                    prev_fs = set(prev_fs)
                 f = prev_fs.union(input_range, prev_strata_range)
                 f = sorted(f)
                 F_in.append(f)
