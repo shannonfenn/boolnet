@@ -29,7 +29,7 @@ cdef class PerOutputMean(Evaluator):
     cpdef double[:] evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)
 
 
-cdef class MeanMCC(Evaluator):
+cdef class MacroMCC(Evaluator):
     cdef PerOutputMCC per_output_evaluator
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T)

@@ -15,7 +15,7 @@ tests:
   # - {order: 'lsb', function: 'e7', value: }
   # - {order: 'msb', function: 'e7', value: }
   # - {order: 'lsb', function: 'correctness', value: }
-  # - {order: 'lsb', function: 'e1_mcc', value: }
+  # - {order: 'lsb', function: 'macro_mcc', value: }
   # - {order: 'lsb', function: 'e2_mcc', value: }
   # - {order: 'msb', function: 'e2_mcc', value: }
   # - {order: 'lsb', function: 'e6_mcc', value: }

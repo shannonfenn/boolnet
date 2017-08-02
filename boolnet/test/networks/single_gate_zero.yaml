@@ -38,7 +38,7 @@ instances:
          - {function: e5, value: 1.0}
          - {function: e6, value: 1.0}
          - {function: correctness, value: 0.0}
-         - {function: e1_mcc, value: -1.0}
+         - {function: macro_mcc, value: -1.0}
          - {function: per_output_error, value: [1.0]}
          - {function: per_output_mcc, value: [-1.0]}
     test:
@@ -50,7 +50,7 @@ instances:
          - {function: e5, value: 1.0}
          - {function: e6, value: 0.5}
          - {function: correctness, value: 0.5}
-         - {function: e1_mcc, value: 0.0}
+         - {function: macro_mcc, value: 0.0}
          - {function: per_output_error, value: [0.5]}
          - {function: per_output_mcc, value: [0.0]}
     full:
@@ -62,6 +62,6 @@ instances:
          - {function: e5, value: 1.0}
          - {function: e6, value: 0.75}
          - {function: correctness, value: 0.25}
-         - {function: e1_mcc, value: -0.5}
+         - {function: macro_mcc, value: -0.5}
          - {function: per_output_error, value: [0.75]}
          - {function: per_output_mcc, value: [-0.5]}

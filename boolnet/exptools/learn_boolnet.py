@@ -211,7 +211,7 @@ def build_result_map(parameters, learner_result):
     objective_functions = [
         (guiding_function, 'guiding', guiding_function_params),
         (fn.E1, 'e1', {}),
-        (fn.E1_MCC, 'e1_mcc', {}),
+        (fn.MACRO_MCC, 'macro_mcc', {}),
         (fn.CORRECTNESS, 'correctness', {}),
         (fn.PER_OUTPUT_ERROR, 'per_output_error', {}),
         (fn.PER_OUTPUT_MCC, 'per_output_mcc', {})]
@@ -246,11 +246,11 @@ def build_result_map(parameters, learner_result):
         'Ng':           final_network.Ng,
         'trg_err':    train_state.function_value('e1'),
         'trg_cor':      train_state.function_value('correctness'),
-        'trg_mcc':      train_state.function_value('e1_mcc'),
+        'trg_mcc':      train_state.function_value('macro_mcc'),
         'trg_err_gf':   train_state.function_value('guiding'),
         'test_err':   test_state.function_value('e1'),
         'test_cor':     test_state.function_value('correctness'),
-        'test_mcc':     test_state.function_value('e1_mcc'),
+        'test_mcc':     test_state.function_value('macro_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
         'tgt_order':    np.array(learner_result.target_order, dtype=np.uintp),

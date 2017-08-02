@@ -18,7 +18,7 @@ EVALUATORS = {
     fn.E5: E5,
     fn.E6: E6,
     fn.E7: E7,
-    fn.E1_MCC: MeanMCC,
+    fn.MACRO_MCC: MacroMCC,
     fn.E2_MCC: E2MCC,
     fn.E6_MCC: E6MCC,
     fn.E6_THRESHOLDED: E6Thresholded,
@@ -118,7 +118,7 @@ cdef class PerOutputMean(Evaluator):
         return self.accumulator
 
 
-cdef class MeanMCC(Evaluator):
+cdef class MacroMCC(Evaluator):
     def __init__(self, size_t Ne, size_t No):
         super().__init__(Ne, No)
         self.per_output_evaluator = PerOutputMCC(Ne, No)
