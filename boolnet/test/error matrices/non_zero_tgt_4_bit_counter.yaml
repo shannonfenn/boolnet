@@ -1,0 +1,28 @@
+Ne: 16
+name: non_zero_tgt_4_bit_counter
+tests:
+- {function: e1, order: lsb, value: 0.5}
+- {function: e2, order: lsb, value: 0.5}
+- {function: e2, order: msb, value: 0.5}
+- {function: e3, order: lsb, value: 0.765625}
+- {function: e3, order: msb, value: 0.765625}
+- {function: e4, order: lsb, value: 0.9375}
+- {function: e4, order: msb, value: 0.765625}
+- {function: e5, order: lsb, value: 0.984375}
+- {function: e5, order: msb, value: 0.875}
+- {function: e6, order: lsb, value: 0.875}
+- {function: e6, order: msb, value: 0.875}
+- {function: e7, order: lsb, value: 1.0}
+- {function: e7, order: msb, value: 1.0}
+- {function: correctness, order: lsb, value: 0.0625}
+- {function: macro_mcc, order: lsb, value: -0.0332995456567}
+# - {function: e2_mcc, order: lsb, value: 0.0}
+# - {function: e2_mcc, order: msb, value: 0.0}
+# - {function: e6_mcc, order: lsb, value: -0.75}
+# - {function: e6_mcc, order: msb, value: -0.75}
+- function: per_output_error
+  order: lsb
+  value: [0.5, 0.5, 0.5, 0.5]
+- function: per_output_mcc
+  order: lsb
+  value: [0.0, 0.015873015873015872, 0.0, -0.14907119849998599]

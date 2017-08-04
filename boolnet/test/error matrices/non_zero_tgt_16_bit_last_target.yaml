@@ -1,0 +1,8 @@
+Ne: 75
+name: non_zero_tgt_16_bit_last_target
+tests:
+  - {function: e1, order: lsb, value: 0.016666666666666666}
+  - {function: e6, order: lsb, value: 0.016666666666666666}
+  - {function: e6, order: msb, value: 0.9541666666666667}
+  - {order: lsb, function: 'macro_mcc', value: 0.966678612679}
+  - {order: 'lsb', function: 'per_output_mcc', value: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.46685780285627343]}
