@@ -190,7 +190,7 @@ target_order_schema = Any('auto', 'msb', 'lsb',
 learner_schema = Schema(
     All(
         Schema({
-            'name':         Any('monolithic', 'stratified', 'split'),
+            'name':         Any('monolithic', 'stratified', 'split', 'stratmultipar'),
             'network':      network_schema,
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
@@ -199,7 +199,7 @@ learner_schema = Schema(
             Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
             Optional('minfs_solver_params'):    minfs_params_schema,
             Optional('minfs_selection_metric'): fs_selection_metric_schema,
-            Optional('minfs_tie_handling'):     'random',
+            Optional('minfs_tie_handling'):     Any('random', 'all'),
             Optional('minfs_prefilter'):        fs_prefilter_schema,
             Optional('shrink_subnets'):            bool,
             Optional('reuse_gates'):            bool,
