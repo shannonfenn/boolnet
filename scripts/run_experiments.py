@@ -9,23 +9,21 @@ from boolnet.exptools.learn_boolnet import learn_bool_net
 
 
 def run_multiple_experiments(explistfile, verbose):
-    with open(explistfile) as f:
-        for line in f:
-            run_single_experiment(line.strip(), verbose)
+    resultfile = explistfile + '.json'
+    with open(explistfile) as tasks, open(resultfile, 'w') as ostream:
+        for i, line in enumerate(tasks):
+            result = run_single_experiment(line.strip(), verbose)
+            ostream.write('[' if i == 0 else '\n,')
+            json.dump(result, ostream, cls=NumpyAwareJSONEncoder)
+        ostream.write(']\n')
 
 
 def run_single_experiment(expfile, verbose):
-    resultfile = splitext(expfile)[0] + '.json'
-
     # task = pickle.load(open(expfile, 'rb'))
     task = pickle.load(gzip.open(expfile, 'rb'))
-
     result = learn_bool_net(task, verbose)
-
     result['id'] = task['id']
-
-    with open(resultfile, 'w') as stream:
-        json.dump(result, stream, cls=NumpyAwareJSONEncoder)
+    return result
 
 
 def main():
@@ -38,7 +36,10 @@ def main():
     if args.experiment.endswith('.explist'):
         run_multiple_experiments(args.experiment, args.verbose)
     elif args.experiment.endswith('.exp'):
-        run_single_experiment(args.experiment, args.verbose)
+        result = run_single_experiment(args.experiment, args.verbose)
+        resultfile = args.experiment + '.json'
+        with open(resultfile, 'w') as ostream:
+            json.dump(result, ostream, cls=NumpyAwareJSONEncoder)
     else:
         parser.error('[experiment] must be .exp or .explist')
 

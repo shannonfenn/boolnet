@@ -123,7 +123,7 @@ def run_tasks(task_iterator, stream, num_tasks):
         bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(task_iterator):
-        stream.write('[' if i == 0 else ',')
+        stream.write('[' if i == 0 else '\n,')
         json.dump(result, stream, cls=NumpyAwareJSONEncoder)
         if num_tasks:
             bar.next()
