@@ -67,8 +67,9 @@ def dump_tasks(tasks, working_dir, batch_mode):
         bar = BetterETABar('Dumping tasks', max=len(tasks))
         bar.update()
     try:
-        for i, task in enumerate(tasks):
-            fname = '{}/working/{}.exp'.format(working_dir, i)
+        for eid, task in enumerate(tasks):
+            task['eid'] = eid
+            fname = '{}/working/{}.exp'.format(working_dir, eid)
             # with open(fname, 'wb') as f:
             with gzip.open(fname, 'wb') as f:
                 pickle.dump(task, f, pickle.HIGHEST_PROTOCOL)
