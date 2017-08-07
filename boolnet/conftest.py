@@ -40,15 +40,16 @@ def error_matrix_harness(request):
         with open(request.param) as f:
             test = yaml.safe_load(f)
         folder = os.path.dirname(request.param)
-        Ep = np.load(os.path.join(folder, test['name'] + '.npy'))
-        ERROR_MATRIX_CACHE[fname] = (test, Ep)
+        Ep = np.load(os.path.join(folder, test['name'] + '_E.npy'))
+        Tp = np.load(os.path.join(folder, test['name'] + '_T.npy'))
+        ERROR_MATRIX_CACHE[fname] = (test, Ep, Tp)
     # make copy of cached instance
-    test, Ep = ERROR_MATRIX_CACHE[fname]
+    test, Ep, Tp = ERROR_MATRIX_CACHE[fname]
     test = copy(test)
-    Ep = np.array(Ep, copy=True)
-    E = unpackmat(Ep, test['Ne'])
-    test['packed error matrix'] = Ep
-    test['unpacked error matrix'] = E
+    test['packed error matrix'] = np.array(Ep, copy=True)
+    test['packed target matrix'] = np.array(Tp, copy=True)
+    test['unpacked error matrix'] = unpackmat(Ep, test['Ne'])
+    test['unpacked target matrix'] = unpackmat(Tp, test['Ne'])
     # No = Ep.shape[0]
     # test['mask'] = np.array(test.get('mask', [1]*No), dtype=np.uint8)
     return test

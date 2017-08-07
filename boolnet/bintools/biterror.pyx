@@ -18,7 +18,7 @@ EVALUATORS = {
     fn.E5: E5,
     fn.E6: E6,
     fn.E7: E7,
-    fn.E1_MCC: MeanMCC,
+    fn.MACRO_MCC: MacroMCC,
     fn.E2_MCC: E2MCC,
     fn.E6_MCC: E6MCC,
     fn.E6_THRESHOLDED: E6Thresholded,
@@ -47,26 +47,29 @@ cdef confusion(packed_type_t[:] errors, packed_type_t[:] target, size_t Ne,
 
 
 cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN):
-    cdef size_t actual_positives, actual_negatives, normaliser
-    cdef double d
+    cdef double actual_positives, actual_negatives,
+    cdef double predicted_positives, predicted_negatives
+    cdef double numerator, denominator
 
-    actual_positives = (TP + FN)
-    actual_negatives = (TN + FP)
-    normaliser = actual_positives * actual_negatives * (TP + FP) * (TN + FN)
+    actual_positives = TP + FN
+    actual_negatives = TN + FP
+    predicted_positives = TP + FP
+    predicted_negatives = TN + FN
+
     if actual_positives == 0:
         # only one given class give accuracy in [-1, 1]
-        return TN / <double>actual_negatives * 2 - 1
+        return TN / actual_negatives * 2 - 1
     elif actual_negatives == 0:
         # only one given class give accuracy in [-1, 1]
-        return TP / <double>actual_positives * 2 - 1
-    elif normaliser == 0:
+        return TP / actual_positives * 2 - 1
+    elif predicted_positives == 0 or predicted_negatives == 0:
         # normal limitting case when two classes present but only one predicted
         return 0
     else:
-        # MCC = (TP * TN - FP * FN) / sqrt(normaliser)
-        # below method has slight numerical inaccuracy but reduces overflow risk
-        d = sqrt(sqrt(normaliser))
-        return TP/d * TN/d - FP/d * FN/d
+        # below method reduces overflow risk
+        numerator = <double>TP * <double>TN - <double>FP * <double>FN
+        denominator = sqrt(actual_positives * actual_negatives * predicted_positives * predicted_negatives)
+        return numerator / denominator
 
 
 cdef class Evaluator:
@@ -118,7 +121,7 @@ cdef class PerOutputMean(Evaluator):
         return self.accumulator
 
 
-cdef class MeanMCC(Evaluator):
+cdef class MacroMCC(Evaluator):
     def __init__(self, size_t Ne, size_t No):
         super().__init__(Ne, No)
         self.per_output_evaluator = PerOutputMCC(Ne, No)

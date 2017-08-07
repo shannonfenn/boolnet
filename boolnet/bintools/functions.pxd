@@ -9,7 +9,7 @@ cpdef enum Function:
     E5,
     E6,
     E7,
-    E1_MCC,
+    MACRO_MCC,
     E2_MCC,
     E6_MCC,
     E6_THRESHOLDED,

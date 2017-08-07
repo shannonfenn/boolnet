@@ -84,7 +84,7 @@ instances:
      - {function: e5, value: 1.0}
      - {function: e6, value: 0.625}
      - {function: correctness, value: 0.0}
-     - {function: e1_mcc, value: -0.25}
+     - {function: macro_mcc, value: -0.25}
      - {function: per_output_error, value: [0.25, 1.0]}
      - {function: per_output_mcc, value: [0.5, -1.0]}
   test:
@@ -96,7 +96,7 @@ instances:
      - {function: e5, value: 1.0}
      - {function: e6, value: 0.96875}
      - {function: correctness, value: 0.0}
-     - {function: e1_mcc, value: -0.16666667000000002}
+     - {function: macro_mcc, value: -0.16666667000000002}
      - {function: per_output_error, value: [0.91666667, 0.25]}
      - {function: per_output_mcc, value: [-0.83333334, 0.5]}
   full:
@@ -108,7 +108,7 @@ instances:
      - {function: e5, value: 1.0}
      - {function: e6, value: 0.875}
      - {function: correctness, value: 0.0}
-     - {function: e1_mcc, value: -0.1875}
+     - {function: macro_mcc, value: -0.1875}
      - {function: per_output_error, value: [0.75, 0.4375]}
      - {function: per_output_mcc, value: [-0.5, 0.125]}
 

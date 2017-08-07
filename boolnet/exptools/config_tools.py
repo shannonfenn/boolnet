@@ -158,6 +158,8 @@ def file_instance(params):
             # create a random permutation of size No
             No = Mp.shape[0] - Ni
             targets = np.random.permutation(No)
+            # store for results
+            params['targets'] = targets
         Tp = Mp[Ni:, :]
         Tp = Tp[targets, :]
         Mp = np.vstack((Mp[:Ni, :], Tp))
@@ -187,6 +189,7 @@ def split_instance(params):
                 # create a random permutation of size No
                 No = Mp_trg.shape[0] - Ni
                 targets = np.random.permutation(No)
+                params['targets'] = targets
             Tp_trg = Mp_trg[Ni:, :]
             Tp_trg = Tp_trg[targets, :]
             Mp_trg = np.vstack((Mp_trg[:Ni, :], Tp_trg))
@@ -212,6 +215,7 @@ def generated_instance(params):
     if targets == 'random':
         # create a random permutation of size No
         targets = np.random.permutation(No)
+        params['targets'] = targets
 
     instance = {
         'type': 'operator',

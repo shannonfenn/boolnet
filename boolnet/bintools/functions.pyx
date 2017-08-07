@@ -7,7 +7,7 @@ def all_functions():
 
 def scalar_functions():
     return [E1, E2, E3, E4, E5, E6, E7,
-            CORRECTNESS, E1_MCC, E2_MCC, E6_MCC,
+            CORRECTNESS, MACRO_MCC, E2_MCC, E6_MCC,
             E6_THRESHOLDED, E3_GENERAL, E6_GENERAL]
 
 
@@ -36,7 +36,7 @@ def function_from_name(name):
     elif name == 'e6':                  return E6
     elif name == 'e7':                  return E7
     elif name == 'correctness':         return CORRECTNESS
-    elif name == 'e1_mcc':              return E1_MCC
+    elif name == 'macro_mcc':           return MACRO_MCC
     elif name == 'e2_mcc':              return E2_MCC
     elif name == 'e6_mcc':              return E6_MCC
     elif name == 'e6_thresholded':      return E6_THRESHOLDED
@@ -56,7 +56,7 @@ def function_name(function_id):
     elif function_id == E6:                 return 'e6'
     elif function_id == E7:                 return 'e7'
     elif function_id == CORRECTNESS:        return 'correctness'
-    elif function_id == E1_MCC:             return 'e1_mcc'
+    elif function_id == MACRO_MCC:          return 'macro_mcc'
     elif function_id == E2_MCC:             return 'e2_mcc'
     elif function_id == E6_MCC:             return 'e6_mcc'
     elif function_id == E6_THRESHOLDED:     return 'e6_thresholded'
@@ -71,7 +71,7 @@ def is_minimiser(function_id):
     if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR,
                        E6_THRESHOLDED, E3_GENERAL, E6_GENERAL]:
         return True
-    elif function_id in [CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
+    elif function_id in [CORRECTNESS, MACRO_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return False
     else:
         raise ValueError('No function id \'{}\''.format(function_id))
@@ -81,7 +81,7 @@ def optimum(function_id):
     if function_id in [E1, E2, E3, E4, E5, E6, E7, PER_OUTPUT_ERROR,
                        E6_THRESHOLDED, E3_GENERAL, E6_GENERAL]:
         return 0.0
-    elif function_id in [CORRECTNESS, E1_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
+    elif function_id in [CORRECTNESS, MACRO_MCC, E2_MCC, E6_MCC, PER_OUTPUT_MCC]:
         return 1.0
     else:
         raise ValueError('No function id \'{}\''.format(function_id))

@@ -90,7 +90,7 @@ instances:
          - {function: e5, value: 0.0}
          - {function: e6, value: 0.0}
          - {function: correctness, value: 1.0}
-         - {function: e1_mcc, value: 1.0}
+         - {function: macro_mcc, value: 1.0}
          - {function: per_output_error, value: [0.0, 0.0, 0.0]}
          - {function: per_output_mcc, value: [1.0, 1.0, 1.0]}
     full:
@@ -102,7 +102,7 @@ instances:
          - {function: e5, value: 0.0}
          - {function: e6, value: 0.0}
          - {function: correctness, value: 1.0}
-         - {function: e1_mcc, value: 1.0}
+         - {function: macro_mcc, value: 1.0}
          - {function: per_output_error, value: [0.0, 0.0, 0.0]}
          - {function: per_output_mcc, value: [1.0, 1.0, 1.0]}
 
