@@ -254,7 +254,7 @@ def build_result_map(parameters, learner_result):
         'test_mcc':     test_state.function_value('macro_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
         'Ne':           train_state.Ne,
-        'tgt_order':    list(learner_result.target_order),
+        'tgt_order':    learner_result.target_order,
         }
     results.update(learner_result.extra)
 

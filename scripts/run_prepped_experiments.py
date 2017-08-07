@@ -163,6 +163,7 @@ def run_single_experiment(expfile):
     task = pickle.load(gzip.open(expfile, 'rb'))
 
     result = learn_bool_net(task)
+    result['id'] = task['id']
 
     with open(resultfile, 'w') as stream:
         json.dump(result, stream, cls=NumpyAwareJSONEncoder)

@@ -22,6 +22,8 @@ def run_single_experiment(expfile, verbose):
 
     result = learn_bool_net(task, verbose)
 
+    result['id'] = task['id']
+
     with open(resultfile, 'w') as stream:
         json.dump(result, stream, cls=NumpyAwareJSONEncoder)
 
