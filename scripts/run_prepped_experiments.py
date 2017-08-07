@@ -13,7 +13,8 @@ import glob
 import pickle
 import json
 import gzip
-from os.path import join, isfile, isdir, expanduser, normpath, splitext
+import itertools
+from os.path import join, isfile, isdir, expanduser, normpath, splitext, exists
 
 from boolnet.utils import BetterETABar
 from boolnet.exptools.learn_boolnet import learn_bool_net
@@ -114,59 +115,36 @@ def scoop_worker_wrapper(*args, **kwargs):
         raise
 
 
-def run_scooped(expfiles, batch_mode):
-    import scoop
-    ''' runs the given configurations '''
-    if not batch_mode:
-        bar = BetterETABar('Scooped', max=len(expfiles))
-        bar.update()
-    # uses unordered map to ensure results are dumped as soon as available
-    for _ in scoop.futures.map_as_completed(scoop_worker_wrapper, expfiles):
-        if not batch_mode:
-            bar.next()
-    if not batch_mode:
-        bar.finish()
-
-
-def run_sequential(expfiles, batch_mode):
-    ''' runs the given configurations '''
-    if not batch_mode:
-        bar = BetterETABar('Sequential', max=len(expfiles))
+def run_tasks(task_iterator, stream, num_tasks):
+    ''' Runs the given tasks and dumps to a single json file.
+        Use num_tasks=0 for batch mode'''
+    if num_tasks:
+        bar = BetterETABar('Progress', max=num_tasks)
         bar.update()
     # map gives an iterator so results are dumped as soon as available
-    for _ in map(run_single_experiment, expfiles):
-        if not batch_mode:
+    for i, result in enumerate(task_iterator):
+        stream.write('[' if i == 0 else ',')
+        json.dump(result, stream, cls=NumpyAwareJSONEncoder)
+        if num_tasks:
             bar.next()
-    if not batch_mode:
+    stream.write(']\n')
+    if num_tasks:
         bar.finish()
-
-
-def run_parallel(expfiles, num_processes, batch_mode):
-    ''' runs the given configurations '''
-    with Pool(processes=num_processes) as pool:
-        if not batch_mode:
-            barname = 'Parallelised ({})'.format(num_processes)
-            bar = BetterETABar(barname, max=len(expfiles))
-            bar.update()
-        # uses unordered map to ensure results are dumped as soon as available
-        for _ in pool.imap_unordered(run_single_experiment, expfiles):
-            if not batch_mode:
-                bar.next()
-        if not batch_mode:
-            bar.finish()
 
 
 def run_single_experiment(expfile):
-    resultfile = splitext(expfile)[0] + '.json'
-
     # task = pickle.load(open(expfile, 'rb'))
     task = pickle.load(gzip.open(expfile, 'rb'))
-
     result = learn_bool_net(task)
     result['id'] = task['id']
+    return result
 
-    with open(resultfile, 'w') as stream:
-        json.dump(result, stream, cls=NumpyAwareJSONEncoder)
+
+def consecutive_filename(base, file_fmt_str):
+    # find first path matching 'base/*i*' which doesn't exist
+    fmt_str = join(expanduser(base), file_fmt_str)
+    return next(fmt_str.format(i) for i in itertools.count()
+                if not exists(fmt_str.format(i)))
 
 
 # ############################## MAIN ####################################### #
@@ -179,24 +157,41 @@ def main():
 
     if args.list:
         with open(args.list, 'r') as f:
-            experiments = [join(args.dir, l.strip()) for l in f]
+            tasks = [join(args.dir, l.strip()) for l in f]
     elif args.range:
-        experiments = [join(args.dir, 'working', '{}.exp'.format(i))
-                       for i in range(args.range[0], args.range[1] + 1)]
+        tasks = [join(args.dir, 'working', '{}.exp'.format(i))
+                 for i in range(args.range[0], args.range[1] + 1)]
     else:
-        experiments = get_remaining_experiments(args.dir)
+        tasks = get_remaining_experiments(args.dir)
 
-    print('{} unprocessed .exp files found.'.format(len(experiments)))
+    resultfile = consecutive_filename(join(args.dir, 'working'),
+                                      'results{}.json')
 
-    if len(experiments) > 0:
-        # Run the actual learning as a parallel process
-        if args.numprocs == 1:
-            run_sequential(experiments, args.batch_mode)
-        elif args.numprocs < 1:
-            run_scooped(experiments, args.batch_mode)
-        else:
-            # Run the actual learning as a parallel process
-            run_parallel(experiments, args.numprocs, args.batch_mode)
+    print('{} unprocessed .exp files found.'.format(len(tasks)))
+    print('Results in: {}.'.format(resultfile))
+
+    if len(tasks) > 0:
+        with open(resultfile, 'w') as resultstream:
+            if args.numprocs < 1:
+                print('Dispatching with SCOOP.')
+                import scoop
+                task_iterator = scoop.futures.map_as_completed(
+                    scoop_worker_wrapper, tasks)
+                run_tasks(task_iterator, resultstream,
+                          0 if args.batch_mode else len(tasks))
+            elif args.numprocs == 1:
+                print('Dispatching with map.')
+                task_iterator = map(run_single_experiment, tasks)
+                run_tasks(task_iterator, resultstream,
+                          0 if args.batch_mode else len(tasks))
+            else:
+                print('Dispatching with multiprocessing.')
+                # Run the actual learning as a parallel process
+                with Pool(processes=args.numprocs) as pool:
+                    task_iterator = pool.imap_unordered(
+                        run_single_experiment, tasks)
+                    run_tasks(task_iterator, resultstream,
+                              0 if args.batch_mode else len(tasks))
 
     total_time = time() - start_time
 
