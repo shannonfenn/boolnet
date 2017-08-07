@@ -15,20 +15,21 @@ def directory_type(directory):
 
 
 def get_remaining_experiments(directory):
-    exp_iter = glob.iglob('{}/working/*.exp'.format(directory))
-    json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    all_exp = glob.glob('{}/working/*.exp'.format(directory))
+    all_json = glob.glob('{}/working/*.json'.format(directory))
 
-    all_exp = set(splitext(f)[0] for f in exp_iter)
-    all_json = set(splitext(f)[0] for f in json_iter)
-    remaining = natsorted(f + '.exp' for f in all_exp - all_json)
+    all_json = set(f[:-5] for f in all_json)
+
+    remaining = natsorted(f for f in all_exp if f[:-4] in all_json)
+
     print('\n'.join(remaining))
 
 
 def get_non_memorised_experiments(directory):
     pattern = re.compile('trg_err": 0\.0(,|\})')
-    json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    all_json = glob.glob('{}/working/*.json'.format(directory))
     failed = []
-    for fname in json_iter:
+    for fname in all_json:
         with open(fname, 'r') as f:
             if pattern.search(f.read()) is None:
                 failed.append(splitext(fname)[0] + '.exp')
@@ -38,9 +39,9 @@ def get_non_memorised_experiments(directory):
 
 def get_memorised_experiments(directory):
     pattern = re.compile('trg_err": 0\.0(,|\})')
-    json_iter = glob.iglob('{}/working/*.json'.format(directory))
+    all_json = glob.glob('{}/working/*.json'.format(directory))
     memorised = []
-    for fname in json_iter:
+    for fname in all_json:
         with open(fname, 'r') as f:
             if pattern.search(f.read()) is not None:
                 memorised.append(splitext(fname)[0] + '.exp')
@@ -50,20 +51,16 @@ def get_memorised_experiments(directory):
 
 def summary(directory):
     pattern = re.compile('trg_err": 0\.0(,|\})')
-    exp_iter = glob.iglob('{}/working/*.exp'.format(directory))
-    json_iter = glob.iglob('{}/working/*.json'.format(directory))
-    all_exp = set(splitext(f)[0] for f in exp_iter)
-    all_json = set(splitext(f)[0] for f in json_iter)
-    num_remaining = len(all_exp - all_json)
-    num_failed = num_succeeded = 0
+    all_exp = glob.glob('{}/working/*.exp'.format(directory))
+    all_json = glob.glob('{}/working/*.json'.format(directory))
+    num_remaining = len(all_exp) - len(all_json)
+    num_failed = 0
     for fname in all_json:
         with open(fname + '.json', 'r') as f:
             if pattern.search(f.read()) is None:
                 num_failed += 1
-            else:
-                num_succeeded += 1
     print('remaining: {} memorised: {} not-memorised: {}'.format(
-        num_remaining, num_succeeded, num_failed))
+        num_remaining, len(all_json) - num_failed, num_failed))
 
 
 def main():
