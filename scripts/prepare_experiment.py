@@ -67,14 +67,16 @@ def dump_tasks(tasks, working_dir, batch_mode):
         bar = BetterETABar('Dumping tasks', max=len(tasks))
         bar.update()
     try:
-        for task_id, task in enumerate(tasks):
-            task['id'] = task_id
-            fname = '{}/working/{}.exp'.format(working_dir, task_id)
-            # with open(fname, 'wb') as f:
-            with gzip.open(fname, 'wb') as f:
-                pickle.dump(task, f, pickle.HIGHEST_PROTOCOL)
-            if not batch_mode:
-                bar.next()
+        with open('{}/working/all.explist'.format(working_dir), 'w') as f_all:
+            for task_id, task in enumerate(tasks):
+                task['id'] = task_id
+                fname = '{}/working/{}.exp'.format(working_dir, task_id)
+                f_all.write(fname + '\n')
+                # with open(fname, 'wb') as f:
+                with gzip.open(fname, 'wb') as f:
+                    pickle.dump(task, f, pickle.HIGHEST_PROTOCOL)
+                if not batch_mode:
+                    bar.next()
     finally:
         # clean up progress bar before printing anything else
         if not batch_mode:
