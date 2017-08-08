@@ -7,10 +7,9 @@ from natsort import natsorted
 def get_non_memorised_experiments(all_files, pattern):
     failed = []
     for fname in all_files:
-        fname = fname.strip()
         with open(splitext(fname)[0] + '.json', 'r') as f:
             if pattern.search(f.read()) is None:
-                failed.append(fname)
+                failed.append(fname.strip())
     failed = natsorted(failed)
     print('\n'.join(failed))
 
@@ -18,10 +17,9 @@ def get_non_memorised_experiments(all_files, pattern):
 def get_memorised_experiments(all_files, pattern):
     memorised = []
     for fname in all_files:
-        fname = fname.strip()
         with open(splitext(fname)[0] + '.json', 'r') as f:
             if pattern.search(f.read()) is not None:
-                memorised.append(fname)
+                memorised.append(fname.strip())
     memorised = natsorted(memorised)
     print('\n'.join(memorised))
 
