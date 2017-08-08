@@ -20,7 +20,7 @@ def get_remaining_experiments(directory):
 
     all_json = set(f[:-5] for f in all_json)
 
-    remaining = natsorted(f for f in all_exp if f[:-4] in all_json)
+    remaining = natsorted(f for f in all_exp if f[:-4] not in all_json)
 
     print('\n'.join(remaining))
 
