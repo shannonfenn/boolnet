@@ -15,7 +15,7 @@ def run_multiple_experiments(explistfile, verbose):
             result = run_single_experiment(line.strip(), verbose)
             ostream.write('[' if i == 0 else '\n,')
             json.dump(result, ostream, cls=NumpyAwareJSONEncoder)
-        ostream.write(']\n')
+        ostream.write('\n]')
 
 
 def run_single_experiment(expfile, verbose):
