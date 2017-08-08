@@ -7,9 +7,10 @@ from natsort import natsorted
 def get_non_memorised_experiments(all_files, pattern):
     failed = []
     for fname in all_files:
+        fname = fname.strip()
         with open(splitext(fname)[0] + '.json', 'r') as f:
             if pattern.search(f.read()) is None:
-                failed.append(splitext(fname)[0] + '.exp')
+                failed.append(fname)
     failed = natsorted(failed)
     print('\n'.join(failed))
 
@@ -17,9 +18,10 @@ def get_non_memorised_experiments(all_files, pattern):
 def get_memorised_experiments(all_files, pattern):
     memorised = []
     for fname in all_files:
+        fname = fname.strip()
         with open(splitext(fname)[0] + '.json', 'r') as f:
             if pattern.search(f.read()) is not None:
-                memorised.append(splitext(fname)[0] + '.exp')
+                memorised.append(fname)
     memorised = natsorted(memorised)
     print('\n'.join(memorised))
 
@@ -31,11 +33,11 @@ def main():
     subparsers = parser.add_subparsers(help='commands', dest='command')
 
     parser_failed = subparsers.add_parser('not')
-    parser_failed.add_argument('list', type=argparse.FileType)
+    parser_failed.add_argument('list', type=argparse.FileType())
     parser_failed.set_defaults(func=get_non_memorised_experiments)
 
     parser_succeeded = subparsers.add_parser('mem')
-    parser_succeeded.add_argument('list', type=argparse.FileType)
+    parser_succeeded.add_argument('list', type=argparse.FileType())
     parser_succeeded.set_defaults(func=get_memorised_experiments)
 
     args = parser.parse_args()
