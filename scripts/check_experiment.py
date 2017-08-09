@@ -56,7 +56,7 @@ def summary(directory):
     num_remaining = len(all_exp) - len(all_json)
     num_failed = 0
     for fname in all_json:
-        with open(fname + '.json', 'r') as f:
+        with open(fname, 'r') as f:
             if pattern.search(f.read()) is None:
                 num_failed += 1
     print('remaining: {} memorised: {} not-memorised: {}'.format(
