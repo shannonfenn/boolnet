@@ -224,56 +224,49 @@ def build_result_map(parameters, learner_result):
     if parameters.get('record_final_net', True):
         learner_result.extra['final_net'] = np.array(gates)
 
-    if 'partial_networks' in learner_result.extra:
-        if parameters.get('record_intermediate_nets', False):
-            for i, net in enumerate(learner_result.partial_networks):
-                key = 'net_{}'.format(i)
-                learner_result.extra[key] = np.array(net.gates)
-        learner_result.extra.pop('partial_networks')
+    # if 'partial_networks' in learner_result.extra:
+    #     if parameters.get('record_intermediate_nets', False):
+    #         for i, net in enumerate(learner_result.partial_networks):
+    #             key = 'net_{}'.format(i)
+    #             learner_result.extra[key] = np.array(net.gates)
+    #     learner_result.extra.pop('partial_networks')
 
-    if 'feature_sets' in learner_result.extra:
-        F = learner_result.extra['feature_sets']
-        for strata, strata_f_sets in enumerate(F):
-            for target, fs in enumerate(strata_f_sets):
-                # only record FSes if they exist
-                if fs is not None:
-                    key = 'fs_s{}_t{}'.format(strata, target)
-                    learner_result.extra[key] = fs
-        learner_result.extra.pop('feature_sets')
+    # if 'feature_sets' in learner_result.extra:
+    #     F = learner_result.extra['feature_sets']
+    #     for strata, strata_f_sets in enumerate(F):
+    #         for target, fs in enumerate(strata_f_sets):
+    #             # only record FSes if they exist
+    #             if fs is not None:
+    #                 key = 'fs_s{}_t{}'.format(strata, target)
+    #                 learner_result.extra[key] = fs
+    #     learner_result.extra.pop('feature_sets')
 
     results = {
         'Ni':           final_network.Ni,
         'No':           final_network.No,
         'Ng':           final_network.Ng,
+        'Ne':           train_state.Ne,
+        'tgt_order':    learner_result.target_order,
+        # training set metrics
         'trg_err':      train_state.function_value('e1'),
         'trg_cor':      train_state.function_value('correctness'),
         'trg_mcc':      train_state.function_value('macro_mcc'),
         'trg_err_gf':   train_state.function_value('guiding'),
+        'trg_errs':     train_state.function_value('per_output_error'),
+        'trg_mccs':     train_state.function_value('per_output_mcc'),
+        # test set metrics
         'test_err':     test_state.function_value('e1'),
         'test_cor':     test_state.function_value('correctness'),
         'test_mcc':     test_state.function_value('macro_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
-        'Ne':           train_state.Ne,
-        'tgt_order':    learner_result.target_order,
+        'test_errs':    test_state.function_value('per_output_error'),
+        'test_mccs':    test_state.function_value('per_output_mcc'),
         }
     results.update(learner_result.extra)
 
     if 'actual_noise' in parameters:
         results['actual_noise'] = parameters['actual_noise']
 
-    # multi-part results
-    for bit, v in enumerate(train_state.function_value('per_output_error')):
-        key = 'trg_err_tgt_{}'.format(bit)
-        results[key] = v
-    for bit, v in enumerate(test_state.function_value('per_output_error')):
-        key = 'test_err_tgt_{}'.format(bit)
-        results[key] = v
-    for bit, v in enumerate(train_state.function_value('per_output_mcc')):
-        key = 'trg_mcc_tgt_{}'.format(bit)
-        results[key] = v
-    for bit, v in enumerate(test_state.function_value('per_output_mcc')):
-        key = 'test_mcc_tgt_{}'.format(bit)
-        results[key] = v
     # for bit, v in enumerate(final_network.max_node_depths()):
     #     key = 'max_depth_tgt_{}'.format(bit)
     #     results[key] = v
