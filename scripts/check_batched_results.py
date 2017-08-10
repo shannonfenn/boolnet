@@ -22,6 +22,18 @@ def get_all_experiments(directory):
         return glob.glob('{}/working/*.exp'.format(directory))
 
 
+def read_json(contents):
+    ''' Attempts to read string as json list. If exception thrown, reattempts
+        after appending "]". If that fails the exception is not caught.'''
+    if not contents.strip():
+        return []
+
+    try:
+        return json.loads(contents)
+    except:
+        return json.loads(contents + ']')
+
+
 def get_remaining_experiments(directory):
     all_exp = get_all_experiments(directory)
     # strip directory and extension to be left with list of ids
@@ -32,7 +44,7 @@ def get_remaining_experiments(directory):
     finished_ids = []
     for jsonfile in all_json:
         with open(jsonfile) as f:
-            records = json.loads(f.read())
+            records = read_json(f.read())
             finished_ids.extend(str(record['id']) for record in records)
 
     remaining = natsorted(i for i in all_ids if i not in finished_ids)
@@ -46,8 +58,8 @@ def get_non_memorised_experiments(directory):
     failed_ids = []
     for fname in all_json:
         with open(fname, 'r') as f:
-            records = json.loads(f.read())
-            failed_ids.extend(record['id']
+            records = read_json(f.read())
+            failed_ids.extend(str(record['id'])
                               for record in records
                               if record['trg_err'] != 0)
     failed_ids = natsorted(failed_ids)
@@ -64,12 +76,16 @@ def summary(directory):
     num_succeeded = 0
     for fname in all_json:
         with open(fname, 'r') as f:
-            records = json.loads(f.read())
-            for record in records:
-                if record['trg_err'] == 0:
-                    num_succeeded += 1
-                else:
-                    num_failed += 1
+            try:
+                records = read_json(f.read())
+            except:
+                print('Warning: could not read {}'.format(fname))
+            else:
+                for record in records:
+                    if record['trg_err'] == 0:
+                        num_succeeded += 1
+                    else:
+                        num_failed += 1
     print('remaining: {} memorised: {} not-memorised: {}'.format(
         num_exp - num_succeeded - num_failed, num_succeeded, num_failed))
 
