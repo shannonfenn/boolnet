@@ -127,7 +127,7 @@ def run_tasks(task_iterator, stream, num_tasks):
         json.dump(result, stream, cls=NumpyAwareJSONEncoder)
         if num_tasks:
             bar.next()
-    stream.write(']\n')
+    stream.write('\n]\n')
     if num_tasks:
         bar.finish()
 
@@ -164,8 +164,7 @@ def main():
     else:
         tasks = get_remaining_experiments(args.dir)
 
-    resultfile = consecutive_filename(join(args.dir, 'working'),
-                                      'results{}.json')
+    resultfile = consecutive_filename(args.dir, 'results_raw_{}.json')
 
     print('{} unprocessed .exp files found.'.format(len(tasks)))
     print('Results in: {}.'.format(resultfile))
