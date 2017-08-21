@@ -206,7 +206,7 @@ def build_result_map(parameters, learner_result):
             'guiding_function_parameters', {})
 
     final_network = learner_result.network
-    gates = final_network.gates
+    gates = np.asarray(final_network.gates)
 
     # build evaluators for training and test data
     objective_functions = [
@@ -222,14 +222,12 @@ def build_result_map(parameters, learner_result):
 
     # Optional results
     if parameters.get('record_final_net', True):
-        learner_result.extra['final_net'] = np.array(gates)
+        learner_result.extra['final_net'] = gates
 
-    # if 'partial_networks' in learner_result.extra:
-    #     if parameters.get('record_intermediate_nets', False):
-    #         for i, net in enumerate(learner_result.partial_networks):
-    #             key = 'net_{}'.format(i)
-    #             learner_result.extra[key] = np.array(net.gates)
-    #     learner_result.extra.pop('partial_networks')
+    partial_nets = learner_result.extra.pop('partial_networks', None)
+    if partial_nets and parameters.get('record_intermediate_nets', False):
+        partial_nets = [net.gates.tolist() for net in partial_nets]
+        learner_result.extra['partial_networks'] = partial_nets
 
     # if 'feature_sets' in learner_result.extra:
     #     F = learner_result.extra['feature_sets']
@@ -252,15 +250,15 @@ def build_result_map(parameters, learner_result):
         'trg_cor':      train_state.function_value('correctness'),
         'trg_mcc':      train_state.function_value('macro_mcc'),
         'trg_err_gf':   train_state.function_value('guiding'),
-        'trg_errs':     train_state.function_value('per_output_error'),
-        'trg_mccs':     train_state.function_value('per_output_mcc'),
+        'trg_errs':     np.asarray(train_state.function_value('per_output_error')),
+        'trg_mccs':     np.asarray(train_state.function_value('per_output_mcc')),
         # test set metrics
         'test_err':     test_state.function_value('e1'),
         'test_cor':     test_state.function_value('correctness'),
         'test_mcc':     test_state.function_value('macro_mcc'),
         'test_err_gf':  test_state.function_value('guiding'),
-        'test_errs':    test_state.function_value('per_output_error'),
-        'test_mccs':    test_state.function_value('per_output_mcc'),
+        'test_errs':    np.asarray(test_state.function_value('per_output_error')),
+        'test_mccs':    np.asarray(test_state.function_value('per_output_mcc')),
         }
     results.update(learner_result.extra)
 
