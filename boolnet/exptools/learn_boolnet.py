@@ -50,6 +50,33 @@ def random_network(Ng, Ni, No, node_funcs):
     return gates
 
 
+def load_dataset(fname, targets):
+    with np.load(fname) as ds:
+        M = utils.PackedMatrix(ds['matrix'], ds['Ne'], ds['Ni'])
+    if targets is not None:
+        Y = M[M.Ni:, :]
+        Y = Y[targets, :]
+        M = np.vstack((M[:M.Ni, :], Y))
+    return M
+
+def convert_file_datasets(parameters):
+    mapping = parameters['mapping']
+    if mapping['type'] == 'file_split':
+        targets = mapping.get('targets', None)
+        Mp_trg = load_dataset(mapping['trg_file'], targets)
+        Mp_test = load_dataset(mapping['test_file'], targets)
+
+        parameters['mapping']['type'] = 'raw_split'
+        parameters['mapping']['training_set'] = Mp_trg
+        parameters['mapping']['test_set'] = Mp_test
+
+    elif mapping['type'] == 'file_unsplit':
+        targets = mapping.get('targets', None)
+        Mp = load_dataset(mapping['file'], targets)
+        parameters['mapping']['type'] = 'raw_unsplit'
+        parameters['mapping']['matrix'] = Mp
+
+
 def build_training_set(mapping):
     if mapping['type'] == 'raw_split':
         trg_indices = mapping.get('training_indices', None)
@@ -103,6 +130,8 @@ def learn_bool_net(parameters, verbose=False):
 
     learner_params = parameters['learner']
     optimiser_params = parameters['learner']['optimiser']
+
+    convert_file_datasets(parameters)
 
     training_set = build_training_set(parameters['mapping'])
 

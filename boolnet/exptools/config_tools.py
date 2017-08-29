@@ -146,28 +146,22 @@ def load_dataset(settings):
 def file_instance(params):
     filename = build_filename(params, '.npz')
     with np.load(filename) as dataset:
-        Mp = dataset['matrix']
         # Ne in the dataset is the full number of examples which we are
         # referring to herein as 'N' to differentiate from the sample size
         N = dataset['Ne']
         Ni = dataset['Ni']
+        No = dataset['matrix'].shape[0] - Ni
+
+    instance = {'type': 'file_unsplit',
+                'file': filename}
 
     if 'targets' in params:
         targets = params['targets']
         if targets == 'random':
             # create a random permutation of size No
-            No = Mp.shape[0] - Ni
             targets = np.random.permutation(No)
-            # store for results
             params['targets'] = targets
-        Tp = Mp[Ni:, :]
-        Tp = Tp[targets, :]
-        Mp = np.vstack((Mp[:Ni, :], Tp))
-
-    instance = {
-        'type': 'raw_unsplit',
-        'matrix': utils.PackedMatrix(Mp, N, Ni)
-        }
+        instance['targets'] = targets
 
     return instance, N, Ni
 
@@ -175,33 +169,26 @@ def file_instance(params):
 def split_instance(params):
     trg_filename = build_filename(params, '.npz', key='training_filename')
     test_filename = build_filename(params, '.npz', key='test_filename')
-    with np.load(trg_filename) as train, np.load(test_filename) as test:
-        Mp_trg = train['matrix']
-        Mp_test = test['matrix']
+    with np.load(trg_filename) as container:
+        Ne_trg = container['Ne']
+        Ni = container['Ni']
+        No = container['matrix'].shape[0] - Ni
+    with np.load(test_filename) as container:
+        Ne_test = container['Ne']
+        assert Ni == container['Ni']
+        assert Ni + No == container['matrix'].shape[0]
 
-        Ne_trg, Ne_test = train['Ne'], test['Ne']
-        Ni = train['Ni']
-        assert test['Ni'] == Ni
+    instance = {'type': 'file_split',
+                'trg_file': trg_filename,
+                'test_file': test_filename}
 
-        if 'targets' in params:
-            targets = params['targets']
-            if targets == 'random':
-                # create a random permutation of size No
-                No = Mp_trg.shape[0] - Ni
-                targets = np.random.permutation(No)
-                params['targets'] = targets
-            Tp_trg = Mp_trg[Ni:, :]
-            Tp_trg = Tp_trg[targets, :]
-            Mp_trg = np.vstack((Mp_trg[:Ni, :], Tp_trg))
-            Tp_test = Mp_test[Ni:, :]
-            Tp_test = Tp_test[targets, :]
-            Mp_test = np.vstack((Mp_test[:Ni, :], Tp_test))
-
-        instance = {
-            'type': 'raw_split',
-            'training_set': utils.PackedMatrix(Mp_trg, Ne_trg, Ni),
-            'test_set': utils.PackedMatrix(Mp_test, Ne_test, Ni)
-            }
+    if 'targets' in params:
+        targets = params['targets']
+        if targets == 'random':
+            # create a random permutation of size No
+            targets = np.random.permutation(No)
+            params['targets'] = targets
+        instance['targets'] = targets
 
     return instance, Ne_trg, Ni, Ne_test
 
