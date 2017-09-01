@@ -16,7 +16,8 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
 def dump_partial_result(results, stream, first):
     if not first:
         stream.write(',')
-    json.dump(results, stream, cls=NumpyAwareJSONEncoder)
+    json.dump(results, stream, cls=NumpyAwareJSONEncoder,
+              separators=(',', ':'))
     stream.write('\n')
     # ensure data is written to disk immediately
     stream.flush()

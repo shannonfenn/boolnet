@@ -14,7 +14,8 @@ def run_multiple_experiments(explistfile, verbose):
         for i, line in enumerate(tasks):
             result = run_single_experiment(line.strip(), verbose)
             ostream.write('[' if i == 0 else '\n,')
-            json.dump(result, ostream, cls=NumpyAwareJSONEncoder)
+            json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
+                      separators=(',', ':'))
         ostream.write('\n]')
 
 
@@ -39,7 +40,8 @@ def main():
         result = run_single_experiment(args.experiment, args.verbose)
         resultfile = args.experiment + '.json'
         with open(resultfile, 'w') as ostream:
-            json.dump(result, ostream, cls=NumpyAwareJSONEncoder)
+            json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
+                      separators=(',', ':'))
     else:
         parser.error('[experiment] must be .exp or .explist')
 

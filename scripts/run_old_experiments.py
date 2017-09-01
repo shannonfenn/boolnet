@@ -26,7 +26,8 @@ def run_single_experiment(expfile, verbose):
         result['id'] = task['id']
 
     with open(resultfile, 'w') as stream:
-        json.dump(result, stream, cls=NumpyAwareJSONEncoder)
+        json.dump(result, stream, cls=NumpyAwareJSONEncoder,
+                  separators=(',', ':'))
 
 
 def main():
