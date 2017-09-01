@@ -29,20 +29,23 @@ def concatenate(partials, outstream):
     outstream.write(']\n')
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description='joins working/*.json')
+def main():
+    parser = argparse.ArgumentParser(description='joins <run>/*.json')
     parser.add_argument('dir', type=directory_type)
+    parser.add_argument('run', nargs='?', type=str, default='0')
     parser.add_argument('--outfile', '-o', type=argparse.FileType('x'),
                         help=('output file, default: <dir>/results.json'))
     args = parser.parse_args()
+
+    run_dir = os.path.join(args.dir, args.run)
+
+    if not os.path.isdir(run_dir):
+        raise ValueError(f'{run_dir} doesn\'t exist')
     if not args.outfile:
-        args.outfile = open(os.path.join(args.dir, 'results.json'), 'x')
-    return args
+        fname = os.path.join(args.dir, f'{args.run}.json')
+        args.outfile = open(fname, 'x')
 
-
-def main():
-    args = parse_args()
-    partials = glob.glob(os.path.join(args.dir, 'working', '*.json'))
+    partials = glob.glob(os.path.join(run_dir, '*.json'))
     partials = natsorted(partials)
     concatenate(partials, args.outfile)
 

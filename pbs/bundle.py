@@ -1,6 +1,7 @@
 import argparse
 import glob
-from os.path import isdir, expanduser, abspath, splitext, join
+import itertools
+from os.path import isdir, expanduser, abspath, splitext, join, exists
 from natsort import natsorted
 
 
@@ -67,8 +68,15 @@ def main():
 
     bundles = strided(experiments, args.num)
 
+    # find first non-existant */run_<int>/
+    dir_generator = (join(args.dir, str(i))
+                     for i in itertools.count())
+    run_dir = next(directory
+                   for directory in dir_generator
+                   if not isdir(directory))
+
     for i, bundle in enumerate(bundles):
-        fname = join(args.dir, 'working', '{}.explist'.format(i))
+        fname = join(run_dir, f'{i}.explist')
         with open(fname, 'w') as f:
             f.writelines(bundle)
         args.outfile.write(fname + '\n')
