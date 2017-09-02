@@ -7,7 +7,7 @@ def load(fname):
         records = json.load(f)
     mapping = {record['id']: record for record in records}
     if len(mapping) != records:
-        raise ValueError(f'Duplicates exist in base: {origin_fname}')
+        raise ValueError(f'Duplicates record ids exist in {origin_fname}')
     return mapping
 
 
@@ -19,7 +19,7 @@ def dump_json_records(records, stream):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='combine results with o')
+    parser = argparse.ArgumentParser(description='combine results')
     parser.add_argument('base', str, help='[lower precedence]')
     parser.add_argument('update', str, help='[higher precedence]')
     parser.add_argument('out', str, help='output [<base>|<update> allowed]')
