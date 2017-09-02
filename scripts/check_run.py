@@ -1,5 +1,7 @@
 import glob
 import argparse
+import pickle
+import gzip
 import rapidjson as json
 from os.path import abspath, expanduser, isdir, splitext, join, basename
 from natsort import natsorted
@@ -15,11 +17,12 @@ def directory_type(directory):
 
 
 def get_all_experiments(directory):
-    try:
-        with open(join(directory, 'tasks', 'all.exp')) as f:
-            return f.read.splitlines()
-    except:
-        return glob.glob(join(directory, 'tasks', '*.exp'))
+    bundles = glob.glob(join(directory, '*.explist'))
+    all_exps = []
+    for explist in bundles:
+        with open(explist) as f:
+            all_exps.extend(f.read().splitlines())
+    return all_exps
 
 
 def read_json(contents):
@@ -27,7 +30,6 @@ def read_json(contents):
         after appending "]". If that fails the exception is not caught.'''
     if not contents.strip():
         return []
-
     try:
         return json.loads(contents)
     except:
@@ -35,35 +37,51 @@ def read_json(contents):
 
 
 def get_remaining_experiments(directory):
-    all_exp = get_all_experiments(directory)
-    # strip directory and extension to be left with list of ids
-    all_ids = [splitext(basename(s))[0] for s in all_exp]
-
     all_json = glob.glob(join(directory, '*.json'))
 
     finished_ids = []
     for jsonfile in all_json:
         with open(jsonfile) as f:
             records = read_json(f.read())
-            finished_ids.extend(str(record['id']) for record in records)
+            finished_ids.extend(record['id'] for record in records)
 
-    remaining = natsorted(i for i in all_ids if i not in finished_ids)
-    remaining = (join(directory, '{}.json'.format(i)) for i in remaining)
+    explist = get_all_experiments(directory)
+    expmap = dict()
+    for exp in explist:
+        with gzip.open(exp, 'rb') as f:
+            eid = pickle.load(f)['id']
+        expmap[eid] = exp
+    if len(expmap) != len(explist):
+        raise ValueError('.exp files with duplicate ids!')
 
+    remaining = natsorted(exp_filename
+                          for i, exp_filename in expmap.items()
+                          if i not in finished_ids)
     print('\n'.join(remaining))
 
 
 def get_non_memorised_experiments(directory):
     all_json = glob.glob(join(directory, '*.json'))
+
     failed_ids = []
-    for fname in all_json:
-        with open(fname, 'r') as f:
+    for jsonfile in all_json:
+        with open(jsonfile, 'r') as f:
             records = read_json(f.read())
-            failed_ids.extend(str(record['id'])
+            failed_ids.extend(record['id']
                               for record in records
                               if record['trg_err'] != 0)
+
+    explist = get_all_experiments(directory)
+    expmap = dict()
+    for exp in explist:
+        with gzip.open(exp, 'rb') as f:
+            eid = pickle.load(f)['id']
+        expmap[eid] = exp
+    if len(expmap) != len(explist):
+        raise ValueError('.exp files with duplicate ids!')
+
     failed_ids = natsorted(failed_ids)
-    failed_paths = (join(directory, '{}.json'.format(i)) for i in failed_ids)
+    failed_paths = (expmap[i] for i in failed_ids)
     print('\n'.join(failed_paths))
 
 

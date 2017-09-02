@@ -2,6 +2,7 @@ from datetime import datetime       # for date for result dir
 from datetime import timedelta       # for date for result dir
 from multiprocessing import Pool    # non-distributed parallellism
 from time import time               # timing
+from glob import glob
 import yaml                         # for loading experiment files
 try:
     from yaml import CSafeLoader as Loader
@@ -9,7 +10,6 @@ except ImportError:
     from yaml import SafeLoader as Loader
 import sys                          # for path, exit
 import argparse                     # CLI
-import glob
 import pickle
 import json
 import gzip
@@ -94,15 +94,6 @@ def parse_arguments():
     return args
 
 
-def get_remaining_experiments(directory):
-    all_exp = set(splitext(f)[0] for f in glob.iglob(
-        '{}/working/*.exp'.format(directory)))
-    all_json = set(splitext(f)[0] for f in glob.iglob(
-        '{}/working/*.json'.format(directory)))
-    remaining = all_exp - all_json
-    return [f + '.exp' for f in remaining]
-
-
 def scoop_worker_wrapper(*args, **kwargs):
     import traceback
     try:
@@ -160,10 +151,10 @@ def main():
         with open(args.list, 'r') as f:
             tasks = [join(args.dir, l.strip()) for l in f]
     elif args.range:
-        tasks = [join(args.dir, 'working', '{}.exp'.format(i))
+        tasks = [join(args.dir, 'tasks', '{}.exp'.format(i))
                  for i in range(args.range[0], args.range[1] + 1)]
     else:
-        tasks = get_remaining_experiments(args.dir)
+        tasks = glob(join(args.dir, 'tasks', '*.exp'))
 
     resultfile = consecutive_filename(args.dir, 'results_raw_{}.json')
 

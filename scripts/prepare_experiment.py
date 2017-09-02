@@ -62,15 +62,15 @@ def initialise(args):
     return settings, result_dir
 
 
-def dump_tasks(tasks, working_dir, batch_mode):
+def dump_tasks(tasks, result_dir, batch_mode):
     if not batch_mode:
         bar = BetterETABar('Dumping tasks', max=len(tasks))
         bar.update()
     try:
-        with open('{}/working/all.explist'.format(working_dir), 'w') as f_all:
+        with open('{}/tasks/all.explist'.format(result_dir), 'w') as f_all:
             for task_id, task in enumerate(tasks):
                 task['id'] = task_id
-                fname = '{}/working/{}.exp'.format(working_dir, task_id)
+                fname = '{}/tasks/{}.exp'.format(result_dir, task_id)
                 f_all.write(fname + '\n')
                 # with open(fname, 'wb') as f:
                 with gzip.open(fname, 'wb') as f:
