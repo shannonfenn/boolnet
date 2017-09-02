@@ -23,7 +23,7 @@ def parse_arguments():
                         help='experiment config filename.')
     parser.add_argument('-d', '--directory', type=str, metavar='dir',
                         default='~/HMRI/experiments/results',
-                        help='working directory to dump configurations in.')
+                        help='base directory to create result directory in.')
     parser.add_argument('-b', '--batch-mode', action='store_true',
                         help='suppress progress bars.')
     return parser.parse_args()
@@ -35,17 +35,17 @@ def create_result_dir(base_dir, exp_name):
     # make directory for the results
     base_dir = os.path.expanduser(base_dir)
 
-    working_dir = os.path.join(base_dir, '{}_{}_'.format(
+    result_dir = os.path.join(base_dir, '{}_{}_'.format(
         exp_name, datetime.now().strftime('%y-%m-%d')))
 
     # find the first number i such that 'Results_datetime_i' is not
     # already a directory and make that new directory
-    working_dir += next(str(i) for i in itertools.count()
-                        if not os.path.isdir(working_dir + str(i)))
-    os.makedirs(working_dir)
+    result_dir += next(str(i) for i in itertools.count()
+                       if not os.path.isdir(result_dir + str(i)))
+    os.makedirs(result_dir)
 
     # return the directory name for the results to go in
-    return working_dir
+    return result_dir
 
 
 def initialise(args):
@@ -54,12 +54,12 @@ def initialise(args):
     settings = yaml.load(args.experiment, Loader=Loader)
 
     # create result directory
-    working_dir = create_result_dir(args.directory, settings['name'])
+    result_dir = create_result_dir(args.directory, settings['name'])
 
     # copy experiment config into results directory
-    shutil.copy(args.experiment.name, working_dir)
+    shutil.copy(args.experiment.name, result_dir)
 
-    return settings, working_dir
+    return settings, result_dir
 
 
 def dump_tasks(tasks, working_dir, batch_mode):
@@ -87,10 +87,10 @@ def dump_tasks(tasks, working_dir, batch_mode):
 def main():
     args = parse_arguments()
 
-    settings, working_dir = initialise(args)
+    settings, result_dir = initialise(args)
 
     print('Directories initialised.')
-    print('Prepping experiment files in: ' + working_dir + '\n')
+    print('Prepping experiment files in: ' + result_dir + '\n')
 
     # generate learning tasks
     try:
@@ -100,16 +100,16 @@ def main():
         tasks = cfg.generate_tasks(configurations, args.batch_mode)
         print('{} tasks generated.\n'.format(len(tasks)))
 
-        os.makedirs(os.path.join(working_dir, 'working'))
+        os.makedirs(os.path.join(result_dir, 'tasks'))
 
-        dump_tasks(tasks, working_dir, args.batch_mode)
+        dump_tasks(tasks, result_dir, args.batch_mode)
     except cfg.ValidationError as err:
         print(err)
         print('\nFailed to prep experiment.')
-        print('Failed! Directory will still exist: {}'.format(working_dir))
+        print('Failed! Directory will still exist: {}'.format(result_dir))
         return
 
-    print('Success! Experiment prepped in: {}.'.format(working_dir))
+    print('Success! Experiment prepped in: {}.'.format(result_dir))
 
 if __name__ == '__main__':
     main()
