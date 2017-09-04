@@ -43,7 +43,7 @@ def main():
     args = parse_args()
 
     if args.infile:
-        experiments = args.infile.read().splitlines(keepends=True)
+        experiments = args.infile.read().splitlines()
         args.infile.close()
     else:
         experiments = natsorted(glob.glob('{}/tasks/*.exp'.format(args.dir)))
