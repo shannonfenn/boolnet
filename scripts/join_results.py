@@ -34,7 +34,7 @@ def main():
     parser.add_argument('dir', type=directory_type)
     parser.add_argument('run', nargs='?', type=str, default='0')
     parser.add_argument('--outfile', '-o', type=argparse.FileType('x'),
-                        help=('output file, default: <dir>/results.json'))
+                        help=('output file, default: <dir>/<run>.json'))
     args = parser.parse_args()
 
     run_dir = os.path.join(args.dir, args.run)
