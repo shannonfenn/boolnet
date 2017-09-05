@@ -20,9 +20,9 @@ def dump_json_records(records, stream):
 
 def main():
     parser = argparse.ArgumentParser(description='combine results')
-    parser.add_argument('base', str, help='[lower precedence]')
-    parser.add_argument('update', str, help='[higher precedence]')
-    parser.add_argument('out', str, help='output [<base>|<update> allowed]')
+    parser.add_argument('base', type=str, help='[lower precedence]')
+    parser.add_argument('update', type=str, help='[higher precedence]')
+    parser.add_argument('out', type=str)
     args = parser.parse_args()
 
     base_map = load(args.base)
@@ -39,3 +39,7 @@ def main():
             f.write('\n')
             first_char = ','
         f.write(']\n')
+
+
+if __name__ == '__main__':
+    main()
