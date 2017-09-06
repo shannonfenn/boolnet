@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import product
 from collections import MutableMapping
 from good import Invalid
 import numpy as np
@@ -243,11 +244,14 @@ def split_variables_from_base(settings):
         variable_sets = settings['list']
     except KeyError:
         try:
-            products = settings['product']
-            # build merged mappings for each pair from products
-            variable_sets = [update_nested(deepcopy(d1), d2)
-                             for d2 in products[1]
-                             for d1 in products[0]]
+            # build merged mappings for each combination
+            lists = settings['product']
+            variable_sets = []
+            for combination in product(*lists):
+                merged = dict()
+                for var_set in combination:
+                    update_nested(merged, var_set)
+                variable_sets.append(merged)
         except KeyError:
             print('Warning: no variable configuration found.\n')
             variable_sets = [{}]

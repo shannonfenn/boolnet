@@ -242,7 +242,7 @@ instance_schema = Schema({
 
 # ########## Schemata for base configs ########## #
 list_msg = '\'list\' must be a sequence of mappings.'
-prod_msg = '\'product\' must be a length 2 sequence of sequences of mappings.'
+prod_msg = '\'product\' must be a sequence of sequences of mappings.'
 experiment_schema = Schema({
     'name':                     str,
     # Must be any dict
@@ -251,10 +251,10 @@ experiment_schema = Schema({
     # Must be a list of dicts
     Optional('list'):    Msg(All(Schema([Schema({}, extra_keys=Allow)]),
                                  Length(min=1)), list_msg),
-    # Must be a length 2 list of lists of dicts
+    # Must be a length >= 2 list of lists of dicts
     Optional('product'): Msg(All([All(Schema([Schema({}, extra_keys=Allow)]),
                                       Length(min=1))],
-                                 Length(min=2, max=2)), prod_msg),
+                                 Length(min=2)), prod_msg),
     # optional level of debug logging
     Optional('debug_level'):        In(['none', 'warning', 'info', 'debug']),
     Entire: Exclusive('list', 'product')
