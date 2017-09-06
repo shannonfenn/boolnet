@@ -10,6 +10,19 @@ import boolnet.bintools.operator_iterator as opit
 import boolnet.utils as utils
 
 
+def build_filename(params, extension, key='filename'):
+    ''' filename helper with optional directory'''
+    filename = os.path.expanduser(params[key])
+    location = params.get('dir', None)
+    # if 'filename' is absolute then ignore 'dir'
+    if location and not os.path.isabs(filename):
+        filename = os.path.join(location, filename)
+    # add extension if missing
+    if os.path.splitext(filename)[-1] == '':
+        filename += extension
+    return filename
+
+
 def get_seed(key):
     ''' Keeps a registry of seeds for each key, if given a new
         key get_seed() generates a new seed for that key, but if
@@ -23,38 +36,6 @@ def get_seed(key):
         random.seed()  # use default randomness source to get a seed
         get_seed.registry[key] = random.randint(1, 2**32-1)
     return get_seed.registry[key]
-
-
-# to signal schema validation failure
-# (with custom message formatting)
-class ValidationError(Exception):
-    pass
-
-
-def update_nested(d, u):
-    ''' this updates a dict with another where the two may contain nested
-        dicts themselves (or more generally nested mutable mappings). '''
-    for k, v in u.items():
-        if isinstance(v, MutableMapping):
-            r = update_nested(d.get(k, {}), v)
-            d[k] = r
-        else:
-            # preference to second mapping if k exists in d
-            d[k] = u[k]
-    return d
-
-
-def build_filename(params, extension, key='filename'):
-    ''' filename helper with optional directory'''
-    filename = os.path.expanduser(params[key])
-    location = params.get('dir', None)
-    # if 'filename' is absolute then ignore 'dir'
-    if location and not os.path.isabs(filename):
-        filename = os.path.join(location, filename)
-    # add extension if missing
-    if os.path.splitext(filename)[-1] == '':
-        filename += extension
-    return filename
 
 
 def load_samples(params, N, Ni, Nt=None):
@@ -228,6 +209,12 @@ def generated_instance(params):
 #             net_settings['initial_gates'] = gates
 
 
+# to signal schema validation failure
+# (with custom message formatting)
+class ValidationError(Exception):
+    pass
+
+
 def validate_schema(config, schema, config_num, msg):
     try:
         schema(config)
@@ -235,6 +222,19 @@ def validate_schema(config, schema, config_num, msg):
         msg = ('Experiment instance {} invalid: {}'
                '\nConfig generation aborted.').format(config_num + 1, err)
         raise ValidationError(msg)
+
+
+def update_nested(d, u):
+    ''' this updates a dict with another where the two may contain nested
+        dicts themselves (or more generally nested mutable mappings). '''
+    for k, v in u.items():
+        if isinstance(v, MutableMapping):
+            r = update_nested(d.get(k, {}), v)
+            d[k] = r
+        else:
+            # preference to second mapping if k exists in d
+            d[k] = u[k]
+    return d
 
 
 def split_variables_from_base(settings):
