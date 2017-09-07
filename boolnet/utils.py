@@ -25,13 +25,18 @@ def dump_partial_result(results, stream, first):
 
 
 class BetterETABar(IncrementalBar):
-    suffix = '%(remaining_hours)d hours remaining'
-    suffix = ('completed: %(index)d/%(max)d | elapsed: %(elapsed)ds | '
+    suffix = ('%(index)d/%(max)d | elapsed: %(elapsed)ds | '
               'eta: %(better_eta)ds')
 
     @property
     def better_eta(self):
         return self.elapsed / (self.index + 1) * self.remaining
+
+    def writeln(self, line):
+        if self.file.isatty():
+            self.clearln()
+            print('\x1b[?7l' + line + '\x1b[?7h', end='', file=self.file)
+            self.file.flush()
 
 
 class PackedMatrix(np.ndarray):
