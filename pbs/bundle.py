@@ -18,15 +18,13 @@ def directory_type(directory):
 def parse_args():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('dir', type=directory_type)
-    parser.add_argument('--num', '-n', type=int)
+    parser.add_argument('--num', '-n', type=int, default=7500)
     parser.add_argument('--infile', '-i', type=argparse.FileType(),
                         help='list of experiments (.exp) to run')
 
     args = parser.parse_args()
 
-    if not args.num:
-        args.num = 7500
-    elif not (1 <= args.num <= 7500):
+    if not (1 <= args.num <= 7500):
         parser.error('--num must be in [1..7500].')
 
     return args
