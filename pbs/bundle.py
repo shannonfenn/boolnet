@@ -46,6 +46,8 @@ def main():
     else:
         experiments = natsorted(glob.glob('{}/tasks/*.exp'.format(args.dir)))
 
+    args.num = min(args.num, len(experiments))
+
     bundles = strided(experiments, args.num)
 
     # find first non-existant */run_<int>/
