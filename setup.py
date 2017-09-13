@@ -81,5 +81,6 @@ setup(
              'scripts/run_experiments.py',
              'scripts/runexp.py',
              'scripts/run_old_experiments.py',
-             'scripts/run_prepped_experiments.py']
+             'scripts/run_prepped_experiments.py',
+             'pbs/submit_bundled_jobs.py']
     )
