@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 from datetime import datetime       # for date for result dir
 from datetime import timedelta       # for date for result dir
 from multiprocessing import Pool    # non-distributed parallellism

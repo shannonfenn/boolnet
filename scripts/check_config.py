@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import yaml                         # for loading experiment files
 try:
     from yaml import CSafeLoader as Loader

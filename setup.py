@@ -69,5 +69,17 @@ setup(
     name='boolnet',
     include_dirs=[np.get_include(), cython_gsl.get_include()],
     cmdclass={'build_ext': build_ext},
-    ext_modules=extensions
+    ext_modules=extensions,
+    scripts=['scripts/bundle.py',
+             'scripts/check_batched_results.py',
+             'scripts/check_config.py',
+             'scripts/check_run.py',
+             'scripts/check_solo_results.py',
+             'scripts/concatenate_results.py',
+             'scripts/merge_results.py',
+             'scripts/prepare_experiment.py',
+             'scripts/run_experiments.py',
+             'scripts/runexp.py',
+             'scripts/run_old_experiments.py',
+             'scripts/run_prepped_experiments.py']
     )

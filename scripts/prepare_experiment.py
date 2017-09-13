@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 from datetime import datetime       # for date for result dir
 import os                           # for mkdir
 import os.path                      # for path manipulation

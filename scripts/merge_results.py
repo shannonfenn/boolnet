@@ -1,3 +1,5 @@
+#! /usr/bin/env python
+
 import rapidjson as json
 import argparse
 
