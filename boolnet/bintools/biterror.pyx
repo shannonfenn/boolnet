@@ -181,7 +181,7 @@ cdef class E2(Evaluator):
 
 cdef class E2MCC(E2):
     def __init__(self, size_t Ne, size_t No, weights=None):
-        super().__init__(Ne, No)
+        super().__init__(Ne, No, weights)
         self.per_output_evaluator = PerOutputMCC(Ne, No)
 
     cpdef double evaluate(self, packed_type_t[:, ::1] E, packed_type_t[:, ::1] T):
