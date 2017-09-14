@@ -98,7 +98,7 @@ class HC(RestartLocalSearch):
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
-            if self.stopping_condition(state):
+            if self.stopping_condition(state, error):
                 self.reached_stopping_condition = True
                 break
 
@@ -155,7 +155,7 @@ class LAHC(RestartLocalSearch):
         # initialise cost list
         self.costs = deque(repeat(error, self.cost_list_len))
 
-        if self.stopping_condition(state):
+        if self.stopping_condition(state, best_error):
             self.reached_stopping_condition = True
             return OptimiserResult(
                 representation=best_representation, error=best_error,
@@ -177,7 +177,7 @@ class LAHC(RestartLocalSearch):
                 best_iteration = iteration
 
             # Stop on user defined condition
-            if self.stopping_condition(state):
+            if self.stopping_condition(state, best_error):
                 self.reached_stopping_condition = True
                 break
 
@@ -278,7 +278,7 @@ class SA(RestartLocalSearch):
                 best_iteration = iteration
 
             # Stop on user defined condition
-            if self.stopping_condition(state):
+            if self.stopping_condition(state, best_error):
                 self.reached_stopping_condition = True
                 break
 

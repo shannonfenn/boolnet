@@ -8,6 +8,7 @@ from pytest import mark, raises, fixture
 import bitpacking.packing as pk
 
 import boolnet.utils as utils
+import boolnet.bintools.biterror as be
 import boolnet.bintools.functions as fn
 import boolnet.network.networkstate as ns
 import boolnet.bintools.example_generator as gen
@@ -194,9 +195,9 @@ def output_different(instance):
 
 def run_instance(instance, state):
     func_id = fn.function_from_name(instance['function'])
+    evaluator = be.EVALUATORS[func_id](state.Ne, state.No)
     expected = instance['value']
-    name = state.add_function(func_id)
-    actual = state.function_value(name)
+    actual = state.function_value(evaluator)
     np.testing.assert_array_almost_equal(expected, actual)
 
 

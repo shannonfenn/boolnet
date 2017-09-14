@@ -23,7 +23,6 @@ cdef class BNState:
         readonly size_t Ne, cols
         pk.packed_type_t[:, :] activation, inputs, outputs, target, error
         readonly pk.packed_type_t zero_mask
-        dict err_evaluators
         readonly size_t invalid_start
         readonly bint evaluated
 
@@ -57,8 +56,6 @@ cdef class BNState:
         self.target = np.zeros((No, cols), dtype=pk.packed_type)
         # instantiate matrices for error
         self.error = np.empty_like(self.target)
-
-        self.err_evaluators = dict()
 
         self.evaluated = False
         self.invalid_start = 0
@@ -98,11 +95,6 @@ cdef class BNState:
         def __get__(self):
             return self.network
 
-    property guiding_functions:
-        def __get__(self):
-            # conversion to list prevents silly copy bugs
-            return list(self.err_evaluators.keys())
-
     property input_matrix:
         def __get__(self):
             return self.inputs
@@ -132,20 +124,9 @@ cdef class BNState:
     cpdef connected_sources(self):
         return self.network.connected_sources()
 
-    cpdef add_function(self, Function function, name='', params={}):
-        eval_class = be.EVALUATORS[function]
-        if not name:
-            name = fn.function_name(function)
-        self.err_evaluators[name] = eval_class(self.Ne, self.No, **params)
-        self.evaluated = False
-        return name
-
-    cpdef function_value(self, name):
-        if name not in self.err_evaluators:
-            raise ValueError('No evaluator with name: {}'.format(name))
-        if not self.evaluated:
-            self.evaluate()
-        return self.err_evaluators[name].evaluate(self.error, self.target)
+    cpdef function_value(self, evaluator):
+        self.evaluate()
+        return evaluator.evaluate(self.error, self.target)
 
     cpdef set_gates(self, np.uint32_t[:, :] gates):
         # force reevaluation
