@@ -111,19 +111,21 @@ def scoop_worker_wrapper(*args, **kwargs):
 def run_tasks(task_iterator, stream, num_tasks):
     ''' Runs the given tasks and dumps to a single json file.
         Use num_tasks=0 for batch mode'''
-    if num_tasks:
-        bar = BetterETABar('Progress', max=num_tasks)
-        bar.update()
-    # map gives an iterator so results are dumped as soon as available
-    for i, result in enumerate(task_iterator):
-        stream.write('[' if i == 0 else '\n,')
-        json.dump(result, stream, cls=NumpyAwareJSONEncoder,
-                  separators=(',', ':'))
+    try:
         if num_tasks:
-            bar.next()
-    stream.write('\n]\n')
-    if num_tasks:
-        bar.finish()
+            bar = BetterETABar('Progress', max=num_tasks)
+            bar.update()
+        # map gives an iterator so results are dumped as soon as available
+        for i, result in enumerate(task_iterator):
+            stream.write('[' if i == 0 else '\n,')
+            json.dump(result, stream, cls=NumpyAwareJSONEncoder,
+                      separators=(',', ':'))
+            if num_tasks:
+                bar.next()
+        stream.write('\n]\n')
+    finally:
+        if num_tasks:
+            bar.finish()
 
 
 def run_single_experiment(expfile):
