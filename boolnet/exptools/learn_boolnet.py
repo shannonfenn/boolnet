@@ -2,9 +2,11 @@ import time
 import random
 import logging
 import re
+import copy
 import numpy as np
 import bitpacking.packing as pk
 import boolnet.bintools.functions as fn
+import boolnet.bintools.biterror as be
 import boolnet.bintools.example_generator as gen
 import boolnet.network.networkstate as ns
 import boolnet.utils as utils
@@ -59,6 +61,7 @@ def load_dataset(fname, targets):
         M = np.vstack((M[:M.Ni, :], Y))
     return M
 
+
 def convert_file_datasets(parameters):
     mapping = parameters['mapping']
     if mapping['type'] == 'file_split':
@@ -75,6 +78,64 @@ def convert_file_datasets(parameters):
         Mp = load_dataset(mapping['file'], targets)
         parameters['mapping']['type'] = 'raw_unsplit'
         parameters['mapping']['matrix'] = Mp
+
+
+def convert_target_orders(parameters, No):
+    order = parameters['target_order']
+    if order == 'lsb':
+        parameters['target_order'] = np.arange(No, dtype=np.uintp)
+    elif order == 'msb':
+        parameters['target_order'] = np.arange(No, dtype=np.uintp)[::-1]
+    elif order == 'random':
+        parameters['target_order'] = np.random.permutation(No).astype(np.uintp)
+    elif order == 'auto':
+        parameters['target_order'] = None
+    else:
+        parameters['target_order'] = np.array(order, dtype=np.uintp)
+
+
+def fn_value_stop_criterion(func_id, evaluator, limit=None):
+    if limit is None:
+        limit = fn.optimum(func_id)
+    if fn.is_minimiser(func_id):
+        return lambda state, _: state.function_value(evaluator) <= limit
+    else:
+        return lambda state, _: state.function_value(evaluator) >= limit
+
+
+def guiding_fn_value_stop_criterion(func_id, limit=None):
+    if limit is None:
+        limit = fn.optimum(func_id)
+    if fn.is_minimiser(func_id):
+        return lambda _, guiding_value: guiding_value <= limit
+    else:
+        return lambda _, guiding_value: guiding_value >= limit
+
+
+def convert_optimiser_params(params, Ne, No):
+    # handle guiding function
+    gf_name = params['guiding_function']
+    gf_id = fn.function_from_name(gf_name)
+    if gf_id not in fn.scalar_functions():
+        raise ValueError('Invalid guiding function: {}'.format(gf_name))
+    gf_params = params.get('guiding_function_parameters', {})
+    gf_evaluator = be.EVALUATORS[gf_id](Ne, No, **gf_params)
+    # Handle stopping condition (may be user specified)
+    # defaults to the guiding function optima
+    condition = params.get('stopping_condition', ['guiding', None])
+    sf_name = condition[0]
+    sf_limit = condition[1]
+    if sf_name != 'guiding':
+        sf_id = fn.function_from_name(sf_name)
+        sf_params = condition[2] if len(condition) > 2 else {}
+        sf_evaluator = be.EVALUATORS[sf_id](Ne, No, **sf_params)
+        stop_functor = fn_value_stop_criterion(sf_id, sf_evaluator, sf_limit)
+    else:
+        stop_functor = guiding_fn_value_stop_criterion(gf_id, sf_limit)
+    # update
+    params['minimise'] = fn.is_minimiser(gf_id)
+    params['guide_functor'] = lambda x: x.function_value(gf_evaluator)
+    params['stop_functor'] = stop_functor
 
 
 def build_training_set(mapping):
@@ -128,28 +189,39 @@ def learn_bool_net(parameters, verbose=False):
     # if no given seed then store to allow reporting in results
     parameters['learner']['seed'] = seed
 
-    learner_params = parameters['learner']
-    optimiser_params = parameters['learner']['optimiser']
-
     convert_file_datasets(parameters)
 
     training_set = build_training_set(parameters['mapping'])
+
+    learner_params = parameters['learner']
+    optimiser_params = learner_params['optimiser']
+
+    convert_optimiser_params(optimiser_params, training_set.Ne, training_set.No)
+
+    learner = LEARNERS[learner_params['name']]
+    optimiser = OPTIMISERS[optimiser_params['name']]
+
+    convert_target_orders(learner_params, training_set.No)
 
     if 'add_noise' in parameters['data']:
         rate = add_noise(training_set, parameters['data']['add_noise'])
         parameters['actual_noise'] = rate
 
     learner_params['training_set'] = training_set
-    learner_params['gate_generator'] = random_network
+
+    # prepare model generator
+    node_funcs = parameters['learner']['network']['node_funcs']
+    if not all(f in range(16) for f in node_funcs):
+        raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
+                         format(node_funcs))
+    learner_params['model_generator'] = lambda Ng, Ni, No: random_network(
+        Ng, Ni, No, node_funcs)
 
     # Handle flexible network size
     if str(learner_params['network']['Ng']).endswith('n'):
         n = int(str(learner_params['network']['Ng'])[:-1])
         Ng = n * training_set.No
         learner_params['network']['Ng'] = Ng
-
-    learner = LEARNERS[learner_params['name']]
-    optimiser = OPTIMISERS[optimiser_params['name']]
 
     setup_end_time = time.monotonic()
 
@@ -172,8 +244,7 @@ def learn_bool_net(parameters, verbose=False):
     return results
 
 
-def build_states(mapping, gates, objectives):
-    ''' objectives should be a list of (func_id, ordering, name) tuples.'''
+def build_states(mapping, gates):
     if mapping['type'] == 'raw_split':
         trg_indices = mapping.get('training_indices', None)
         test_indices = mapping.get('test_indices', None)
@@ -219,35 +290,37 @@ def build_states(mapping, gates, objectives):
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
 
-    # add functions to be later called by name
-    for func, name, params in objectives:
-        S_trg.add_function(func, name, params=params)
-        S_test.add_function(func, name, params=params)
-
     return S_trg, S_test
 
 
 def build_result_map(parameters, learner_result):
 
-    guiding_function = fn.function_from_name(
+    parameters['learner']['optimiser'].pop('guide_functor')
+    parameters['learner']['optimiser'].pop('stop_functor')
+
+    gf_id = fn.function_from_name(
         parameters['learner']['optimiser']['guiding_function'])
-    guiding_function_params = parameters['learner']['optimiser'].get(
+    gf_params = parameters['learner']['optimiser'].get(
             'guiding_function_parameters', {})
 
     final_network = learner_result.network
     gates = np.asarray(final_network.gates)
 
-    # build evaluators for training and test data
-    objective_functions = [
-        (guiding_function, 'guiding', guiding_function_params),
-        (fn.E1, 'e1', {}),
-        (fn.MACRO_MCC, 'macro_mcc', {}),
-        (fn.CORRECTNESS, 'correctness', {}),
-        (fn.PER_OUTPUT_ERROR, 'per_output_error', {}),
-        (fn.PER_OUTPUT_MCC, 'per_output_mcc', {})]
+    train_state, test_state = build_states(parameters['mapping'], gates)
 
-    train_state, test_state = build_states(
-        parameters['mapping'], gates, objective_functions)
+    # build evaluators for training and test data
+    eval_guiding_train = be.EVALUATORS[gf_id](train_state.Ne, train_state.No, **gf_params)
+    eval_guiding_test = be.EVALUATORS[gf_id](test_state.Ne, test_state.No, **gf_params)
+    eval_e1_train = be.EVALUATORS[fn.E1](train_state.Ne, train_state.No)
+    eval_e1_test = be.EVALUATORS[fn.E1](test_state.Ne, test_state.No)
+    eval_macro_mcc_train = be.EVALUATORS[fn.MACRO_MCC](train_state.Ne, train_state.No)
+    eval_macro_mcc_test = be.EVALUATORS[fn.MACRO_MCC](test_state.Ne, test_state.No)
+    eval_correctness_train = be.EVALUATORS[fn.CORRECTNESS](train_state.Ne, train_state.No)
+    eval_correctness_test = be.EVALUATORS[fn.CORRECTNESS](test_state.Ne, test_state.No)
+    eval_per_output_err_train = be.EVALUATORS[fn.PER_OUTPUT_ERROR](train_state.Ne, train_state.No)
+    eval_per_output_err_test = be.EVALUATORS[fn.PER_OUTPUT_ERROR](test_state.Ne, test_state.No)
+    eval_per_output_mcc_train = be.EVALUATORS[fn.PER_OUTPUT_MCC](train_state.Ne, train_state.No)
+    eval_per_output_mcc_test = be.EVALUATORS[fn.PER_OUTPUT_MCC](test_state.Ne, test_state.No)
 
     # Optional results
     if parameters.get('record_final_net', True):
@@ -275,19 +348,19 @@ def build_result_map(parameters, learner_result):
         'Ne':           train_state.Ne,
         'tgt_order':    learner_result.target_order,
         # training set metrics
-        'trg_err':      train_state.function_value('e1'),
-        'trg_cor':      train_state.function_value('correctness'),
-        'trg_mcc':      train_state.function_value('macro_mcc'),
-        'trg_err_gf':   train_state.function_value('guiding'),
-        'trg_errs':     np.asarray(train_state.function_value('per_output_error')),
-        'trg_mccs':     np.asarray(train_state.function_value('per_output_mcc')),
+        'trg_err':      train_state.function_value(eval_e1_train),
+        'trg_cor':      train_state.function_value(eval_correctness_train),
+        'trg_mcc':      train_state.function_value(eval_macro_mcc_train),
+        'trg_err_gf':   train_state.function_value(eval_guiding_train),
+        'trg_errs':     np.asarray(train_state.function_value(eval_per_output_err_train)),
+        'trg_mccs':     np.asarray(train_state.function_value(eval_per_output_mcc_train)),
         # test set metrics
-        'test_err':     test_state.function_value('e1'),
-        'test_cor':     test_state.function_value('correctness'),
-        'test_mcc':     test_state.function_value('macro_mcc'),
-        'test_err_gf':  test_state.function_value('guiding'),
-        'test_errs':    np.asarray(test_state.function_value('per_output_error')),
-        'test_mccs':    np.asarray(test_state.function_value('per_output_mcc')),
+        'test_err':     test_state.function_value(eval_e1_test),
+        'test_cor':     test_state.function_value(eval_correctness_test),
+        'test_mcc':     test_state.function_value(eval_macro_mcc_test),
+        'test_err_gf':  test_state.function_value(eval_guiding_test),
+        'test_errs':    np.asarray(test_state.function_value(eval_per_output_err_test)),
+        'test_mccs':    np.asarray(test_state.function_value(eval_per_output_mcc_test)),
         }
     results.update(learner_result.extra)
 

@@ -4,7 +4,6 @@ import numpy as np
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
-import boolnet.bintools.functions as fn
 import boolnet.network.algorithms as alg
 from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
 from boolnet.network.networkstate import BNState
@@ -14,15 +13,6 @@ import itertools
 
 LearnerResult = namedtuple('LearnerResult', [
     'network', 'target_order', 'extra'])
-
-
-def fn_value_stop_criterion(func_id, name, limit=None):
-    if limit is None:
-        limit = fn.optimum(func_id)
-    if fn.is_minimiser(func_id):
-        return lambda state: state.function_value(name) <= limit
-    else:
-        return lambda state: state.function_value(name) >= limit
 
 
 def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
@@ -130,89 +120,36 @@ def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
 
 
 class MonolithicLearner:
-    def _setup(self, optimiser, parameters):
+    def _setup(self, parameters):
         # Gate generation
-        self.gate_generator = parameters['gate_generator']
-        self.node_funcs = parameters['network']['node_funcs']
+        self.model_generator = parameters['model_generator']
         self.budget = parameters['network']['Ng']
-        # Instance
-        self.problem_matrix = parameters['training_set']
-        self.Ni = self.problem_matrix.Ni
-        self.No = self.problem_matrix.No
-        self.input_matrix, self.target_matrix = np.split(
-            self.problem_matrix, [self.Ni])
-        self.Ne = self.problem_matrix.Ne
-        # Optimiser
-        self.optimiser = optimiser
-        self.opt_params = copy(parameters['optimiser'])
-        gf_name = self.opt_params['guiding_function']
-        self.guiding_fn_id = fn.function_from_name(gf_name)
-        self.guiding_fn_params = self.opt_params.get(
-            'guiding_function_parameters', {})
-        self.opt_params['minimise'] = fn.is_minimiser(self.guiding_fn_id)
-
-        # convert shorthands for target order
-        if parameters['target_order'] == 'lsb':
-            self.target_order = np.arange(self.No, dtype=np.uintp)
-        elif parameters['target_order'] == 'msb':
-            self.target_order = np.arange(self.No, dtype=np.uintp)[::-1]
-        elif parameters['target_order'] == 'random':
-            self.target_order = np.random.permutation(self.No).astype(np.uintp)
-        elif parameters['target_order'] == 'auto':
-            self.target_order = None
+        # get target order
+        self.target_order = parameters['target_order']
+        if self.target_order is None:
             # this key is only required if auto-targetting
             self.minfs_metric = parameters['minfs_selection_metric']
-        else:
-            self.target_order = np.array(parameters['target_order'],
-                                         dtype=np.uintp)
         # Optional minfs solver time limit
         self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
         self.minfs_tie_handling = parameters.get('minfs_tie_handling',
                                                  'random')
 
-        # add functor for evaluating the guiding func
-        self.guiding_fn_eval_name = 'guiding'
-        self.opt_params['guiding_function'] = lambda x: x.function_value(
-            self.guiding_fn_eval_name)
-
-        # Check if user supplied a stopping condition
-        condition = self.opt_params.get('stopping_condition', None)
-        if condition and condition[0] != 'guiding':
-            limit = condition[1]
-            self.stopping_fn_eval_name = 'stop'
-            self.stopping_fn_id = fn.function_from_name(condition[0])
-            if len(condition) > 2:
-                self.stopping_fn_params = condition[2]
-            else:
-                self.stopping_fn_params = {}
-        else:
-            if condition:
-                limit = condition[1]
-            self.stopping_fn_eval_name = self.guiding_fn_eval_name
-            self.stopping_fn_id = self.guiding_fn_id
-            self.stopping_fn_params = self.guiding_fn_params
-            limit = None
-
-        self.opt_params['stopping_condition'] = fn_value_stop_criterion(
-            self.stopping_fn_id, self.stopping_fn_eval_name, limit)
-        # check parameters
-        if self.guiding_fn_id not in fn.scalar_functions():
-            raise ValueError('Invalid guiding function: {}'.format(gf_name))
-        if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
-            raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
-                             format(self.node_funcs))
-
     def run(self, optimiser, parameters, verbose=False):
         t0 = time()
-        self._setup(optimiser, parameters)
+        self._setup(parameters)
+
+        # Instance
+        D = parameters['training_set']
+        X, Y = np.split(D, [D.Ni])
+        Ni, No, Ne = D.Ni, D.No, D.Ne
 
         if self.target_order is None:
             if verbose:
                 print('Determining target order...')
             # determine the target order by ranking feature sets
-            mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
-            mfs_targets = pk.unpackmat(self.target_matrix, self.Ne)
+            mfs_features = pk.unpackmat(X, Ne)
+            mfs_targets = pk.unpackmat(Y, Ne)
 
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
@@ -234,22 +171,13 @@ class MonolithicLearner:
                 print('done. Time taken: {}'.format(time() - t0))
 
         # build the network state
-        gates = self.gate_generator(self.budget, self.Ni,
-                                    self.No, self.node_funcs)
+        gates = self.model_generator(self.budget, Ni, No)
 
         # reorder problem matrix
-        outputs = self.problem_matrix[-self.No:, :]
+        outputs = D[-No:, :]
         outputs[:] = outputs[self.target_order, :]
 
-        state = BNState(gates, self.problem_matrix)
-        # add the guiding function to be evaluated
-        state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name,
-                           self.guiding_fn_params)
-        # add the stopping function to be evaluated
-        if (self.stopping_fn_eval_name is not None and
-                self.stopping_fn_eval_name != self.guiding_fn_eval_name):
-            state.add_function(self.stopping_fn_id, self.stopping_fn_eval_name,
-                               self.stopping_fn_params)
+        state = BNState(gates, D)
 
         t1 = time()
 
@@ -257,7 +185,7 @@ class MonolithicLearner:
             print('Optimising...')
 
         # run the optimiser
-        opt_result = self.optimiser.run(state, self.opt_params)
+        opt_result = optimiser.run(state, parameters['optimiser'])
         t2 = time()
 
         if verbose:
@@ -268,7 +196,7 @@ class MonolithicLearner:
         outputs[:] = outputs[inverse_order, :]
 
         gates = np.array(opt_result.representation.gates)
-        out_gates = gates[-self.No:, :]
+        out_gates = gates[-No:, :]
         out_gates[:] = out_gates[inverse_order, :]
         opt_result.representation.set_gates(gates)
 
@@ -286,82 +214,34 @@ class MonolithicLearner:
 
 
 class SplitLearner:
-    def _setup(self, optimiser, parameters):
+    def _setup(self, parameters):
         # Gate generation
-        self.gate_generator = parameters['gate_generator']
-        self.node_funcs = parameters['network']['node_funcs']
+        self.model_generator = parameters['model_generator']
         self.budget = parameters['network']['Ng']
         self.remaining_budget = self.budget
         # Instance
-        self.problem_matrix = parameters['training_set']
-        self.Ni = self.problem_matrix.Ni
-        self.No = self.problem_matrix.No
-        self.input_matrix, self.target_matrix = np.split(
-            self.problem_matrix, [self.Ni])
-        self.Ne = self.problem_matrix.Ne
-        # Optimiser
-        self.optimiser = optimiser
-        self.opt_params = copy(parameters['optimiser'])
-        gf_name = self.opt_params['guiding_function']
-        self.guiding_fn_id = fn.function_from_name(gf_name)
-        self.guiding_fn_params = self.opt_params.get(
-            'guiding_function_parameters', {})
-        self.opt_params['minimise'] = fn.is_minimiser(self.guiding_fn_id)
-
-        # add functor for evaluating the guiding func
-        self.guiding_fn_eval_name = 'guiding'
-        self.opt_params['guiding_function'] = lambda x: x.function_value(
-            self.guiding_fn_eval_name)
-
-        # Check if user supplied a stopping condition
-        condition = self.opt_params.get('stopping_condition', None)
-        if condition and condition[0] != 'guiding':
-            limit = condition[1]
-            self.stopping_fn_eval_name = 'stop'
-            self.stopping_fn_id = fn.function_from_name(condition[0])
-            if len(condition) > 2:
-                self.stopping_fn_params = condition[2]
-            else:
-                self.stopping_fn_params = {}
-        else:
-            if condition:
-                limit = condition[1]
-            self.stopping_fn_eval_name = self.guiding_fn_eval_name
-            self.stopping_fn_id = self.guiding_fn_id
-            self.stopping_fn_params = self.guiding_fn_params
-            limit = None
-
-        self.opt_params['stopping_condition'] = fn_value_stop_criterion(
-            self.stopping_fn_id, self.stopping_fn_eval_name, limit)
-
+        self.D = parameters['training_set']
+        self.X, self.Y = np.split(self.D, [self.D.Ni])
         # Optional feature selection params
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
-        self.feature_sets = np.empty(self.No, dtype=list)
+        self.feature_sets = np.empty(self.D.No, dtype=list)
 
-        # check parameters
-        if self.guiding_fn_id not in fn.scalar_functions():
-            raise ValueError('Invalid guiding function: {}'.format(gf_name))
-        if max(self.node_funcs) > 15 or min(self.node_funcs) < 0:
-            raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
-                             format(self.node_funcs))
-
-    def next_gates(self, t):
-        size = self.remaining_budget // (self.No - t)
+    def next_subnet(self, t):
+        size = self.remaining_budget // (self.D.No - t)
         self.remaining_budget -= size
         fs = self.feature_sets[t]
-        return self.gate_generator(size, len(fs), 1, self.node_funcs)
+        return self.model_generator(size, len(fs), 1)
 
     def join_networks(self, base, new, t):
-
         if self.use_minfs_selection:
             # build a map for replacing sources
             new_input_map = list(self.feature_sets[t])
         else:
             # build a map for replacing sources
-            new_input_map = list(range(self.Ni))
+            new_input_map = list(range(self.D.Ni))
         # difference in input sizes plus # of non-output base gates
         # offset = base.Ni - new.Ni + base.Ng - base.No
         offset = base.Ni + base.Ng - base.No
@@ -386,20 +266,19 @@ class SplitLearner:
 
         new_target = np.vstack((base.target_matrix, new.target_matrix))
 
-        new_problem_matrix = PackedMatrix(np.vstack((self.input_matrix,
-                                                     new_target)),
-                                          Ne=self.Ne, Ni=self.Ni)
-        return BNState(accumulated_gates, new_problem_matrix)
+        new_D = PackedMatrix(np.vstack((self.X, new_target)),
+                             Ne=self.D.Ne, Ni=self.D.Ni)
+        return BNState(accumulated_gates, new_D)
 
     def get_feature_sets(self):
         # default - in case of empty fs or fs-selection not enabled
-        for t in range(self.No):
-            self.feature_sets[t] = list(range(self.Ni))
+        for t in range(self.D.No):
+            self.feature_sets[t] = list(range(self.D.Ni))
 
         if self.use_minfs_selection:
             # unpack inputs to minFS solver
-            mfs_features = pk.unpackmat(self.input_matrix, self.Ne)
-            mfs_targets = pk.unpackmat(self.target_matrix, self.Ne)
+            mfs_features = pk.unpackmat(self.X, self.D.Ne)
+            mfs_targets = pk.unpackmat(self.Y, self.D.Ne)
             _, F = mfs.ranked_feature_sets(
                 mfs_features, mfs_targets, self.minfs_metric,
                 self.minfs_solver, self.minfs_params)
@@ -408,22 +287,23 @@ class SplitLearner:
                     self.feature_sets[t] = fs
 
     def make_partial_instance(self, target_index):
-        target = self.target_matrix[target_index]
+        target = self.Y[target_index]
         fs = self.feature_sets[target_index]
-        inp = self.input_matrix[fs, :]
-        return PackedMatrix(np.vstack((inp, target)), Ne=self.Ne, Ni=len(fs))
+        Xsub = self.X[fs, :]
+        return PackedMatrix(np.vstack((Xsub, target)),
+                            Ne=self.D.Ne, Ni=len(fs))
 
     def run(self, optimiser, parameters, verbose=False):
         t0 = time()
 
-        self._setup(optimiser, parameters)
+        self._setup(parameters)
 
         opt_results = []
         optimisation_times = []
         other_times = []
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
-        accumulated_network = BNState(np.empty((0, 3)), self.input_matrix)
+        accumulated_network = BNState(np.empty((0, 3)), self.X)
 
         if verbose:
             print('Getting feature sets...')
@@ -435,30 +315,21 @@ class SplitLearner:
         if verbose:
             print('done. Time taken: {}'.format(feature_selection_time))
 
-        for target_index in range(self.No):
+        for target_index in range(self.D.No):
             t0 = time()
 
-            partial_instance = self.make_partial_instance(target_index)
+            D_partial = self.make_partial_instance(target_index)
 
             # build the network state
-            gates = self.next_gates(target_index)
-            state = BNState(gates, partial_instance)
-            # add the guiding function to be evaluated
-            state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name,
-                               self.guiding_fn_params)
-            # add the stopping function to be evaluated
-            if (self.stopping_fn_eval_name is not None and
-                    self.stopping_fn_eval_name != self.guiding_fn_eval_name):
-                state.add_function(self.stopping_fn_id,
-                                   self.stopping_fn_eval_name,
-                                   self.stopping_fn_params)
+            gates = self.next_subnet(target_index)
+            state = BNState(gates, D_partial)
 
             t1 = time()
 
             if verbose:
                 print('Target {} Optimising...'.format(target_index))
             # run the optimiser
-            partial_result = self.optimiser.run(state, self.opt_params)
+            partial_result = optimiser.run(state, parameters['optimiser'])
             t2 = time()
 
             if verbose:
@@ -469,7 +340,7 @@ class SplitLearner:
 
             # build up final network by inserting this partial result
             result_state = BNState(partial_result.representation.gates,
-                                   partial_instance)
+                                   D_partial)
             accumulated_network = self.join_networks(
                 accumulated_network, result_state, target_index)
 
@@ -479,7 +350,7 @@ class SplitLearner:
 
         return LearnerResult(
             network=accumulated_network.representation,
-            target_order=list(range(self.No)),
+            target_order=list(range(self.D.No)),
             extra={
                 'best_err': [r.error for r in opt_results],
                 'best_step': [r.best_iteration for r in opt_results],
@@ -492,39 +363,47 @@ class SplitLearner:
             })
 
 
-class StratifiedLearner(MonolithicLearner):
+class StratifiedLearner():
 
-    def _setup(self, optimiser, parameters):
-        super()._setup(optimiser, parameters)
-        # Required
-        self.auto_target = (parameters['target_order'] == 'auto')
+    def _setup(self, parameters):
+        # Gate generation
+        self.model_generator = parameters['model_generator']
+        self.budget = parameters['network']['Ng']
+        # get target order
+        self.target_order = parameters['target_order']
+        # Instance
+        self.D = parameters['training_set']
+        self.X, self.Y = np.split(self.D, [self.D.Ni])
         # Optional
+        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
+        self.minfs_params = parameters.get('minfs_solver_params', {})
+        self.minfs_tie_handling = parameters.get('minfs_tie_handling',
+                                                 'random')
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_prefilter = parameters.get('minfs_prefilter', None)
         self.shrink_subnets = parameters.get('shrink_subnets', True)
         self.reuse_gates = parameters.get('reuse_gates', False)
         # Initialise
-        self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
         self.strata_sizes = []
         self.learned_targets = []
-        self.feature_sets = np.empty((self.No, self.No), dtype=list)
+        self.feature_sets = np.empty((self.D.No, self.D.No), dtype=list)
 
     def determine_next_target(self, strata, inputs):
-        if self.auto_target:
+        if self.target_order is None:
             # get unlearned targets
-            to_learn = np.setdiff1d(range(self.No), self.learned_targets)
+            to_learn = np.setdiff1d(range(self.D.No), self.learned_targets)
         elif self.use_minfs_selection:
             # get next target from given ordering
             to_learn = [self.target_order[strata]]
         else:
             return self.target_order[strata]
         next_target = ranked_fs_helper(
-            inputs, self.target_matrix, self.Ne, self.Ni, self.strata_sizes,
-            strata, to_learn, self.feature_sets, self.minfs_prefilter,
-            self.minfs_metric, self.minfs_solver, self.minfs_params,
-            self.minfs_tie_handling, False)
+            inputs, self.Y, self.D.Ne, self.D.Ni,
+            self.strata_sizes, strata, to_learn, self.feature_sets,
+            self.minfs_prefilter, self.minfs_metric, self.minfs_solver,
+            self.minfs_params, self.minfs_tie_handling, False)
 
         return next_target
 
@@ -534,10 +413,10 @@ class StratifiedLearner(MonolithicLearner):
             fs = self.feature_sets[strata, target_index]
             inputs = inputs[fs]
 
-        target = self.target_matrix[target_index]
+        target = self.Y[target_index]
 
         return PackedMatrix(np.vstack((inputs, target)),
-                            Ne=self.Ne, Ni=inputs.shape[0])
+                            Ne=self.D.Ne, Ni=inputs.shape[0])
 
     def join_networks(self, base, new, strata, target_index):
         # simple: build up a map for all sources, for sources after the
@@ -576,18 +455,17 @@ class StratifiedLearner(MonolithicLearner):
 
         new_target = np.vstack((base.target_matrix, new.target_matrix))
 
-        new_problem_matrix = PackedMatrix(
-            np.vstack((self.input_matrix, new_target)),
-            Ne=self.Ne, Ni=self.Ni)
+        D_new = PackedMatrix(np.vstack((self.X, new_target)),
+                             Ne=self.D.Ne, Ni=self.D.Ni)
 
-        return BNState(accumulated_gates, new_problem_matrix)
+        return BNState(accumulated_gates, D_new)
 
     def reorder_network_outputs(self, network):
         # all non-output gates are left alone, and the output gates are
         # reordered by the inverse permutation of "learned_targets"
-        No = network.No
         new_out_order = inverse_permutation(self.learned_targets)
         new_gates = np.array(network.gates)
+        No = network.No
         new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
         network.set_gates(new_gates)
 
@@ -599,11 +477,11 @@ class StratifiedLearner(MonolithicLearner):
         #   hook into accumulated network
         # reorganise outputs
 
-        self._setup(optimiser, parameters)
+        self._setup(parameters)
 
         opt_results = []
 
-        inputs = self.input_matrix.copy()
+        inputs = self.X.copy()
 
         # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
         accumulated_network = BNState(np.empty((0, 3)), inputs)
@@ -611,7 +489,7 @@ class StratifiedLearner(MonolithicLearner):
         optimisation_times = []
         other_times = []
 
-        for i in range(self.No):
+        for i in range(self.D.No):
             if verbose:
                 print('Strata {}'.format(i))
             t0 = time()
@@ -625,16 +503,14 @@ class StratifiedLearner(MonolithicLearner):
             if verbose:
                 print('  done. Target {} selected.'.format(target))
 
-            partial_instance = self.make_partial_instance(i, target, inputs)
+            D_partial = self.make_partial_instance(i, target, inputs)
 
             # ### build state to be optimised ### #
             # next batch of gates
-            size = self.remaining_budget // (self.No - i)
-            gates = self.gate_generator(size, partial_instance.Ni,
-                                        partial_instance.No, self.node_funcs)
-            state = BNState(gates, partial_instance)
-            # add the guiding function to be evaluated
-            state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name)
+            size = self.remaining_budget // (self.D.No - i)
+            gates = self.model_generator(size, D_partial.Ni,
+                                         D_partial.No)
+            state = BNState(gates, D_partial)
 
             t1 = time()
 
@@ -643,7 +519,7 @@ class StratifiedLearner(MonolithicLearner):
                 print('  Optimising...')
 
             # optimise
-            partial_result = self.optimiser.run(state, self.opt_params)
+            partial_result = optimiser.run(state, parameters['optimiser'])
 
             t2 = time()
 
@@ -658,11 +534,11 @@ class StratifiedLearner(MonolithicLearner):
             if self.shrink_subnets:
                 # percolate
                 new_gates = alg.filter_connected(net.gates, net.Ni, net.No)
-                result_state = BNState(new_gates, partial_instance)
+                result_state = BNState(new_gates, D_partial)
                 if self.reuse_gates:
                     size = new_gates.shape[0]
             else:
-                result_state = BNState(net.gates, partial_instance)
+                result_state = BNState(net.gates, D_partial)
 
             # update node budget and strata sizes
             self.remaining_budget -= size
@@ -675,7 +551,7 @@ class StratifiedLearner(MonolithicLearner):
             # new Ni = Ng - No + Ni
             No = accumulated_network.No
             inputs = accumulated_network.activation_matrix[:-No, :]
-            inputs = PackedMatrix(inputs, Ne=self.Ne, Ni=inputs.shape[0])
+            inputs = PackedMatrix(inputs, Ne=self.D.Ne, Ni=inputs.shape[0])
 
             self.learned_targets.append(target)
 
@@ -720,29 +596,37 @@ class StratifiedLearner(MonolithicLearner):
     #                          .format(feature, target))
 
 
-class StratMultiPar(MonolithicLearner):
+class StratMultiPar:
 
-    def _setup(self, optimiser, parameters):
-        super()._setup(optimiser, parameters)
-        # Required
-        self.auto_target = (parameters['target_order'] == 'auto')
+    def _setup(self, parameters):
+        # Gate generation
+        self.model_generator = parameters['model_generator']
+        self.budget = parameters['network']['Ng']
+        # get target order
+        self.target_order = parameters['target_order']
+        # Instance
+        self.D = parameters['training_set']
+        self.X, self.Y = np.split(self.D, [self.D.Ni])
         # Optional
+        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
+        self.minfs_params = parameters.get('minfs_solver_params', {})
+        self.minfs_tie_handling = parameters.get('minfs_tie_handling',
+                                                 'random')
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_prefilter = parameters.get('minfs_prefilter', None)
         self.shrink_subnets = parameters.get('shrink_subnets', True)
         self.reuse_gates = parameters.get('reuse_gates', False)
         # Initialise
-        self.No, _ = self.target_matrix.shape
         self.remaining_budget = self.budget
         self.strata_sizes = []
         self.learned_targets = []
-        self.feature_sets = np.empty((self.No, self.No), dtype=list)
+        self.feature_sets = np.empty((self.D.No, self.D.No), dtype=list)
 
     def remaining_targets(self):
         flat_learned = list(
                 itertools.chain.from_iterable(self.learned_targets))
-        return np.setdiff1d(range(self.No), flat_learned)
+        return np.setdiff1d(range(self.D.No), flat_learned)
 
     def determine_next_targets(self, strata, inputs):
         if self.auto_target:
@@ -754,7 +638,7 @@ class StratMultiPar(MonolithicLearner):
             return self.target_order[strata]
 
         next_targets = ranked_fs_helper(
-            inputs, self.target_matrix, self.Ne, self.Ni, self.strata_sizes,
+            inputs, self.Y, self.D.Ne, self.D.Ni, self.strata_sizes,
             strata, to_learn, self.feature_sets, self.minfs_prefilter,
             self.minfs_metric, self.minfs_solver, self.minfs_params,
             'all', False)
@@ -775,10 +659,10 @@ class StratMultiPar(MonolithicLearner):
             fs = self._combined_feature_set(strata, target_indices)
             inputs = inputs[fs]
 
-        target = self.target_matrix[target_indices]
+        targets = self.Y[target_indices]
 
-        return PackedMatrix(np.vstack((inputs, target)),
-                            Ne=self.Ne, Ni=inputs.shape[0])
+        return PackedMatrix(np.vstack((inputs, targets)),
+                            Ne=self.D.Ne, Ni=inputs.shape[0])
 
     def join_networks(self, base, new, strata, target_indices):
         # simple: build up a map for all sources, for sources after the
@@ -815,13 +699,12 @@ class StratMultiPar(MonolithicLearner):
                                            base.gates[-base.No:, :],
                                            new.gates[-new.No:, :]))
 
-        new_target_matrix = np.vstack((base.target_matrix, new.target_matrix))
+        Y_new = np.vstack((base.target_matrix, new.target_matrix))
 
-        new_problem_matrix = PackedMatrix(
-            np.vstack((self.input_matrix, new_target_matrix)),
-            Ne=self.Ne, Ni=self.Ni)
+        D_new = PackedMatrix(np.vstack((self.X, Y_new)),
+                             Ne=self.D.Ne, Ni=self.D.Ni)
 
-        return BNState(accumulated_gates, new_problem_matrix)
+        return BNState(accumulated_gates, D_new)
 
     def reorder_network_outputs(self, network):
         # all non-output gates are left alone, and the output gates are
@@ -844,13 +727,13 @@ class StratMultiPar(MonolithicLearner):
         #   hook into accumulated network
         # reorganise outputs
 
-        self._setup(optimiser, parameters)
+        self._setup(parameters)
 
         opt_results = []
 
-        inputs = self.input_matrix.copy()
+        inputs = self.X.copy()
 
-        # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
+        # make a state with Ng = No = 0 and set the inp mat = self.X
         accumulated_network = BNState(np.empty((0, 3)), inputs)
 
         optimisation_times = []
@@ -871,16 +754,13 @@ class StratMultiPar(MonolithicLearner):
             if verbose:
                 print('  done. Targets selected: {} .'.format(targets))
 
-            partial_instance = self.make_partial_instance(strata, targets, inputs)
+            D_partial = self.make_partial_instance(strata, targets, inputs)
 
             # ### build state to be optimised ### #
             # next batch of gates
             size = self.remaining_budget * len(targets) // len(self.remaining_targets())
-            gates = self.gate_generator(size, partial_instance.Ni,
-                                        partial_instance.No, self.node_funcs)
-            state = BNState(gates, partial_instance)
-            # add the guiding function to be evaluated
-            state.add_function(self.guiding_fn_id, self.guiding_fn_eval_name)
+            gates = self.model_generator(size, D_partial.Ni, D_partial.No)
+            state = BNState(gates, D_partial)
 
             t1 = time()
 
@@ -889,7 +769,7 @@ class StratMultiPar(MonolithicLearner):
                 print('  Optimising...')
 
             # optimise
-            partial_result = self.optimiser.run(state, self.opt_params)
+            partial_result = optimiser.run(state, parameters['optimiser'])
 
             t2 = time()
 
@@ -904,11 +784,11 @@ class StratMultiPar(MonolithicLearner):
             if self.shrink_subnets:
                 # percolate
                 new_gates = alg.filter_connected(net.gates, net.Ni, net.No)
-                result_state = BNState(new_gates, partial_instance)
                 if self.reuse_gates:
                     size = new_gates.shape[0]
             else:
-                result_state = BNState(net.gates, partial_instance)
+                new_gates = net.gates
+            result_state = BNState(new_gates, D_partial)
 
             # update node budget and strata sizes
             self.remaining_budget -= size
@@ -921,7 +801,7 @@ class StratMultiPar(MonolithicLearner):
             # new Ni = Ng - No + Ni
             No = accumulated_network.No
             inputs = accumulated_network.activation_matrix[:-No, :]
-            inputs = PackedMatrix(inputs, Ne=self.Ne, Ni=inputs.shape[0])
+            inputs = PackedMatrix(inputs, Ne=self.D.Ne, Ni=inputs.shape[0])
 
             self.learned_targets.append(targets)
 

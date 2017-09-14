@@ -29,14 +29,14 @@ class RestartLocalSearch:
     def initialise(self, parameters):
         # unpack options
         try:
-            self.guiding_function = parameters['guiding_function']
+            self.guiding_function = parameters['guide_functor']
             if parameters['minimise']:
                 self.is_as_good = op.le
                 self.is_better = op.lt
             else:
                 self.is_as_good = op.ge
                 self.is_better = op.gt
-            self.stopping_condition = parameters['stopping_condition']
+            self.stopping_condition = parameters['stop_functor']
             self.return_option = parameters.get('return', 'best')
             # self.max_restarts = parameters.get('max_restarts', 0)
             self.max_restarts = parameters.get('max_restarts', 0)
