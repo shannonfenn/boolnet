@@ -9,7 +9,7 @@ def load(fname):
         records = json.loads(f.read())
     mapping = {record['id']: record for record in records}
     if len(mapping) != len(records):
-        raise ValueError(f'Duplicates record ids exist in {fname}')
+        raise ValueError('Duplicates record ids exist in {}'.format(fname))
     return mapping
 
 

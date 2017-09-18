@@ -42,9 +42,9 @@ def main():
     run_dir = os.path.join(args.dir, args.run)
 
     if not os.path.isdir(run_dir):
-        raise ValueError(f'{run_dir} doesn\'t exist')
+        raise ValueError('{} doesn\'t exist'.format(run_dir))
     if not args.outfile:
-        fname = os.path.join(args.dir, f'{args.run}.json')
+        fname = os.path.join(args.dir, args.run + '.json')
         args.outfile = open(fname, 'x')
 
     partials = glob.glob(os.path.join(run_dir, '*.json'))
