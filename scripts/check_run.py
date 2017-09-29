@@ -5,7 +5,7 @@ import argparse
 import pickle
 import gzip
 import rapidjson as json
-from os.path import abspath, expanduser, isdir, splitext, join, basename
+from os.path import abspath, expanduser, isdir, join
 from natsort import natsorted
 
 
