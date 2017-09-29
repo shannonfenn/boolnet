@@ -303,7 +303,7 @@ def build_result_map(parameters, learner_result):
     gf_params = parameters['learner']['optimiser'].get(
             'guiding_function_parameters', {})
 
-    final_network = learner_result.network
+    final_network = learner_result['network']
     gates = np.asarray(final_network.gates)
 
     train_state, test_state = build_states(parameters['mapping'], gates)
@@ -324,29 +324,29 @@ def build_result_map(parameters, learner_result):
 
     # Optional results
     if parameters.get('record_final_net', True):
-        learner_result.extra['final_net'] = gates
+        learner_result['extra']['final_net'] = gates
 
-    partial_nets = learner_result.extra.pop('partial_networks', None)
+    partial_nets = learner_result['extra'].pop('partial_networks', None)
     if partial_nets and parameters.get('record_intermediate_nets', False):
         partial_nets = [net.gates.tolist() for net in partial_nets]
-        learner_result.extra['partial_networks'] = partial_nets
+        learner_result['extra']['partial_networks'] = partial_nets
 
-    # if 'feature_sets' in learner_result.extra:
-    #     F = learner_result.extra['feature_sets']
+    # if 'feature_sets' in learner_result['extra']:
+    #     F = learner_result['extra']['feature_sets']
     #     for strata, strata_f_sets in enumerate(F):
     #         for target, fs in enumerate(strata_f_sets):
     #             # only record FSes if they exist
     #             if fs is not None:
     #                 key = 'fs_s{}_t{}'.format(strata, target)
-    #                 learner_result.extra[key] = fs
-    #     learner_result.extra.pop('feature_sets')
+    #                 learner_result['extra'][key] = fs
+    #     learner_result['extra'].pop('feature_sets')
 
     results = {
         'Ni':           final_network.Ni,
         'No':           final_network.No,
         'Ng':           final_network.Ng,
         'Ne':           train_state.Ne,
-        'tgt_order':    learner_result.target_order,
+        'tgt_order':    learner_result['target_order'],
         # training set metrics
         'trg_err':      train_state.function_value(eval_e1_train),
         'trg_cor':      train_state.function_value(eval_correctness_train),
@@ -362,7 +362,7 @@ def build_result_map(parameters, learner_result):
         'test_errs':    np.asarray(test_state.function_value(eval_per_output_err_test)),
         'test_mccs':    np.asarray(test_state.function_value(eval_per_output_mcc_test)),
         }
-    results.update(learner_result.extra)
+    results.update(learner_result['extra'])
 
     if 'actual_noise' in parameters:
         results['actual_noise'] = parameters['actual_noise']

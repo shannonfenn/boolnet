@@ -11,10 +11,6 @@ from time import time
 import itertools
 
 
-LearnerResult = namedtuple('LearnerResult', [
-    'network', 'target_order', 'extra'])
-
-
 def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
                      prefilter_method, metric, solver, solver_params,
                      tie_handling='random', provide_prior_soln=False):
@@ -200,17 +196,18 @@ class MonolithicLearner:
         out_gates[:] = out_gates[inverse_order, :]
         opt_result.representation.set_gates(gates)
 
-        return LearnerResult(
-            network=opt_result.representation,
-            target_order=self.target_order,
-            extra={
+        return {
+            'network': opt_result.representation,
+            'target_order': self.target_order,
+            'extra': {
                 'best_err': [opt_result.error],
                 'best_step': [opt_result.best_iteration],
                 'steps': [opt_result.iteration],
                 'restarts': [opt_result.restarts],
                 'opt_time': t2-t1,
                 'other_time': t1-t0,
-            })
+                }
+            }
 
 
 class SplitLearner:
@@ -348,10 +345,10 @@ class SplitLearner:
             optimisation_times.append(t2 - t1)
             other_times.append(t3 - t2 + t1 - t0)
 
-        return LearnerResult(
-            network=accumulated_network.representation,
-            target_order=list(range(self.D.No)),
-            extra={
+        return {
+            'network': accumulated_network.representation,
+            'target_order': list(range(self.D.No)),
+            'extra': {
                 'best_err': [r.error for r in opt_results],
                 'best_step': [r.best_iteration for r in opt_results],
                 'steps': [r.iteration for r in opt_results],
@@ -360,7 +357,8 @@ class SplitLearner:
                 'opt_time': optimisation_times,
                 'other_time': other_times,
                 'fs_time': feature_selection_time
-            })
+                }
+            }
 
 
 class StratifiedLearner():
@@ -563,10 +561,10 @@ class StratifiedLearner():
         # NOTE: This is why output gates are not included as possible inputs
         self.reorder_network_outputs(accumulated_network.representation)
 
-        return LearnerResult(
-            network=accumulated_network.representation,
-            target_order=self.learned_targets,
-            extra={
+        return {
+            'network': accumulated_network.representation,
+            'target_order': self.learned_targets,
+            'extra': {
                 'partial_networks': [r.representation for r in opt_results],
                 'best_err': [r.error for r in opt_results],
                 'best_step': [r.best_iteration for r in opt_results],
@@ -576,7 +574,8 @@ class StratifiedLearner():
                 'opt_time': optimisation_times,
                 'other_time': other_times,
                 'strata_sizes': self.strata_sizes,
-            })
+                }
+            }
 
     # def handle_single_FS(self, feature, target):
     #     # When we have a 1FS we have already learned the target,
@@ -815,10 +814,10 @@ class StratMultiPar:
         # NOTE: This is why output gates are not included as possible inputs
         self.reorder_network_outputs(accumulated_network.representation)
 
-        return LearnerResult(
-            network=accumulated_network.representation,
-            target_order=self.learned_targets,
-            extra={
+        return {
+            'network': accumulated_network.representation,
+            'target_order': self.learned_targets,
+            'extra': {
                 'partial_networks': [r.representation for r in opt_results],
                 'best_err': [r.error for r in opt_results],
                 'best_step': [r.best_iteration for r in opt_results],
@@ -828,4 +827,5 @@ class StratMultiPar:
                 'opt_time': optimisation_times,
                 'other_time': other_times,
                 'strata_sizes': self.strata_sizes,
-            })
+                }
+            }
