@@ -372,7 +372,7 @@ def build_result_map(parameters, learner_result):
     #     results[key] = v
 
     if 'notes' in parameters:
-        results['notes'] = ''.join(parameters['notes'].values())
+        results['notes'] = parameters['notes']
 
     # handle requests to log keys
     log_keys = parameters.get('log_keys', [])
