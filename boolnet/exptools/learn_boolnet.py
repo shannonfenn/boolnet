@@ -2,7 +2,6 @@ import time
 import random
 import logging
 import re
-import copy
 import numpy as np
 import bitpacking.packing as pk
 import boolnet.bintools.functions as fn
@@ -10,7 +9,10 @@ import boolnet.bintools.biterror as be
 import boolnet.bintools.example_generator as gen
 import boolnet.network.networkstate as ns
 import boolnet.utils as utils
-import boolnet.learners as learners
+import boolnet.learners.monolithic as monolithic
+import boolnet.learners.stratified as stratified
+import boolnet.learners.stratified_multipar as stratified_multipar
+import boolnet.learners.split as split
 import boolnet.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
 import boolnet.exptools.config_filtering as cf
@@ -24,10 +26,10 @@ OPTIMISERS = {
 
 
 LEARNERS = {
-    'monolithic': learners.MonolithicLearner(),
-    'stratified': learners.StratifiedLearner(),
-    'stratmultipar': learners.StratMultiPar(),
-    'split': learners.SplitLearner(),
+    'monolithic': monolithic.Learner(),
+    'stratified': stratified.Learner(),
+    'stratmultipar': stratified_multipar.Learner(),
+    'split': split.Learner(),
     }
 
 
