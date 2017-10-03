@@ -2,32 +2,26 @@ import numpy as np
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
-from boolnet.utils import PackedMatrix
+from boolnet.utils import PackedMatrix, spacings
 from boolnet.network.networkstate import BNState
 from time import time
 
 
 class Learner:
     def _setup(self, parameters):
-        # Gate generation
-        self.model_generator = parameters['model_generator']
-        self.budget = parameters['network']['Ng']
-        self.remaining_budget = self.budget
         # Instance
         self.D = parameters['training_set']
         self.X, self.Y = np.split(self.D, [self.D.Ni])
+        # Gate generation
+        self.model_generator = parameters['model_generator']
+        self.budget = parameters['network']['Ng']
+        self.budgets = spacings(self.budget, self.D.No)
         # Optional feature selection params
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_params = parameters.get('minfs_solver_params', {})
         self.minfs_solver = parameters.get('minfs_solver', 'cplex')
         self.feature_sets = np.empty(self.D.No, dtype=list)
-
-    def next_subnet(self, t):
-        size = self.remaining_budget // (self.D.No - t)
-        self.remaining_budget -= size
-        fs = self.feature_sets[t]
-        return self.model_generator(size, len(fs), 1)
 
     def join_networks(self, base, new, t):
         if self.use_minfs_selection:
@@ -109,13 +103,12 @@ class Learner:
         if verbose:
             print('done. Time taken: {}'.format(feature_selection_time))
 
-        for target_index in range(self.D.No):
+        for target_index, size in enumerate(self.budgets):
             t0 = time()
 
             D_partial = self.make_partial_instance(target_index)
-
             # build the network state
-            gates = self.next_subnet(target_index)
+            gates = self.model_generator(size, D_partial.Ni, 1)
             state = BNState(gates, D_partial)
 
             t1 = time()
