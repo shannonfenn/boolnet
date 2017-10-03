@@ -132,8 +132,8 @@ def pairwise(iterable):
 
 
 def spacings(n, k, low_first=True):
-    rem = n
-    sizes = [rem // (n - i) for i in range(k)]
-    if low_first:
-        sizes.reverse()
-    return sizes
+    # (n + k - 1) // k == ceil(n/k)
+    S = (k - n % k) * [n // k] + (n % k) * [(n + k - 1) // k]
+    if not low_first:
+        S.reverse()
+    return S

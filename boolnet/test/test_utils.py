@@ -1,5 +1,6 @@
 import pytest
 import boolnet.utils as utils
+from random import randint
 
 
 @pytest.fixture
@@ -70,3 +71,13 @@ def test_order_from_rank(harness, execution_number):
     ranking_with_ties, _, all_expected = harness
     actual = utils.order_from_rank(ranking_with_ties)
     assert actual.tolist() in all_expected
+
+
+@pytest.mark.parametrize('execution_number', range(10))
+def test_spacings(harness, execution_number):
+    n = randint(1, 100)
+    k = randint(1, n)
+    S = utils.spacings(n, k)
+    assert sum(S) == n
+    assert len(S) == k
+    assert all((n // k) <= s <= (n // k + 1) for s in S)
