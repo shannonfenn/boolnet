@@ -3,7 +3,7 @@ import bitpacking.packing as pk
 from progress.bar import IncrementalBar
 import json
 import os
-from os.path import splitext
+from itertools import tee
 
 
 class NumpyAwareJSONEncoder(json.JSONEncoder):
@@ -122,3 +122,18 @@ def order_from_rank(ranking_with_ties):
     ranking_without_ties = rank_with_ties_broken(ranking_with_ties)
     # orders and rankings are inverse when no ties are present
     return inverse_permutation(ranking_without_ties)
+
+
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
+
+
+def spacings(n, k, low_first=True):
+    rem = n
+    sizes = [rem // (n - i) for i in range(k)]
+    if low_first:
+        sizes.reverse()
+    return sizes
