@@ -6,3 +6,4 @@ progress
 pyyaml
 networkx
 cythongsl
+scikit-learn
