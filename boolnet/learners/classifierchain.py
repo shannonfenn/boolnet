@@ -8,11 +8,6 @@ from time import time
 
 
 class Learner:
-    def next_subnet(self, t):
-        size = self.remaining_budget // (self.D.No - t)
-        self.remaining_budget -= size
-        fs = self.feature_sets[t]
-        return self.model_generator(size, len(fs), 1)
 
     def join_networks(self, base, new, t):
         if self.use_minfs_selection:
@@ -171,26 +166,20 @@ class Learner:
     def run(self, optimiser, parameters, verbose=False):
         t0 = time()
 
-        # Gate generation
-        model_generator = parameters['model_generator']
-        budget = parameters['network']['Ng']
-        remaining_budget = budget
-        # get target order
-        target_order = parameters['target_order']
-        if target_order is None:
-
-        # Instance
-        self.minfs_metric = parameters.get('minfs_selection_metric', None)
-        self.minfs_params = parameters.get('minfs_solver_params', {})
-        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
-
         # Instance
         D = parameters['training_set']
         X, Y = np.split(D, [D.Ni])
         Ni, No, Ne = D.Ni, D.No, D.Ne
 
+        # Gate generation
+        model_generator = parameters['model_generator']
+        total_budget = parameters['network']['Ng']
+        budgets = spacings(total_budget, No)
+
+        # get target order
+        target_order = parameters['target_order']
         if target_order is None:
-            # parameters only required if auto-targetting
+            # these parameters only required if auto-targetting
             mfs_solver = parameters.get('minfs_solver', 'cplex')
             mfs_metric = parameters['minfs_selection_metric']
             mfs_params = parameters.get('minfs_solver_params', {})
@@ -228,6 +217,10 @@ class Learner:
         out_gates = gates[-No:, :]
         out_gates[:] = out_gates[inverse_order, :]
         opt_result.representation.set_gates(gates)
+
+        # TO REORDER THE NETWORK OUTPUTS JUST MAKE AND EXTRA GROUP OF OR GATES
+        # THAT EACH TAKE THE CORRECT OUTPUT NODE AS BOTH INPUTS - DON'T RESTRICT
+        # THE BUDGET THOUGH TO ERR ON THE SIDE OF BEING FAIR
 
         return {
             'network': opt_result.representation,
