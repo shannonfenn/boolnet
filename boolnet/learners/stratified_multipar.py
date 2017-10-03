@@ -170,7 +170,8 @@ class Learner:
 
             # ### build state to be optimised ### #
             # next batch of gates
-            size = self.remaining_budget * len(targets) // len(self.remaining_targets())
+            size = (self.remaining_budget * len(targets) //
+                    len(self.remaining_targets()))
             gates = self.model_generator(size, D_partial.Ni, D_partial.No)
             state = BNState(gates, D_partial)
 

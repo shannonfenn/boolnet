@@ -8,46 +8,42 @@ from time import time
 
 
 class Learner:
-    def _setup(self, parameters):
-        # Gate generation
-        self.model_generator = parameters['model_generator']
-        self.budget = parameters['network']['Ng']
-        # get target order
-        self.target_order = parameters['target_order']
-        if self.target_order is None:
-            # this key is only required if auto-targetting
-            self.minfs_metric = parameters['minfs_selection_metric']
-        # Optional minfs solver time limit
-        self.minfs_params = parameters.get('minfs_solver_params', {})
-        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
-        self.minfs_tie_handling = parameters.get('minfs_tie_handling',
-                                                 'random')
-
     def run(self, optimiser, parameters, verbose=False):
         t0 = time()
-        self._setup(parameters)
+
+        # Gate generation
+        model_generator = parameters['model_generator']
+        budget = parameters['network']['Ng']
+        # get target order
+        target_order = parameters['target_order']
+        if target_order is None:
+            # this key is only required if auto-targetting
+            mfs_metric = parameters['minfs_selection_metric']
+        # Optional minfs solver time limit
+        mfs_params = parameters.get('minfs_solver_params', {})
+        mfs_solver = parameters.get('minfs_solver', 'cplex')
+        mfs_tie_handling = parameters.get('minfs_tie_handling', 'random')
 
         # Instance
         D = parameters['training_set']
         X, Y = np.split(D, [D.Ni])
         Ni, No, Ne = D.Ni, D.No, D.Ne
 
-        if self.target_order is None:
+        if target_order is None:
             if verbose:
                 print('Determining target order...')
             # determine the target order by ranking feature sets
-            mfs_features = pk.unpackmat(X, Ne)
-            mfs_targets = pk.unpackmat(Y, Ne)
+            mfs_X = pk.unpackmat(X, Ne)
+            mfs_Y = pk.unpackmat(Y, Ne)
 
             # use external solver for minFS
             rank, feature_sets = mfs.ranked_feature_sets(
-                mfs_features, mfs_targets, self.minfs_metric,
-                self.minfs_solver, self.minfs_params)
+                mfs_X, mfs_Y, mfs_metric, mfs_solver, mfs_params)
 
-            if self.minfs_tie_handling == 'random':
+            if mfs_tie_handling == 'random':
                 # randomly pick from possible exact orders
-                self.target_order = order_from_rank(rank)
-            elif self.minfs_tie_handling == 'min_depth':
+                target_order = order_from_rank(rank)
+            elif mfs_tie_handling == 'min_depth':
                 # can do using a tuple to sort where the second element is the
                 # inverse of the largest feature (i.e. the greatest depth)
                 raise NotImplementedError(
@@ -59,11 +55,11 @@ class Learner:
                 print('done. Time taken: {}'.format(time() - t0))
 
         # build the network state
-        gates = self.model_generator(self.budget, Ni, No)
+        gates = model_generator(budget, Ni, No)
 
         # reorder problem matrix
         outputs = D[-No:, :]
-        outputs[:] = outputs[self.target_order, :]
+        outputs[:] = outputs[target_order, :]
 
         state = BNState(gates, D)
 
@@ -80,7 +76,7 @@ class Learner:
             print('done. Time taken: {}'.format(t2 - t1))
 
         # undo ordering
-        inverse_order = inverse_permutation(self.target_order)
+        inverse_order = inverse_permutation(target_order)
         outputs[:] = outputs[inverse_order, :]
 
         gates = np.array(opt_result.representation.gates)
@@ -90,7 +86,7 @@ class Learner:
 
         return {
             'network': opt_result.representation,
-            'target_order': self.target_order,
+            'target_order': target_order,
             'extra': {
                 'best_err': [opt_result.error],
                 'best_step': [opt_result.best_iteration],
