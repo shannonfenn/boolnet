@@ -1,10 +1,8 @@
-from copy import copy
-from collections import namedtuple
 import numpy as np
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
-from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
+from boolnet.utils import order_from_rank, inverse_permutation
 from boolnet.network.networkstate import BNState
 from time import time
 

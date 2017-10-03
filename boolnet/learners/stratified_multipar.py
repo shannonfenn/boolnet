@@ -1,9 +1,7 @@
-from copy import copy
-from collections import namedtuple
 import numpy as np
 
 import boolnet.network.algorithms as alg
-from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
+from boolnet.utils import PackedMatrix, inverse_permutation
 from boolnet.network.networkstate import BNState
 from boolnet.learners.stratified import ranked_fs_helper
 from time import time
