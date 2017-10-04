@@ -1,6 +1,6 @@
 from good import (
     Schema, message, All, Any, Range, IsDir, Allow, Default, Match, Msg,
-    In, Optional, Required, Exclusive, Length, Invalid, Entire, truth)
+    In, Optional, Exclusive, Length, Invalid, Entire, truth)
 import boolnet.bintools.functions as fn
 
 
@@ -190,7 +190,8 @@ target_order_schema = Any('auto', 'msb', 'lsb',
 learner_schema = Schema(
     All(
         Schema({
-            'name':         Any('monolithic', 'stratified', 'split', 'stratmultipar'),
+            'name':         Any('monolithic', 'stratified', 'split',
+                                'stratmultipar', 'classifierchain'),
             'network':      network_schema,
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
@@ -213,11 +214,15 @@ learner_schema = Schema(
         # if name monolithic then some minfs keys are not allowed
         conditionally_forbidden('name', 'monolithic', 'minfs_masking'),
         conditionally_forbidden('name', 'monolithic', 'minfs_prefilter'),
-        conditionally_forbidden('name', 'split', 'minfs_prefilter'),
         conditionally_forbidden('name', 'monolithic', 'reuse_gates'),
-        conditionally_forbidden('name', 'split', 'reuse_gates'),
         conditionally_forbidden('name', 'monolithic', 'shrink_subnets'),
+        conditionally_forbidden('name', 'split', 'minfs_prefilter'),
+        conditionally_forbidden('name', 'split', 'reuse_gates'),
         conditionally_forbidden('name', 'split', 'shrink_subnets'),
+        conditionally_forbidden('name', 'classifierchain', 'minfs_masking'),
+        conditionally_forbidden('name', 'classifierchain', 'minfs_prefilter'),
+        conditionally_forbidden('name', 'classifierchain', 'reuse_gates'),
+        conditionally_forbidden('name', 'classifierchain', 'shrink_subnets'),
         )
     )
 

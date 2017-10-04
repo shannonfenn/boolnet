@@ -13,6 +13,7 @@ import boolnet.learners.monolithic as monolithic
 import boolnet.learners.stratified as stratified
 import boolnet.learners.stratified_multipar as stratified_multipar
 import boolnet.learners.split as split
+import boolnet.learners.classifierchain as classifierchain
 import boolnet.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
 import boolnet.exptools.config_filtering as cf
@@ -30,6 +31,7 @@ LEARNERS = {
     'stratified': stratified.Learner(),
     'stratmultipar': stratified_multipar.Learner(),
     'split': split.Learner(),
+    'classifierchain': classifierchain.Learner(),
     }
 
 
