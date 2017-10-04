@@ -9,6 +9,7 @@ from math import ceil
 
 import bitpacking.packing as pk
 cimport bitpacking.packing as pk
+from bitpacking.packing cimport packed_type_t
 
 import boolnet.bintools.functions as fn
 import boolnet.bintools.biterror as be
@@ -16,13 +17,34 @@ import boolnet.bintools.biterror as be
 from boolnet.bintools.functions cimport Function
 from boolnet.network.boolnet cimport BoolNet, Move
 
+# 2-input binary functions
+cdef packed_type_t _f0(packed_type_t x, packed_type_t y):  return 0
+cdef packed_type_t _f1(packed_type_t x, packed_type_t y):  return ~(x|y)  # NOR
+cdef packed_type_t _f2(packed_type_t x, packed_type_t y):  return ~x&y
+cdef packed_type_t _f3(packed_type_t x, packed_type_t y):  return ~x
+cdef packed_type_t _f4(packed_type_t x, packed_type_t y):  return x&~y
+cdef packed_type_t _f5(packed_type_t x, packed_type_t y):  return ~y
+cdef packed_type_t _f6(packed_type_t x, packed_type_t y):  return x^y     # XOR
+cdef packed_type_t _f7(packed_type_t x, packed_type_t y):  return ~(x&y) # NAND
+cdef packed_type_t _f8(packed_type_t x, packed_type_t y):  return x&y     # AND
+cdef packed_type_t _f9(packed_type_t x, packed_type_t y):  return ~(x^y) # XNOR
+cdef packed_type_t _f10(packed_type_t x, packed_type_t y): return y
+cdef packed_type_t _f11(packed_type_t x, packed_type_t y): return ~x|y
+cdef packed_type_t _f12(packed_type_t x, packed_type_t y): return x
+cdef packed_type_t _f13(packed_type_t x, packed_type_t y): return x|~y
+cdef packed_type_t _f14(packed_type_t x, packed_type_t y): return x|y      # OR
+cdef packed_type_t _f15(packed_type_t x, packed_type_t y): return 1
+# binary function type
+ctypedef packed_type_t (*f_type)(packed_type_t, packed_type_t)
+cdef f_type* function_list = [_f0, _f1, _f2, _f3, _f4, _f5, _f6, _f7,
+                              _f8, _f9, _f10, _f11, _f12, _f13, _f14, _f15]
 
 cdef class BNState:
     cdef:
         readonly BoolNet network
         readonly size_t Ne, cols
-        pk.packed_type_t[:, :] activation, inputs, outputs, target, error
-        readonly pk.packed_type_t zero_mask
+        packed_type_t[:, :] activation, inputs, outputs, target, error
+        readonly packed_type_t zero_mask
         readonly size_t invalid_start
         readonly bint evaluated
 
@@ -62,7 +84,7 @@ cdef class BNState:
         self._check_state_invariants()
 
         # buffer view for copying
-        cdef pk.packed_type_t[:, :] P = problem_matrix
+        cdef packed_type_t[:, :] P = problem_matrix
 
         self.inputs[...] = P[:Ni, :]
         self.target[...] = P[Ni:, :]
@@ -138,7 +160,7 @@ cdef class BNState:
     cpdef force_reevaluation(self):
         self.evaluated = False
         self.invalid_start = 0
-    
+
     cpdef randomise(self):
         self.network.randomise()
         # indicate the network must be reevaluated
@@ -185,9 +207,9 @@ cdef class BNState:
             getting node TFs from network. '''
         cdef:
             size_t Ni, No, Ng, cols, c, g, o, src1, src2, start
-            pk.packed_type_t[:, :] activation, outputs, error, target
+            packed_type_t[:, :] activation, outputs, error, target
             np.uint32_t[:, :] gates
-            pk.f_type func
+            f_type func
 
         if self.evaluated:
             return
@@ -201,7 +223,7 @@ cdef class BNState:
         error = self.error
         target = self.target
         gates = self.network.gates
-        
+
         cols = activation.shape[1]
 
         # evaluate the state matrix
@@ -210,7 +232,7 @@ cdef class BNState:
         for g in range(start, Ng):
             src1 = gates[g, 0]
             src2 = gates[g, 1]
-            func = pk.function_list[gates[g, 2]]
+            func = function_list[gates[g, 2]]
             for c in range(cols):
                 activation[Ni+g, c] = func(activation[src1, c], activation[src2, c])
 
@@ -225,7 +247,7 @@ cdef class BNState:
 
         self.evaluated = True
 
-    cdef void _apply_zero_mask(self, pk.packed_type_t[:,:] matrix):
+    cdef void _apply_zero_mask(self, packed_type_t[:,:] matrix):
         # when evaluating make a zeroing-mask '11110000' to AND the last
         # column in the error matrix with to clear the value back to zero
         cdef size_t r, rows, cols
@@ -273,4 +295,3 @@ cdef class BNState:
         if self.error.shape[1] != self.cols:
             raise ValueError('Error column width ({}) != cols ({}).'.
                              format(self.error.shape[1], self.cols))
-
