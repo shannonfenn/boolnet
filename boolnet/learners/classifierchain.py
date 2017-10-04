@@ -11,14 +11,14 @@ from time import time
 def join_networks(networks, order):
     # The first network doesn't need modification
     Ni = networks[0].Ni
-    prev_outputs = [Ni + networks[0].Ng]
+    prev_outputs = [Ni + networks[0].Ng - 1]
     remapped_gate_batches = [np.array(networks[0].gates, copy=True)]
     for n in range(1, len(networks)):
         net = networks[n]
         sources_map = (list(range(Ni)) +
                        prev_outputs +
-                       list(range(Ni+sum(prev_outputs),
-                                  Ni+sum(prev_outputs)+net.Ng)))
+                       list(range(prev_outputs[-1] + 1,
+                                  prev_outputs[-1] + 1 + net.Ng)))
         # apply to all but the last column (transfer functions) of the gate
         # matrix. Use numpy array: cython memoryview slicing is broken
         remapped_gates = np.array(net.gates, copy=True)
@@ -27,12 +27,14 @@ def join_networks(networks, order):
                 # gate.size-1 since the last entry is the transfer function
                 gate[i] = sources_map[gate[i]]
         remapped_gate_batches.append(remapped_gates)
+        prev_outputs.append(sources_map[-1])
 
     # final set of OR gates for reordering output
     outputs = np.zeros((len(order), remapped_gate_batches[0].shape[1]),
                        dtype=remapped_gate_batches[0].dtype)
     outputs[:, -1] = 14  # OR function
-    outputs[:, :-1] = np.reshape(order, (-1, 1))
+    for o in order:
+        outputs[o, :-1] = prev_outputs[o]
     remapped_gate_batches.append(outputs)
 
     return np.vstack(remapped_gate_batches)

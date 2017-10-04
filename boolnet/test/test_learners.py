@@ -1,96 +1,56 @@
+import pytest
 import numpy as np
-from numpy.testing import assert_array_equal
-from pytest import fixture
-from boolnet.network.boolnet import BoolNet
+import boolnet.learners.classifierchain as cc
+from boolnet.network.networkstate import BNState
+from boolnet.utils import PackedMatrix
 # from boolnet.learners import build_mask
 
 
-# #################### Global fixtures #################### #
-@fixture(params=[
-    (100, 16, 8, [0, 11, 23, 34, 46, 57, 69, 80, 92]),
-    (173, 4, 9, [0, 18, 36, 54, 72, 91, 109, 127, 145, 164])])
-def harness(request):
-    # load experiment file
-    Ng, Ni, No, bounds = request.param
+def random_network(Ng, Ni, No, node_funcs):
+    # generate random feedforward network
     gates = np.empty(shape=(Ng, 3), dtype=np.int32)
     for g in range(Ng):
-        gates[g, :-1] = np.random.randint(g+Ni, size=2)
-        gates[g, -1] = np.random.randint(16)
-    net = BoolNet(gates, Ni, No)
-    return net, bounds
+        # don't allow connecting outputs together
+        gates[g, 0] = np.random.randint(min(g, Ng - No) + Ni)
+        gates[g, 1] = np.random.randint(min(g, Ng - No) + Ni)
+    gates[:, 2] = np.random.choice(node_funcs, size=Ng)
+    return gates
 
 
-# @fixture(params=[
-#     (100, 16, 8, [0, 11, 23, 34, 46, 57, 69, 80, 92]),
-#     (173, 4, 9, [0, 18, 36, 54, 72, 91, 109, 127, 145, 164])])
-# def kfs_harness(request):
-#     # load experiment file
-#     Ng, Ni, No, bounds = request.param
-#     gates = np.empty(shape=(Ng, 2), dtype=np.int32)
-#     for g in range(Ng):
-#         gates[g, :] = np.random.randint(g+Ni, size=2)
-#     net = BoolNet(gates, Ni, No)
-#     return net, bounds, feature_sets
+@pytest.mark.parametrize('execution_number', range(10))
+def test_classifierchain_join_networks(execution_number):
+    Ni = np.random.randint(1, 20)
+    No = np.random.randint(1, 20)
+    Ng = np.random.randint(1, 20)
+    Ne = np.random.randint(20, 256)
+    Ncol = int(np.ceil(Ne / 64))
 
+    print(Ni, No, Ng)
 
-# def test_build_mask_without_kfs_sourceable(harness):
-#     net, bounds = harness
+    X = np.random.randint(2**64, size=(Ni, Ncol), dtype=np.uint64)
+    Y = np.random.randint(2**64, size=(No, Ncol), dtype=np.uint64)
+    D = PackedMatrix(np.vstack((X, Y)), Ni=Ni, Ne=Ne)
 
-#     Ni, No, Ng = net.Ni, net.No, net.Ng
-#     for target in range(No):
-#         l, u = bounds[target], bounds[target + 1]
-#         # commented out: version where prior outputs were sourceable
-#         # expected = np.array([1]*(Ni+l) + [1]*(u-l) + [0]*(Ng-No-u) +
-#         #                     [1]*target + [0]*(No-target), dtype=np.uint8)
-#         expected = np.array([1]*(Ni+l) + [1]*(u-l) + [0]*(Ng-No-u) +
-#                             [0]*(No), dtype=np.uint8)
-#         actual, _ = build_mask(net, l, u, target)
-#         print('expected:\n', expected)
-#         print('actual:\n', actual)
-#         assert_array_equal(expected, actual)
+    nets = [random_network(Ng, Ni + i, 1, list(range(16)))
+            for i in range(No)]
 
+    print(nets)
 
-# def test_build_mask_without_kfs_changeable(harness):
-#     net, bounds = harness
+    expected = []
+    states = []
+    for i, gates in enumerate(nets):
+        Dsub = np.vstack([X] + expected + [Y[[i], :]])
+        Dsub = PackedMatrix(Dsub, Ni=Ni+i, Ne=Ne)
+        net = BNState(gates, Dsub)
+        expected.append(np.array(net.output_matrix))
+        states.append(net)
+    expected = np.vstack(expected)
 
-#     No, Ng = net.No, net.Ng
+    combined = cc.join_networks(states, list(range(No)))
 
-#     for target in range(No):
-#         l, u = bounds[target], bounds[target + 1]
-#         expected = np.array([0]*l + [1]*(u-l) + [0]*(Ng-No-u) +
-#                             [0]*target + [1] + [0]*(No-target-1),
-#                             dtype=np.uint8)
-#         _, actual = build_mask(net, l, u, target)
-#         # print('expected:\n', expected)
-#         # print('actual:\n', actual)
-#         assert_array_equal(expected, actual)
+    print(combined)
 
+    combined = BNState(combined, D)
+    actual = np.array(combined.output_matrix)
 
-# def test_build_mask_with_kfs_sourceable(kfs_harness):
-#     net, bounds, feature_sets = kfs_harness
-
-#     Ni, No, Ng = net.Ni, net.No, net.Ng
-
-#     for target in range(No):
-#         l, u = bounds[target], bounds[target + 1]
-#         expected = np.array([1]*(Ni+l) + [1]*(u-l) + [0]*(Ng-No-u) +
-#                             [1]*target + [0]*(No-target), dtype=np.uint8)
-#         actual, _ = build_mask(net, l, u, target)
-#         print(expected)
-#         print(actual)
-#         assert_array_equal(expected, actual)
-
-
-# def test_build_mask_with_kfs_changeable(kfs_harness):
-#     net, bounds, feature_sets = kfs_harness
-
-#     No, Ng = net.No, net.Ng
-
-#     for target in range(No):
-#         l, u = bounds[target], bounds[target + 1]
-#         expected = np.array([0]*l + [1]*(u-l) + [0]*(Ng-No-u) +
-#                             [0]*target + [1] + [0]*(No-target-1), dtype=np.uint8)
-#         _, actual = build_mask(net, l, u, target)
-#         print(expected)
-#         print(actual)
-#         assert_array_equal(expected, actual)
+    np.testing.assert_array_equal(expected, actual)
