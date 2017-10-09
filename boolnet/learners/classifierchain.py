@@ -33,7 +33,7 @@ def join_networks(networks, order):
     outputs = np.zeros((len(order), remapped_gate_batches[0].shape[1]),
                        dtype=remapped_gate_batches[0].dtype)
     outputs[:, -1] = 14  # OR function
-    for o in order:
+    for i, o in enumerate(order):
         outputs[o, :-1] = prev_outputs[o]
     remapped_gate_batches.append(outputs)
 
