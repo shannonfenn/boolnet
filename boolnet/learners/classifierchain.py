@@ -34,7 +34,7 @@ def join_networks(networks, order):
                        dtype=remapped_gate_batches[0].dtype)
     outputs[:, -1] = 14  # OR function
     for i, o in enumerate(order):
-        outputs[o, :-1] = prev_outputs[o]
+        outputs[i, :-1] = prev_outputs[o]
     remapped_gate_batches.append(outputs)
 
     return np.vstack(remapped_gate_batches)
