@@ -98,16 +98,12 @@ class Learner:
         budgets = spacings(total_budget, D.No)
 
         # get target order
-        target_order = parameters['target_order']
-        if target_order is None:
-            # these parameters only required if auto-targetting
-            mfs_solver = parameters.get('minfs_solver', 'cplex')
-            mfs_metric = parameters['minfs_selection_metric']
-            mfs_params = parameters.get('minfs_solver_params', {})
-            target_order, feature_sets = minfs_target_order(
-                    X, Y, mfs_solver, mfs_metric, mfs_params)
-        else:
-            feature_sets = None
+        mfs_solver = parameters.get('minfs_solver', 'cplex')
+        mfs_metric = parameters['minfs_selection_metric']
+        mfs_params = parameters.get('minfs_solver_params', {})
+        target_order, feature_sets = minfs_target_order(
+                X, Y, mfs_solver, mfs_metric, mfs_params)
+
 
         opt_results = []
         optimisation_times = []
