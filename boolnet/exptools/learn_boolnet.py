@@ -377,8 +377,9 @@ def build_result_map(parameters, learner_result):
     #     key = 'max_depth_tgt_{}'.format(bit)
     #     results[key] = v
 
-    if 'notes' in parameters:
-        results['notes'] = parameters['notes']
+    for k, v in parameters.items():
+        if re.match(r'notes.*', k):
+            results[k] = v
 
     # handle requests to log keys
     log_keys = parameters.get('log_keys', [])

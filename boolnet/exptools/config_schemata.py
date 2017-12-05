@@ -238,7 +238,7 @@ instance_schema = Schema({
     'learner':  learner_schema,
     'sampling': sampling_schema,
     'log_keys': log_keys_schema,
-    Optional('notes'):  str,
+    Optional(Match(r'notes.*')):  str,
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
