@@ -191,7 +191,8 @@ learner_schema = Schema(
     All(
         Schema({
             'name':         Any('monolithic', 'stratified', 'split',
-                                'stratmultipar', 'classifierchain'),
+                                'stratmultipar', 'classifierchain',
+                                'classifierchain_plus'),
             'network':      network_schema,
             'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
