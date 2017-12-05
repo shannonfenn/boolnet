@@ -59,11 +59,6 @@ def minfs_target_order(X, Y, solver, metric, params, tie_handling):
     if tie_handling == 'random':
         # randomly pick from possible exact orders
         return order_from_rank(rank), feature_sets
-    elif tie_handling == 'min_depth':
-        # can do using a tuple to sort where the second element is the
-        # inverse of the largest feature (i.e. the greatest depth)
-        raise NotImplementedError(
-            'min_depth tie breaking not implemented.')
     else:
         raise ValueError('Invalid choice for tie_handling.')
 
