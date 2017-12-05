@@ -40,10 +40,10 @@ class BetterETABar(IncrementalBar):
 
 
 class PackedMatrix(np.ndarray):
-    def __new__(cls, input_array, Ne, Ni=0):
+    def __new__(cls, matrix, Ne, Ni=0):
         # Input array is an already formed ndarray instance
         # We first cast to be our class type
-        obj = np.asarray(input_array).view(cls)
+        obj = np.asarray(matrix).view(cls)
         # add the new attribute to the created instance
         obj.Ne = Ne
         obj.Ni = Ni
