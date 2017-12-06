@@ -33,7 +33,7 @@ LEARNERS = {
     'stratmultipar': stratified_multipar.Learner(),
     'split': split.Learner(),
     'classifierchain': classifierchain.Learner(),
-    'classifierchainplus': classifierchain_plus.Learner(),
+    'classifierchain_plus': classifierchain_plus.Learner(),
     }
 
 
