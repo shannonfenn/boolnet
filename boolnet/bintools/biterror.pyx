@@ -56,12 +56,10 @@ cdef double matthews_corr_coef(size_t TP, size_t TN, size_t FP, size_t FN):
     predicted_positives = TP + FP
     predicted_negatives = TN + FN
 
-    if actual_positives == 0:
+    if actual_positives == 0 or actual_negatives == 0:
         # only one given class give accuracy in [-1, 1]
-        return TN / actual_negatives * 2 - 1
-    elif actual_negatives == 0:
-        # only one given class give accuracy in [-1, 1]
-        return TP / actual_positives * 2 - 1
+        # this covers two cases, but the other terms will be zero
+        return (TN + TP) / (actual_negatives + actual_positives) * 2 - 1
     elif predicted_positives == 0 or predicted_negatives == 0:
         # normal limitting case when two classes present but only one predicted
         return 0
