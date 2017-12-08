@@ -23,7 +23,10 @@ def get_all_experiments(directory):
     all_exps = []
     for explist in bundles:
         with open(explist) as f:
-            all_exps.extend(f.read().splitlines())
+            bunch = [line
+                     for line in f.read().splitlines()
+                     if line]
+            all_exps.extend(bunch)
     return all_exps
 
 
