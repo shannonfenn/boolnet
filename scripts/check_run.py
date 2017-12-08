@@ -5,7 +5,7 @@ import argparse
 import pickle
 import gzip
 import rapidjson as json
-from os.path import abspath, expanduser, isdir, join
+from os.path import abspath, expanduser, isdir, join, basename, splitext
 from natsort import natsorted
 
 
@@ -38,7 +38,7 @@ def read_json(contents):
         return json.loads(contents + ']')
 
 
-def get_remaining_experiments(directory):
+def get_remaining_experiments(directory, fast=True):
     all_json = glob.glob(join(directory, '*.json'))
 
     finished_ids = []
@@ -49,9 +49,13 @@ def get_remaining_experiments(directory):
 
     explist = get_all_experiments(directory)
     expmap = dict()
+
     for exp in explist:
-        with gzip.open(exp, 'rb') as f:
-            eid = pickle.load(f)['id']
+        if fast:
+            eid = int(splitext(basename(exp))[0])
+        else:
+            with gzip.open(exp, 'rb') as f:
+                eid = pickle.load(f)['id']
         expmap[eid] = exp
     if len(expmap) != len(explist):
         raise ValueError('.exp files with duplicate ids!')
@@ -62,7 +66,7 @@ def get_remaining_experiments(directory):
     print('\n'.join(remaining))
 
 
-def get_non_memorised_experiments(directory):
+def get_non_memorised_experiments(directory, fast=True):
     all_json = glob.glob(join(directory, '*.json'))
 
     failed_ids = []
@@ -75,9 +79,13 @@ def get_non_memorised_experiments(directory):
 
     explist = get_all_experiments(directory)
     expmap = dict()
+
     for exp in explist:
-        with gzip.open(exp, 'rb') as f:
-            eid = pickle.load(f)['id']
+        if fast:
+            eid = int(splitext(basename(exp))[0])
+        else:
+            with gzip.open(exp, 'rb') as f:
+                eid = pickle.load(f)['id']
         expmap[eid] = exp
     if len(expmap) != len(explist):
         raise ValueError('.exp files with duplicate ids!')
