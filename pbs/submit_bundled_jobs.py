@@ -46,7 +46,7 @@ def submit(bundles, queue, walltime, joblistfile, dry):
                 print(' '.join(cmd))
             else:
                 status = sp.run(cmd, stdout=sp.PIPE, universal_newlines=True)
-                ids.append(status.stdout + '\n')
+                ids.append(status.stdout)
     finally:
         print('{} jobs submitted.'.format(len(ids)))
         if joblistfile:

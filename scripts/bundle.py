@@ -66,6 +66,8 @@ def main():
             f.write('\n'.join(bundle))
             f.write('\n')
 
+    print('{} bundles created.'.format(len(bundles)))
+
 
 if __name__ == '__main__':
     main()
