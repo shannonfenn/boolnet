@@ -62,10 +62,13 @@ def main():
                         metavar='queue', default='xeon3q',
                         choices=['computeq', 'xeon3q', 'xeon4q'])
     parser.add_argument('--out', '-o', type=argparse.FileType('w'),
-                        help='optional file to dump job ids.')
+                        help='file to dump job ids. Default <dir>/jobids')
     parser.add_argument('--dry', action='store_true',
                         help='print resulting commands instead of executing.')
     args = parser.parse_args()
+
+    if not args.out:
+        args.out = open(os.path.join(args.dir, 'jobids'), 'w')
 
     bundles = glob.glob(os.path.join(args.dir, '*.explist'))
 
