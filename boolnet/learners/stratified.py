@@ -5,7 +5,7 @@ import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
 import boolnet.network.algorithms as alg
-from boolnet.utils import PackedMatrix, order_from_rank, inverse_permutation
+from boolnet.utils import PackedMatrix
 from boolnet.network.networkstate import BNState
 from time import time
 
@@ -221,7 +221,7 @@ class Learner():
     def reorder_network_outputs(self, network):
         # all non-output gates are left alone, and the output gates are
         # reordered by the inverse permutation of "learned_targets"
-        new_out_order = inverse_permutation(self.learned_targets)
+        new_out_order = mfs.inverse_permutation(self.learned_targets)
         new_gates = np.array(network.gates)
         No = network.No
         new_gates[-No:, :] = new_gates[-No:, :][new_out_order]

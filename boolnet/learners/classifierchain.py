@@ -2,8 +2,7 @@ import numpy as np
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
-from boolnet.utils import PackedMatrix, order_from_rank, spacings
-from boolnet.utils import inverse_permutation
+from boolnet.utils import PackedMatrix, spacings
 from boolnet.network.networkstate import BNState
 from time import time
 
@@ -58,7 +57,7 @@ def minfs_target_order(X, Y, solver, metric, params, tie_handling):
 
     if tie_handling == 'random':
         # randomly pick from possible exact orders
-        return order_from_rank(rank), feature_sets
+        return mfs.order_from_rank(rank), feature_sets
     else:
         raise ValueError('Invalid choice for tie_handling.')
 
@@ -132,7 +131,7 @@ class Learner:
 
         partial_networks = [r.representation for r in opt_results]
         accumulated_gates = join_networks(partial_networks,
-                                          inverse_permutation(target_order))
+                                          mfs.inverse_permutation(target_order))
 
         return {
             'network': BNState(accumulated_gates, D),

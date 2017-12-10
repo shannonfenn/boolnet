@@ -1,7 +1,9 @@
 import numpy as np
 
+import minfs.feature_selection as mfs
+
 import boolnet.network.algorithms as alg
-from boolnet.utils import PackedMatrix, inverse_permutation
+from boolnet.utils import PackedMatrix
 from boolnet.network.networkstate import BNState
 from boolnet.learners.stratified import ranked_fs_helper
 from time import time
@@ -126,7 +128,7 @@ class Learner:
             itertools.chain.from_iterable(self.learned_targets))
         print(list(self.learned_targets))
         print(list(flat_learned))
-        new_out_order = inverse_permutation(flat_learned)
+        new_out_order = mfs.inverse_permutation(flat_learned)
         new_gates = np.array(network.gates)
         new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
         network.set_gates(new_gates)

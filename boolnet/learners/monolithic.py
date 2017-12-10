@@ -2,7 +2,6 @@ import numpy as np
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
-from boolnet.utils import order_from_rank, inverse_permutation
 from boolnet.network.networkstate import BNState
 from time import time
 
@@ -42,7 +41,7 @@ class Learner:
 
             if mfs_tie_handling == 'random':
                 # randomly pick from possible exact orders
-                target_order = order_from_rank(rank)
+                target_order = mfs.order_from_rank(rank)
             elif mfs_tie_handling == 'min_depth':
                 # can do using a tuple to sort where the second element is the
                 # inverse of the largest feature (i.e. the greatest depth)
@@ -76,7 +75,7 @@ class Learner:
             print('done. Time taken: {}'.format(t2 - t1))
 
         # undo ordering
-        inverse_order = inverse_permutation(target_order)
+        inverse_order = mfs.inverse_permutation(target_order)
         outputs[:] = outputs[inverse_order, :]
 
         gates = np.array(opt_result.representation.gates)

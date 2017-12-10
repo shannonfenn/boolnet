@@ -1,8 +1,7 @@
 import numpy as np
 import minfs.feature_selection as mfs
 
-from boolnet.utils import PackedMatrix, order_from_rank, spacings
-from boolnet.utils import inverse_permutation, unpack
+from boolnet.utils import PackedMatrix, spacings, unpack
 from boolnet.network.networkstate import BNState
 from time import time
 
@@ -144,7 +143,7 @@ class Learner:
 
         partial_networks = [r.representation for r in opt_results]
         accumulated_gates = join_networks(partial_networks,
-                                          inverse_permutation(target_order))
+                                          mfs.inverse_permutation(target_order))
 
         return {
             'network': BNState(accumulated_gates, D),
