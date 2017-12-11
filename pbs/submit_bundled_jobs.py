@@ -22,9 +22,9 @@ def directory_type(directory):
         raise Exception('{0} is not a valid path'.format(directory))
 
 
-def submit(bundles, queue, walltime, joblistfile, dry):
+def submit(script, bundles, queue, walltime, joblistfile, dry):
     ids = []
-    script = os.path.expanduser('~/HMRI/code/boolnet/pbs/j_submit_single.sh')
+    script = os.path.expanduser(script)
 
     if not os.path.isfile(script):
         print('Error: script does not exist. Aborting.')
@@ -58,6 +58,9 @@ def main():
     parser.add_argument('dir', type=directory_type,
                         help='Directory containing .explist files')
     parser.add_argument('walltime', type=walltime_arg_type)
+    parser.add_argument('--script', '-s', type=str,
+                        default='~/HMRI/code/boolnet/pbs/j_submit_single.sh',
+                        help='job script path. Default <boolnet>/pbs/j_submit_single.sh')
     parser.add_argument('--queue', '-q', type=str,
                         metavar='queue', default='xeon3q',
                         choices=['computeq', 'xeon3q', 'xeon4q'])
@@ -72,7 +75,7 @@ def main():
 
     bundles = glob.glob(os.path.join(args.dir, '*.explist'))
 
-    submit(bundles, args.queue, args.walltime, args.out, args.dry)
+    submit(args.script, bundles, args.queue, args.walltime, args.out, args.dry)
 
 
 if __name__ == '__main__':
