@@ -64,7 +64,7 @@ def load_dataset(fname, targets):
     if targets is not None:
         Y = M[M.Ni:, :]
         Y = Y[targets, :]
-        M = np.vstack((M[:M.Ni, :], Y))
+        M = utils.PackedMatrix(np.vstack((M[:M.Ni, :], Y)), M.Ne, M.Ni)
     return M
 
 
