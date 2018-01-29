@@ -22,7 +22,7 @@ def prefilter_features(Ni, strata_sizes, strata, targets, fs_table, method):
 
     if method == 'all':
         # bound on Nf: none
-        return input_range
+        return list(range(sum(strata_sizes[:strata]) + Ni))
     elif method == 'prev-strata':
         # bound on Nf: L
         # Note: no guarantee that the prior strata contains a valid fs
