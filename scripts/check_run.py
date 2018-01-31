@@ -31,14 +31,22 @@ def get_all_experiments(directory):
 
 
 def read_json(contents):
-    ''' Attempts to read string as json list. If exception thrown, reattempts
-        after appending "]". If that fails the exception is not caught.'''
-    if not contents.strip():
+    ''' Attempts to read string as json list. 
+        If exception thrown, reattempt after appending "]".
+        If that fails, reattempt after removing last line.
+        Else the original exception is raised.'''
+    contents = contents.strip()
+    if not contents:
         return []
     try:
         return json.loads(contents)
     except:
-        return json.loads(contents + ']')
+        try:
+            return json.loads(contents + ']')
+        except:
+            return json.loads(contents.rsplit('\n', 1)[0] + ']')
+
+
 
 
 def get_remaining_experiments(directory, fast=True):
