@@ -19,14 +19,11 @@ def main():
                         help='[later will overwrite keys of earlier]')
     args = parser.parse_args()
 
-    in_maps = [load(f) for f in args.inputs]
+    output = {}
+    for f in args.inputs:
+        output.update(load(f))
 
-    output = dict(item
-                  for m in in_maps
-                  for item in m.items())
-
-    output = [output[k] for k in sorted(output)]
-    output = '\n,'.join(json.dumps(record) for record in output)
+    output = '\n,'.join(json.dumps(output[k]) for k in sorted(output))
     print(f'[{output}\n]')
 
 
