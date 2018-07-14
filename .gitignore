@@ -15,3 +15,5 @@ py*.cpp
 compilelog
 *_bak.*
 
+
+\.pytest_cache/

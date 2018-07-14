@@ -4,27 +4,25 @@ import rapidjson as json
 import argparse
 
 
-def load(fname):
-    with open(fname) as f:
-        records = json.loads(f.read())
-    mapping = {record['id']: record for record in records}
-    if len(mapping) != len(records):
-        raise ValueError('Duplicates record ids exist in {}'.format(fname))
-    return mapping
-
-
 def main():
     parser = argparse.ArgumentParser(description='combine results')
     parser.add_argument('inputs', type=str, nargs='+',
                         help='[later will overwrite keys of earlier]')
     args = parser.parse_args()
 
-    output = {}
-    for f in args.inputs:
-        output.update(load(f))
+    # build a mapping with 'id' keys 
+    id_map = {}
+    for fname in args.inputs:
+        with open(fname) as f:
+            for lineno, line in enumerate(f):
+                if not line.startswith(']'):
+                    record = json.loads(line[1:]) # trim leading delimiter
+                    id_map[record['id']] = line[1:]
 
-    output = '\n,'.join(json.dumps(output[k]) for k in sorted(output))
-    print(f'[{output}\n]')
+    for i, line in enumerate(id_map.values()):
+        print(',' if i else '[', end='')
+        print(line, end='')
+    print(']')
 
 
 if __name__ == '__main__':
