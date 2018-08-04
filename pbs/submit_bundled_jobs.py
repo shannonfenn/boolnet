@@ -63,7 +63,7 @@ def main():
                         help='job script path. Default <boolnet>/pbs/j_submit_single.sh')
     parser.add_argument('--queue', '-q', type=str,
                         metavar='queue', default='xeon3q',
-                        choices=['computeq', 'xeon3q', 'xeon4q'])
+                        choices=['computeq', 'xeon3q', 'xeon4q', 'testq'])
     parser.add_argument('--out', '-o', type=argparse.FileType('w'),
                         help='file to dump job ids. Default <dir>/jobids')
     parser.add_argument('--dry', action='store_true',
