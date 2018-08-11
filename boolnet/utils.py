@@ -2,7 +2,6 @@ import numpy as np
 import bitpacking.packing as pk
 from progress.bar import IncrementalBar
 import json
-import os
 from itertools import tee
 
 
@@ -15,17 +14,6 @@ class NumpyAwareJSONEncoder(json.JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
-
-
-def dump_partial_result(results, stream, first):
-    if not first:
-        stream.write(',')
-    json.dump(results, stream, cls=NumpyAwareJSONEncoder,
-              separators=(',', ':'))
-    stream.write('\n')
-    # ensure data is written to disk immediately
-    stream.flush()
-    os.fsync(stream.fileno())
 
 
 class BetterETABar(IncrementalBar):
