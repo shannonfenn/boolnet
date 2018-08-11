@@ -17,18 +17,10 @@ def directory_type(directory):
 
 
 def concatenate(partials, outstream):
-    lead_char = '['
     for fname in partials:
         with open(fname, 'r') as f:
             for line in f:
-                # extract the record
-                match = re.search(pattern='\{.*\}', string=line)
-                if match:
-                    outstream.write(lead_char)
-                    outstream.write(match.group())
-                    outstream.write('\n')
-                    lead_char = ','
-    outstream.write(']\n')
+                outstream.write(line)
 
 
 def main():

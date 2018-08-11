@@ -30,33 +30,14 @@ def get_all_experiments(directory):
     return all_exps
 
 
-def read_json(contents):
-    ''' Attempts to read string as json list. 
-        If exception thrown, reattempt after appending "]".
-        If that fails, reattempt after removing last line.
-        Else the original exception is raised.'''
-    contents = contents.strip()
-    if not contents:
-        return []
-    try:
-        return json.loads(contents)
-    except:
-        try:
-            return json.loads(contents + ']')
-        except:
-            return json.loads(contents.rsplit('\n', 1)[0] + ']')
-
-
-
-
 def get_remaining_experiments(directory, fast=True):
     all_json = glob.glob(join(directory, '*.json'))
 
     finished_ids = []
     for jsonfile in all_json:
         with open(jsonfile) as f:
-            records = read_json(f.read())
-            finished_ids.extend(record['id'] for record in records)
+            records = [json.loads(line) for line in f if line.strip()]
+        finished_ids.extend(record['id'] for record in records)
 
     explist = get_all_experiments(directory)
     expmap = dict()
@@ -83,10 +64,10 @@ def get_non_memorised_experiments(directory, fast=True):
     failed_ids = []
     for jsonfile in all_json:
         with open(jsonfile, 'r') as f:
-            records = read_json(f.read())
-            failed_ids.extend(record['id']
-                              for record in records
-                              if record['trg_err'] != 0)
+            records = [json.loads(line) for line in f if line.strip()]
+        failed_ids.extend(record['id']
+                          for record in records
+                          if record['trg_err'] != 0)
 
     explist = get_all_experiments(directory)
     expmap = dict()
@@ -112,10 +93,10 @@ def summary(directory):
     num_exp = len(get_all_experiments(directory))
     num_failed = 0
     num_succeeded = 0
-    for fname in all_json:
-        with open(fname, 'r') as f:
+    for fname in all_json:    
             try:
-                records = read_json(f.read())
+                with open(fname, 'r') as f:
+                    records = [json.loads(line) for line in f if line.strip()]
             except:
                 print('Warning: could not read {}'.format(fname))
             else:

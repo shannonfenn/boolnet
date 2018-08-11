@@ -134,7 +134,6 @@ def initialise(args):
 
 
 def run_tasks(tasks, num_processes, out_stream, batch_mode):
-    out_stream.write('[')
     if num_processes == 1:
         run_sequential(tasks, out_stream, batch_mode)
     elif num_processes < 1:
@@ -142,7 +141,6 @@ def run_tasks(tasks, num_processes, out_stream, batch_mode):
     else:
         # Run the actual learning as a parallel process
         run_parallel(tasks, num_processes, out_stream, batch_mode)
-    out_stream.write(']')
 
 
 def run_parallel(tasks, num_processes, out_stream, batch_mode):
@@ -154,7 +152,9 @@ def run_parallel(tasks, num_processes, out_stream, batch_mode):
             bar.update()
         # uses unordered map to ensure results are dumped as soon as available
         for i, result in enumerate(pool.imap_unordered(learn_bool_net, tasks)):
-            cfg.dump_partial_results(result, out_stream, i == 0)
+            json.dump(result, out_stream, cls=NumpyAwareJSONEncoder,
+                  separators=(',', ':'))
+            out_stream.write('\n')
             if not batch_mode:
                 bar.next()
         if not batch_mode:
@@ -182,7 +182,9 @@ def run_scooped(tasks, out_stream, batch_mode):
     # uses unordered map to ensure results are dumped as soon as available
     for i, result in enumerate(scoop.futures.map_as_completed(
             scoop_worker_wrapper, tasks)):
-        cfg.dump_partial_results(result, out_stream, i == 0)
+        json.dump(result, out_stream, cls=NumpyAwareJSONEncoder,
+                  separators=(',', ':'))
+        out_stream.write('\n')
         if not batch_mode:
             bar.next()
     if not batch_mode:
@@ -196,7 +198,9 @@ def run_sequential(tasks, out_stream, batch_mode):
         bar.update()
     # map gives an iterator so results are dumped as soon as available
     for i, result in enumerate(map(learn_bool_net, tasks)):
-        cfg.dump_partial_results(result, out_stream, i == 0)
+        json.dump(result, out_stream, cls=NumpyAwareJSONEncoder,
+                  separators=(',', ':'))
+        out_stream.write('\n')
         if not batch_mode:
             bar.next()
     if not batch_mode:
