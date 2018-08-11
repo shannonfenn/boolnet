@@ -1,6 +1,7 @@
 #! /usr/bin/env python
 
 import argparse
+import re
 
 
 def main():
@@ -15,9 +16,11 @@ def main():
     id_map = {}
     for fname in args.inputs:
         with open(fname) as f:
+            # print([len(line) for line in f])
             for line in f:
-                match = pattern.search(pattern='id":\s?(\d+),',
-                                       string=line)
+                # print(line)
+                match = re.search(pattern='id":\s?(\d+)(,|\})',
+                                  string=line)
                 key = match.group(1)
                 id_map[key] = line
 
