@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 
+import sys
 import glob
 import argparse
 import pickle
@@ -55,7 +56,7 @@ def get_remaining_experiments(directory, fast=True):
     remaining = natsorted(exp_filename
                           for i, exp_filename in expmap.items()
                           if i not in finished_ids)
-    print('\n'.join(remaining))
+    return '\n'.join(remaining)
 
 
 def get_non_memorised_experiments(directory, fast=True):
@@ -84,7 +85,7 @@ def get_non_memorised_experiments(directory, fast=True):
 
     failed_ids = natsorted(failed_ids)
     failed_paths = (expmap[i] for i in failed_ids)
-    print('\n'.join(failed_paths))
+    return '\n'.join(failed_paths)
 
 
 def summary(directory):
@@ -93,20 +94,21 @@ def summary(directory):
     num_exp = len(get_all_experiments(directory))
     num_failed = 0
     num_succeeded = 0
-    for fname in all_json:    
+    for fname in all_json:
             try:
                 with open(fname, 'r') as f:
                     records = [json.loads(line) for line in f if line.strip()]
-            except:
-                print('Warning: could not read {}'.format(fname))
+            except json.JSONDecodeError:
+                print('Warning: could not read {}'.format(fname),
+                      file=sys.stderr)
             else:
                 for record in records:
                     if record['trg_err'] == 0:
                         num_succeeded += 1
                     else:
                         num_failed += 1
-    print('remaining: {} memorised: {} not-memorised: {}'.format(
-        num_exp - num_succeeded - num_failed, num_succeeded, num_failed))
+    return 'remaining: {} memorised: {} not-memorised: {}'.format(
+        num_exp - num_succeeded - num_failed, num_succeeded, num_failed)
 
 
 def main():
@@ -129,7 +131,8 @@ def main():
 
     args = parser.parse_args()
 
-    args.func(args.dir)
+    print(args.func(args.dir))
+
 
 if __name__ == '__main__':
     main()
