@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-import re
 import glob
 import argparse
 import os.path
@@ -20,7 +19,12 @@ def concatenate(partials, outstream):
     for fname in partials:
         with open(fname, 'r') as f:
             for line in f:
-                outstream.write(line)
+                line = line.strip()
+                if any(line.startswith(c) for c in [',', '[', ']']):
+                    line = line[1:]
+                if line:
+                    outstream.write(line)
+                    outstream.write('\n')
 
 
 def main():
@@ -42,6 +46,7 @@ def main():
     partials = glob.glob(os.path.join(run_dir, '*.json'))
     partials = natsorted(partials)
     concatenate(partials, args.outfile)
+
 
 if __name__ == '__main__':
     main()
