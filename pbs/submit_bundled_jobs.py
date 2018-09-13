@@ -22,13 +22,18 @@ def directory_type(directory):
         raise Exception('{0} is not a valid path'.format(directory))
 
 
-def submit(script, bundles, queue, walltime, joblistfile, dry):
+def submit(bundles, jobscript, queue, walltime, joblistfile, dry):
     ids = []
-    script = os.path.expanduser(script)
+    submitscript = os.path.expanduser('~/HMRI/code/boolnet/pbs/j_single.sh')
+    jobscript = os.path.normpath(os.path.expanduser(jobscript))
 
-    if not os.path.isfile(script):
-        print('Error: script does not exist. Aborting.')
-        print('Bad script path: ' + script)
+    if not os.path.isfile(submitscript):
+        print('Error: submitscript does not exist. Aborting.')
+        print('Bad script path: ' + submitscript)
+        return
+    if not os.path.isfile(jobscript):
+        print('Error: jobscript does not exist. Aborting.')
+        print('Bad script path: ' + jobscript)
         return
     # pbs job limit
     if len(bundles) > 7500:
@@ -41,7 +46,8 @@ def submit(script, bundles, queue, walltime, joblistfile, dry):
         for i, expfile in enumerate(bundles):
             sout = '{}.sout'.format(expfile)
             serr = '{}.serr'.format(expfile)
-            cmd = [script, expfile, sout, serr, queue, resources]
+            cmd = [submitscript, expfile, sout, serr,
+                   queue, resources, jobscript]
             if dry:
                 print(' '.join(cmd))
             else:
@@ -59,8 +65,8 @@ def main():
                         help='Directory containing .explist files')
     parser.add_argument('walltime', type=walltime_arg_type)
     parser.add_argument('--script', '-s', type=str,
-                        default='~/HMRI/code/boolnet/pbs/j_submit_single.sh',
-                        help='job script path. Default <boolnet>/pbs/j_submit_single.sh')
+                        default='~/HMRI/code/boolnet/pbs/j_single.sh',
+                        help='job script path.')
     parser.add_argument('--queue', '-q', type=str,
                         metavar='queue', default='xeon3q',
                         choices=['computeq', 'xeon3q', 'xeon4q', 'testq'])
@@ -75,7 +81,7 @@ def main():
 
     bundles = glob.glob(os.path.join(args.dir, '*.explist'))
 
-    submit(args.script, bundles, args.queue, args.walltime, args.out, args.dry)
+    submit(bundles, args.script, args.queue, args.walltime, args.out, args.dry)
 
 
 if __name__ == '__main__':
