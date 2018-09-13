@@ -24,7 +24,8 @@ def directory_type(directory):
 
 def submit(bundles, jobscript, queue, walltime, joblistfile, dry):
     ids = []
-    submitscript = os.path.expanduser('~/HMRI/code/boolnet/pbs/j_single.sh')
+    submitscript = os.path.expanduser(
+        '~/HMRI/code/boolnet/pbs/j_submit_single.sh')
     jobscript = os.path.normpath(os.path.expanduser(jobscript))
 
     if not os.path.isfile(submitscript):
