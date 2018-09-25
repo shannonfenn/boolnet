@@ -1,6 +1,7 @@
 from good import (
-    Schema, message, All, Any, Range, IsDir, Allow, Default, Match, Msg,
+    Schema, message, All, Any, Range, Allow, Default, Match, Msg,
     In, Optional, Exclusive, Length, Invalid, Entire, truth)
+import os.path
 import boolnet.bintools.functions as fn
 
 
@@ -40,6 +41,13 @@ def valid_log_key(v):
             isinstance(v[1], bool) and isinstance(v[2], list))
 
 
+@message('Must be a valid directory.')
+def IsDir(d):
+    d = os.path.expanduser(d)
+    assert os.path.isdir(d)
+    return d
+
+
 guiding_functions = fn.scalar_function_names()
 
 
@@ -61,7 +69,7 @@ data_schema = Any(
     Schema({
         'type':                 'file',
         'filename':             str,
-        Optional('dir'):        IsDir(),
+        Optional('dir'):        IsDir,
         Optional('add_noise'):  Range(min=0.0),
         Optional('targets'):    target_subset_schema,
         }),
@@ -70,7 +78,7 @@ data_schema = Any(
         'type':                 'split',
         'training_filename':    str,
         'test_filename':        str,
-        Optional('dir'):        IsDir(),
+        Optional('dir'):        IsDir,
         Optional('add_noise'):  Range(min=0.0),
         Optional('targets'):    target_subset_schema,
         })
@@ -90,7 +98,7 @@ sampling_schema = Any(
         'type':             'file',
         'filename':         str,
         Optional('test'):   str,
-        Optional('dir'):    IsDir(),
+        Optional('dir'):    IsDir,
         # allow for now, but don't force
         Optional('seed'):   seed_schema,
         }),
