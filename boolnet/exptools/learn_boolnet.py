@@ -229,6 +229,12 @@ def learn_bool_net(parameters, verbose=False):
         Ng = n * training_set.No
         learner_params['network']['Ng'] = Ng
 
+    # Handle max iterations
+    if str(learner_params['optimiser'].get('max_iterations', '')).endswith('n'):
+        n = int(str(learner_params['optimiser']['max_iterations'])[:-1])
+        max_it = n * training_set.No
+        learner_params['optimiser']['max_iterations'] = max_it
+
     setup_end_time = time.monotonic()
 
     # learn the network

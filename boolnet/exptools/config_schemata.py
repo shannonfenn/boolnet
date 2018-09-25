@@ -147,7 +147,8 @@ optimiser_schema = Any(
     # Hill Climbing
     Schema({
         'name':                                  'HC',
-        'max_iterations':                        All(int, Range(min=1)),
+        'max_iterations':                        Any(All(int, Range(min=1)),
+                                                     Match('[1-9][0-9]*n')),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return'):                      In(['best', 'last']),
@@ -158,7 +159,8 @@ optimiser_schema = Any(
     Schema({
         'name':                                  'LAHC',
         'cost_list_length':                      All(int, Range(min=1)),
-        'max_iterations':                        All(int, Range(min=1)),
+        'max_iterations':                        Any(All(int, Range(min=1)),
+                                                     Match('[1-9][0-9]*n')),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return'):                      In(['best', 'last']),
