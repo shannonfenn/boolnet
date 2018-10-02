@@ -3,7 +3,6 @@ import boolnet.utils as utils
 from random import randint
 
 
-
 @pytest.mark.parametrize('execution_number', range(10))
 def test_spacings(execution_number):
     n = randint(1, 100)

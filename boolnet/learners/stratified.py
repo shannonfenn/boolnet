@@ -1,5 +1,3 @@
-from copy import copy
-from collections import namedtuple
 import numpy as np
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
@@ -353,5 +351,3 @@ class Learner():
     #         raise ValueError('1FS handling triggered with invalid feature:\n'
     #                          'feature:\n{}\ntarget:\n{}'
     #                          .format(feature, target))
-
-

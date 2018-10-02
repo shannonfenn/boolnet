@@ -52,7 +52,7 @@ class RestartLocalSearch:
         state.revert_move()
 
     def _optimise(self, state):
-        raise NotImplemented
+        raise NotImplementedError()
 
     def run(self, state, parameters):
         # unpack options

@@ -16,7 +16,7 @@ import pickle
 import json
 import gzip
 import itertools
-from os.path import join, isfile, isdir, expanduser, normpath, splitext, exists
+from os.path import join, isfile, isdir, expanduser, normpath, exists
 
 from boolnet.utils import BetterETABar
 from boolnet.exptools.learn_boolnet import learn_bool_net

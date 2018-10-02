@@ -1,6 +1,4 @@
-import json
 import argparse
-import os.path
 import numpy as np
 
 

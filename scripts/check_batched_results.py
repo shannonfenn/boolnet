@@ -19,8 +19,8 @@ def directory_type(directory):
 def get_all_experiments(directory):
     try:
         with open(join(directory, 'tasks', 'all.exp')) as f:
-            return f.read.splitlines()
-    except:
+            return f.read().splitlines()
+    except OSError:
         return glob.glob(join(directory, 'tasks', '*.exp'))
 
 
@@ -32,7 +32,7 @@ def read_json(contents):
 
     try:
         return json.loads(contents)
-    except:
+    except ValueError:
         return json.loads(contents + ']')
 
 
@@ -79,8 +79,10 @@ def summary(directory):
         with open(fname, 'r') as f:
             try:
                 records = read_json(f.read())
-            except:
+            except OSError:
                 print('Warning: could not read {}'.format(fname))
+            except ValueError:
+                print('Warning: could not parse {}'.format(fname))
             else:
                 for record in records:
                     if record['trg_err'] == 0:
@@ -112,6 +114,7 @@ def main():
     args = parser.parse_args()
 
     args.func(args.dir)
+
 
 if __name__ == '__main__':
     main()

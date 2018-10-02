@@ -130,8 +130,8 @@ class Learner:
             optimisation_times.append(t2 - t1)
 
         partial_networks = [r.representation for r in opt_results]
-        accumulated_gates = join_networks(partial_networks,
-                                          mfs.inverse_permutation(target_order))
+        accumulated_gates = join_networks(
+            partial_networks, mfs.inverse_permutation(target_order))
 
         return {
             'network': BNState(accumulated_gates, D),

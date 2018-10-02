@@ -4,7 +4,7 @@ import argparse
 import glob
 import itertools
 import os
-from os.path import isdir, expanduser, abspath, splitext, join, exists
+from os.path import isdir, expanduser, abspath, join
 from natsort import natsorted
 
 

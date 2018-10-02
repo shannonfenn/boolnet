@@ -60,12 +60,13 @@ def minfs_target_order(X, Y, solver, metric, params):
 
     curriculum = []
     feature_sets = []
-    
+
     while len(curriculum) < No:
         # construct new set of instances
         X_temp = np.hstack((X, Y[:, curriculum]))
-        to_learn = [t for t in range(No)
-                      if t not in curriculum]
+        to_learn = [t
+                    for t in range(No)
+                    if t not in curriculum]
         Y_temp = Y[:, to_learn]
         # use external solver for minFS
         ranking, F = mfs.ranked_feature_sets(
@@ -102,7 +103,6 @@ class Learner:
         mfs_params = parameters.get('minfs_solver_params', {})
         target_order, feature_sets = minfs_target_order(
                 X, Y, mfs_solver, mfs_metric, mfs_params)
-
 
         opt_results = []
         optimisation_times = []
@@ -142,8 +142,8 @@ class Learner:
             optimisation_times.append(t2 - t1)
 
         partial_networks = [r.representation for r in opt_results]
-        accumulated_gates = join_networks(partial_networks,
-                                          mfs.inverse_permutation(target_order))
+        accumulated_gates = join_networks(
+            partial_networks, mfs.inverse_permutation(target_order))
 
         return {
             'network': BNState(accumulated_gates, D),

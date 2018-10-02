@@ -73,15 +73,30 @@ def test_path_value_pairs():
 
 
 def test_list_regex_match():
-    assert cf.list_regex_match([], [])
-    assert not cf.list_regex_match([''], [])
-    assert not cf.list_regex_match([], [''])
-    assert cf.list_regex_match(['seeding', 'sampling'], ['seeding', 'sampling'])
-    assert cf.list_regex_match(['seed.*', 'sampling'], ['seeding', 'sampling'])
-    assert cf.list_regex_match(['seeding', '.*ling'], ['seeding', 'sampling'])
-    assert cf.list_regex_match(['seed.*', '.*ling'], ['seeding', 'sampling'])
+    # valid
+    assert cf.list_regex_match([],
+                               [])
+
+    assert cf.list_regex_match(['seeding', 'sampling'],
+                               ['seeding', 'sampling'])
+
+    assert cf.list_regex_match(['seed.*', 'sampling'],
+                               ['seeding', 'sampling'])
+
+    assert cf.list_regex_match(['seeding', '.*ling'],
+                               ['seeding', 'sampling'])
+
+    assert cf.list_regex_match(['seed.*', '.*ling'],
+                               ['seeding', 'sampling'])
+
     assert cf.list_regex_match(['learner', 'optimiser', '.*'],
                                ['learner', 'optimiser', 'name'])
+    # invalid
+    assert not cf.list_regex_match([''],
+                                   [])
+
+    assert not cf.list_regex_match([],
+                                   [''])
 
 
 def test_filter_keys():

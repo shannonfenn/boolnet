@@ -6,6 +6,7 @@ import boolnet.network.algorithms as alg
 import boolnet.utils as utils
 import bitpacking.packing as pk
 
+
 # ############## Fixtures ##################### #
 @pytest.fixture
 def random_state():

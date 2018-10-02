@@ -21,8 +21,9 @@ def main(in_name):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Convert old json dataset to numpy binary file.')
-    parser.add_argument('filename', type=str,
-                        help='name of file to convert (should be json formatted)')
+    parser.add_argument(
+        'filename', type=str,
+        help='name of file to convert (should be json formatted)')
     args = parser.parse_args()
 
     main(args.filename)

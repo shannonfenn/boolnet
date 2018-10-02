@@ -12,7 +12,8 @@ class TestSA:
     def test_geometric(self):
         for series in self.geometric_series:
             expected = series[3]
-            actual = [round(x, 10) for x in geometric(series[0], series[1], series[2])]
+            actual = [round(x, 10)
+                      for x in geometric(series[0], series[1], series[2])]
             assert np.allclose(expected, actual)
 
     def test_stepped_exp_decrease(self):
@@ -22,8 +23,10 @@ class TestSA:
             for t in series[3]:
                 for r in range(repeats):
                     expected.append(t)
-            actual = stepped_exp_decrease(series[0], series[1], series[2], repeats)
-            actual = [round(x, 10) for x in actual]
+            actual = stepped_exp_decrease(series[0], series[1], series[2],
+                                          repeats)
+            actual = [round(x, 10)
+                      for x in actual]
             assert np.allclose(expected, actual)
 
     def test_accept(self):

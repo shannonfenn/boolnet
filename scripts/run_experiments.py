@@ -19,7 +19,7 @@ def run_single_experiment(expfile, verbose):
 
 def process_single_experiments(expfile, verbose):
     resultfile = expfile + '.json'
-    result = run_single_experiment(expfile, args.verbose)
+    result = run_single_experiment(expfile, verbose)
     with open(resultfile, 'w') as ostream:
         json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
                   separators=(',', ':'))
