@@ -10,8 +10,7 @@ from os.path import abspath, expanduser, isdir, join, basename, splitext
 from natsort import natsorted
 
 
-def directory_type(args):
-    directory = args.dir
+def directory_type(directory):
     # Handle tilde
     directory = abspath(expanduser(directory))
     if isdir(directory):
