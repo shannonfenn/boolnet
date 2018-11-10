@@ -19,8 +19,7 @@ def directory_type(directory):
         raise Exception('{0} is not a valid path'.format(directory))
 
 
-def get_all_experiments(args):
-    directory = args.dir
+def get_all_experiments(directory):
     bundles = glob.glob(join(directory, '*.explist'))
     all_exps = []
     for explist in bundles:
