@@ -90,30 +90,47 @@ def get_non_memorised_experiments(args, fast=True):
     return '\n'.join(failed_paths)
 
 
+def parse_file(fname, swallow_errors):
+    num_succeeded = num_failed = num_error = 0
+    try:
+        with open(fname, 'r') as stream:
+            lines = [line for line in stream if line.strip()]
+    except OSError as e:
+        if not swallow_errors:
+            print(f'Warning: could not read {fname}\n{e}',
+                  file=sys.stderr)
+
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except (ValueError, TypeError) as e:
+            if not swallow_errors:
+                print(f'Warning: bad json line {fname}\n{e}',
+                      file=sys.stderr)
+            num_error += 1
+        else:
+            if record['trg_err'] == 0:
+                num_succeeded += 1
+            else:
+                num_failed += 1
+    return num_succeeded, num_failed, num_error
+
+
 def summary(args):
     directory = args.dir
     swallow_errors = args.s
     all_json = glob.glob(join(directory, '*.json'))
 
     num_exp = len(get_all_experiments(directory))
-    num_failed = 0
-    num_succeeded = 0
+    num_succeeded = num_failed = num_error = 0
     for fname in all_json:
-            try:
-                with open(fname, 'r') as f:
-                    records = [json.loads(line) for line in f if line.strip()]
-            except (ValueError, TypeError) as e:
-                if not swallow_errors:
-                    print(f'Warning: could not read {fname}\n{e}',
-                          file=sys.stderr)
-            else:
-                for record in records:
-                    if record['trg_err'] == 0:
-                        num_succeeded += 1
-                    else:
-                        num_failed += 1
-    return 'remaining: {} memorised: {} not-memorised: {}'.format(
-        num_exp - num_succeeded - num_failed, num_succeeded, num_failed)
+        s, f, e = parse_file(fname, swallow_errors)
+        num_succeeded += s
+        num_failed += f
+        num_error += e
+    return (f'remaining: {num_exp - num_succeeded - num_failed - num_error} '
+            f'memorised: {num_succeeded} not-memorised: {num_failed} '
+            f'json-error: {num_error}')
 
 
 def main():
