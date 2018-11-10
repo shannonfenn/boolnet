@@ -98,8 +98,8 @@ def summary(directory):
             try:
                 with open(fname, 'r') as f:
                     records = [json.loads(line) for line in f if line.strip()]
-            except json.JSONDecodeError:
-                print('Warning: could not read {}'.format(fname),
+            except (ValueError, TypeError) as e:
+                print(f'Warning: could not read {fname}\n{e}',
                       file=sys.stderr)
             else:
                 for record in records:
