@@ -75,8 +75,6 @@ setup(
              'scripts/check_config.py',
              'scripts/check_run.py',
              'scripts/check_solo_results.py',
-             'scripts/concatenate_results.py',
-             'scripts/merge_results.py',
              'scripts/prepare_experiment.py',
              'scripts/run_experiments.py',
              'scripts/runexp.py',
