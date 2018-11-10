@@ -10,7 +10,8 @@ from os.path import abspath, expanduser, isdir, join, basename, splitext
 from natsort import natsorted
 
 
-def directory_type(directory):
+def directory_type(args):
+    directory = args.dir
     # Handle tilde
     directory = abspath(expanduser(directory))
     if isdir(directory):
@@ -19,7 +20,8 @@ def directory_type(directory):
         raise Exception('{0} is not a valid path'.format(directory))
 
 
-def get_all_experiments(directory):
+def get_all_experiments(args):
+    directory = args.dir
     bundles = glob.glob(join(directory, '*.explist'))
     all_exps = []
     for explist in bundles:
@@ -31,7 +33,8 @@ def get_all_experiments(directory):
     return all_exps
 
 
-def get_remaining_experiments(directory, fast=True):
+def get_remaining_experiments(args, fast=True):
+    directory = args.dir
     all_json = glob.glob(join(directory, '*.json'))
 
     finished_ids = []
@@ -59,7 +62,8 @@ def get_remaining_experiments(directory, fast=True):
     return '\n'.join(remaining)
 
 
-def get_non_memorised_experiments(directory, fast=True):
+def get_non_memorised_experiments(args, fast=True):
+    directory = args.dir
     all_json = glob.glob(join(directory, '*.json'))
 
     failed_ids = []
@@ -88,7 +92,9 @@ def get_non_memorised_experiments(directory, fast=True):
     return '\n'.join(failed_paths)
 
 
-def summary(directory):
+def summary(args):
+    directory = args.dir
+    swallow_errors = args.s
     all_json = glob.glob(join(directory, '*.json'))
 
     num_exp = len(get_all_experiments(directory))
@@ -99,8 +105,9 @@ def summary(directory):
                 with open(fname, 'r') as f:
                     records = [json.loads(line) for line in f if line.strip()]
             except (ValueError, TypeError) as e:
-                print(f'Warning: could not read {fname}\n{e}',
-                      file=sys.stderr)
+                if not swallow_errors:
+                    print(f'Warning: could not read {fname}\n{e}',
+                          file=sys.stderr)
             else:
                 for record in records:
                     if record['trg_err'] == 0:
@@ -127,11 +134,13 @@ def main():
 
     parser_summary = subparsers.add_parser('sum')
     parser_summary.add_argument('dir', type=directory_type)
+    parser_summary.add_argument('-s', action='store_true',
+                                help='silence warnings.')
     parser_summary.set_defaults(func=summary)
 
     args = parser.parse_args()
 
-    print(args.func(args.dir))
+    print(args.func(args))
 
 
 if __name__ == '__main__':
