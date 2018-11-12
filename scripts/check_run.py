@@ -118,7 +118,7 @@ def parse_file(fname, swallow_errors):
 
 def summary(args):
     directory = args.dir
-    swallow_errors = args.s
+    swallow_errors = not args.verbose
     all_json = glob.glob(join(directory, '*.json'))
 
     num_exp = len(get_all_experiments(directory))
@@ -149,8 +149,8 @@ def main():
 
     parser_summary = subparsers.add_parser('sum')
     parser_summary.add_argument('dir', type=directory_type)
-    parser_summary.add_argument('-s', action='store_true',
-                                help='silence warnings.')
+    parser_summary.add_argument('--verbose', '-v', action='store_true',
+                                help='verbose json errors.')
     parser_summary.set_defaults(func=summary)
 
     args = parser.parse_args()
