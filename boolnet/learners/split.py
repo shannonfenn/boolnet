@@ -116,7 +116,7 @@ class Learner:
             if verbose:
                 print('Target {} Optimising...'.format(target_index))
             # run the optimiser
-            partial_result = optimiser.run(state, parameters['optimiser'])
+            partial_result = optimiser.run(state)
             t2 = time()
 
             if verbose:

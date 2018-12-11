@@ -274,8 +274,7 @@ class Learner():
                 print('  time taken: {}'.format(t1 - t0))
                 print('  Optimising...')
 
-            # optimise
-            partial_result = optimiser.run(state, parameters['optimiser'])
+            partial_result = optimiser.run(state)
 
             t2 = time()
 

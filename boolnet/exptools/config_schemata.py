@@ -140,7 +140,7 @@ optimiser_schema = Any(
         'steps_per_temp':                        All(int, Range(min=1)),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
-        Optional('return'):                      In(['best', 'last']),
+        Optional('return_option'):               In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
         }),
@@ -151,7 +151,7 @@ optimiser_schema = Any(
                                                      Match('[1-9][0-9]*n')),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
-        Optional('return'):                      In(['best', 'last']),
+        Optional('return_option'):               In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
         }),
@@ -163,7 +163,7 @@ optimiser_schema = Any(
                                                      Match('[1-9][0-9]*n')),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
-        Optional('return'):                      In(['best', 'last']),
+        Optional('return_option'):               In(['best', 'last']),
         Optional('stopping_condition'):          stopping_condition_schema,
         Optional('max_restarts'):                All(int, Range(min=0))
         }),
@@ -204,7 +204,6 @@ learner_schema = Schema(
                                 'stratmultipar', 'classifierchain',
                                 'classifierchain_plus'),
             'network':      network_schema,
-            'optimiser':    optimiser_schema,
             'target_order': target_order_schema,
             'seed':         Any(None, All(int, Range(min=0)), Default(None)),
             Optional('minfs_masking'):          bool,
@@ -244,10 +243,11 @@ log_keys_schema = Schema(
 
 
 instance_schema = Schema({
-    'data':     data_schema,
-    'learner':  learner_schema,
-    'sampling': sampling_schema,
-    'log_keys': log_keys_schema,
+    'data':         data_schema,
+    'learner':      learner_schema,
+    'optimiser':    optimiser_schema,
+    'sampling':     sampling_schema,
+    'log_keys':     log_keys_schema,
     Optional(Match(r'notes.*')):  str,
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,

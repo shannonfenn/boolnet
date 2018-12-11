@@ -21,9 +21,9 @@ import boolnet.exptools.config_filtering as cf
 
 
 OPTIMISERS = {
-    'SA': optimisers.SA(),
-    'LAHC': optimisers.LAHC(),
-    'HC': optimisers.HC(),
+    'SA': optimisers.SA,
+    'LAHC': optimisers.LAHC,
+    'HC': optimisers.HC,
     }
 
 
@@ -118,7 +118,7 @@ def guiding_fn_value_stop_criterion(func_id, limit=None):
         return lambda _, guiding_value: guiding_value >= limit
 
 
-def convert_optimiser_params(params, Ne, No):
+def initialise_optimiser(params, Ne, No):
     # handle guiding function
     gf_name = params['guiding_function']
     gf_id = fn.function_from_name(gf_name)
@@ -138,10 +138,17 @@ def convert_optimiser_params(params, Ne, No):
         stop_functor = fn_value_stop_criterion(sf_id, sf_evaluator, sf_limit)
     else:
         stop_functor = guiding_fn_value_stop_criterion(gf_id, sf_limit)
+    # variable max iterations
+    if str(params.get('max_iterations', '')).endswith('n'):
+        n = int(str(params['max_iterations'])[:-1])
+        max_it = n * No
+        params['max_iterations'] = max_it
     # update
     params['minimise'] = fn.is_minimiser(gf_id)
     params['guide_functor'] = lambda x: x.function_value(gf_evaluator)
     params['stop_functor'] = stop_functor
+
+    return OPTIMISERS[params['name']](**params)
 
 
 def build_training_set(mapping):
@@ -199,14 +206,9 @@ def learn_bool_net(parameters, verbose=False):
 
     training_set = build_training_set(parameters['mapping'])
 
+    optimiser = initialise_optimiser(parameters['optimiser'], training_set.Ne, training_set.No)
+
     learner_params = parameters['learner']
-    optimiser_params = learner_params['optimiser']
-
-    convert_optimiser_params(optimiser_params, training_set.Ne, training_set.No)
-
-    learner = LEARNERS[learner_params['name']]
-    optimiser = OPTIMISERS[optimiser_params['name']]
-
     convert_target_orders(learner_params, training_set.No)
 
     if 'add_noise' in parameters['data']:
@@ -229,15 +231,10 @@ def learn_bool_net(parameters, verbose=False):
         Ng = n * training_set.No
         learner_params['network']['Ng'] = Ng
 
-    # Handle max iterations
-    if str(learner_params['optimiser'].get('max_iterations', '')).endswith('n'):
-        n = int(str(learner_params['optimiser']['max_iterations'])[:-1])
-        max_it = n * training_set.No
-        learner_params['optimiser']['max_iterations'] = max_it
-
     setup_end_time = time.monotonic()
 
     # learn the network
+    learner = LEARNERS[learner_params['name']]
     learner_result = learner.run(optimiser, learner_params, verbose)
 
     learning_end_time = time.monotonic()

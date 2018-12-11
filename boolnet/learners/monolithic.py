@@ -68,7 +68,7 @@ class Learner:
             print('Optimising...')
 
         # run the optimiser
-        opt_result = optimiser.run(state, parameters['optimiser'])
+        opt_result = optimiser.run(state)
         t2 = time()
 
         if verbose:

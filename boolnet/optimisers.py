@@ -26,24 +26,18 @@ def geometric(a, r, n):
 
 class RestartLocalSearch:
 
-    def initialise(self, parameters):
-        # unpack options
-        try:
-            self.guiding_function = parameters['guide_functor']
-            if parameters['minimise']:
-                self.is_as_good = op.le
-                self.is_better = op.lt
-            else:
-                self.is_as_good = op.ge
-                self.is_better = op.gt
-            self.stopping_condition = parameters['stop_functor']
-            self.return_option = parameters.get('return', 'best')
-            # self.max_restarts = parameters.get('max_restarts', 0)
-            self.max_restarts = parameters.get('max_restarts', 0)
-            self.reached_stopping_condition = False
-        except KeyError:
-            print('Optimiser parameters missing!', file=sys.stderr)
-            raise
+    def __init__(self, guide_functor, minimise, stop_functor,
+                 return_option='best', max_restarts=0):
+        self.guiding_function = guide_functor
+        if minimise:
+            self.is_as_good = op.le
+            self.is_better = op.lt
+        else:
+            self.is_as_good = op.ge
+            self.is_better = op.gt
+        self.stopping_condition = stop_functor
+        self.return_option = return_option
+        self.max_restarts = max_restarts
 
     def move(self, state):
         state.move_to_random_neighbour()
@@ -54,16 +48,10 @@ class RestartLocalSearch:
     def _optimise(self, state):
         raise NotImplementedError()
 
-    def run(self, state, parameters):
-        # unpack options
-        self.initialise(parameters)
-
-        # original_state = state.representation()
-
+    def run(self, state):
         for i in range(self.max_restarts + 1):
-            # state.set_representation(original_state)
-            step_result = self._optimise(state)
-            if self.reached_stopping_condition:
+            step_result, reached_stop_condition = self._optimise(state)
+            if reached_stop_condition:
                 break
             elif i < self.max_restarts:
                 state.randomise()
@@ -78,13 +66,9 @@ class RestartLocalSearch:
 
 class HC(RestartLocalSearch):
 
-    def initialise(self, parameters):
-        super().initialise(parameters)
-        try:
-            self.max_iterations = parameters['max_iterations']
-        except KeyError:
-            print('Optimiser parameters missing!', file=sys.stderr)
-            raise
+    def __init__(self, max_iterations, **kwargs):
+        super().__init__(**kwargs)
+        self.max_iterations = max_iterations
 
     def _optimise(self, state):
         # Calculate initial error
@@ -94,12 +78,10 @@ class HC(RestartLocalSearch):
         # set up aspiration criteria
         best_iteration = 0
 
-        self.reached_stopping_condition = False
         # optimisation loop
         for iteration in range(self.max_iterations):
             # Stop on user defined condition
             if self.stopping_condition(state, error):
-                self.reached_stopping_condition = True
                 break
 
             # perform random move
@@ -120,12 +102,13 @@ class HC(RestartLocalSearch):
             # and prevent accidentally undoing accepted moves later
             state.clear_history()
 
-        return OptimiserResult(
+        result = OptimiserResult(
             representation=state.representation,
             error=error,
             best_iteration=best_iteration,
             iteration=iteration,
             restarts=None)
+        return result, self.stopping_condition(state, error)
 
     def accept(self, new_error, current_error):
         if self.is_as_good(new_error, current_error):
@@ -134,14 +117,10 @@ class HC(RestartLocalSearch):
 
 class LAHC(RestartLocalSearch):
 
-    def initialise(self, parameters):
-        super().initialise(parameters)
-        try:
-            self.cost_list_len = parameters['cost_list_length']
-            self.max_iterations = parameters['max_iterations']
-        except KeyError:
-            print('Optimiser parameters missing!', file=sys.stderr)
-            raise
+    def __init__(self, cost_list_length, max_iterations, **kwargs):
+        super().__init__(**kwargs)
+        self.cost_list_length = cost_list_length
+        self.max_iterations = max_iterations
 
     def _optimise(self, state):
         # Calculate initial error
@@ -153,15 +132,12 @@ class LAHC(RestartLocalSearch):
         best_iteration = 0
 
         # initialise cost list
-        self.costs = deque(repeat(error, self.cost_list_len))
+        self.costs = deque(repeat(error, self.cost_list_length))
 
         if self.stopping_condition(state, best_error):
-            self.reached_stopping_condition = True
             return OptimiserResult(
                 representation=best_representation, error=best_error,
-                best_iteration=0, iteration=0, restarts=None)
-        else:
-            self.reached_stopping_condition = False
+                best_iteration=0, iteration=0, restarts=None), True
 
         # optimisation loop
         for iteration in range(self.max_iterations):
@@ -178,7 +154,6 @@ class LAHC(RestartLocalSearch):
 
             # Stop on user defined condition
             if self.stopping_condition(state, best_error):
-                self.reached_stopping_condition = True
                 break
 
             # Determine whether to accept the new state
@@ -194,12 +169,13 @@ class LAHC(RestartLocalSearch):
         if self.return_option == 'last':
             best_representation = copy(state.representation)
 
-        return OptimiserResult(
+        result = OptimiserResult(
             representation=best_representation,
             error=best_error,
             best_iteration=best_iteration,
             iteration=iteration,
             restarts=None)
+        return result, self.stopping_condition(state, best_error)
 
     def accept(self, new_error, current_error):
         oldest_error = self.costs.popleft()
@@ -213,6 +189,13 @@ class LAHC(RestartLocalSearch):
 
 
 class SA(RestartLocalSearch):
+    def __init__(self, num_temps, steps_per_temp, init_temp, temp_rate,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.num_t = num_temps
+        self.steps_per_t = steps_per_temp
+        self.init_t = init_temp
+        self.t_rate = temp_rate
 
     def accept(self, old_error, new_error, temperature):
         delta = abs(new_error - old_error)
@@ -224,20 +207,6 @@ class SA(RestartLocalSearch):
         # Accept when dE is non-negative or with probability P = e^(-dE/T)
         return (delta <= 0) or (temperature > 0 and
                                 random() < exp(-delta/temperature))
-
-    def initialise(self, parameters):
-        super().initialise(parameters)
-        try:
-            self.num_temps = parameters['num_temps']
-            self.steps_per_temp = parameters['steps_per_temp']
-            self.init_temp = parameters['init_temp']
-            self.temp_rate = parameters['temp_rate']
-        except KeyError:
-            print('Optimiser parameters missing!', file=sys.stderr)
-            raise
-        self.temperatures = stepped_exp_decrease(
-            self.init_temp, self.temp_rate,
-            self.num_temps, self.steps_per_temp)
 
     def _optimise(self, state):
         # Calculate initial error
@@ -252,10 +221,10 @@ class SA(RestartLocalSearch):
 
         last_temp = self.init_temp  # so we can check for temp changes
 
-        self.reached_stopping_condition = False
-
         # annealing loop
-        for iteration, temp in enumerate(self.temperatures):
+        temperatures = stepped_exp_decrease(self.init_t, self.t_rate,
+                                            self.num_t, self.steps_per_t)
+        for iteration, temp in enumerate(temperatures):
 
             # Log error on new temperature if logging
             best_error_for_temp = min(best_error_for_temp, error)
@@ -279,7 +248,6 @@ class SA(RestartLocalSearch):
 
             # Stop on user defined condition
             if self.stopping_condition(state, best_error):
-                self.reached_stopping_condition = True
                 break
 
             # Determine whether to accept the new state
@@ -295,9 +263,11 @@ class SA(RestartLocalSearch):
         if self.return_option == 'last':
             best_representation = copy(state.representation)
 
-        return OptimiserResult(
+        result = OptimiserResult(
             representation=best_representation,
             error=best_error,
             best_iteration=best_iteration,
             iteration=iteration,
             restarts=None)
+
+        return result, self.stopping_condition(state, best_error)
