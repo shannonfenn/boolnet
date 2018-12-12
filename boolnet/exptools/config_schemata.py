@@ -115,17 +115,10 @@ sampling_schema = Any(
     )
 
 
-network_schema = All(
-    Schema({
-        'method':       'generated',
-        'Ng':           Any(All(int, Range(min=1)), Match('[1-9][0-9]*n')),
-        'node_funcs':   [All(int, Range(min=0, max=15))]
-        }),
-    # Schema({
-    #     'method':   'given',
-    #     'gates':    [All([All(int, Range(min=0))], Length(min=3, max=3))],
-    #     })
-    )
+network_schema = Schema({
+    'Ng':           Any(All(int, Range(min=1)), Match('[1-9][0-9]*n')),
+    'node_funcs':   [All(int, Range(min=0, max=15))]
+    })
 
 stopping_condition_schema = Any(['guiding', float],
                                 [In(guiding_functions), float])
