@@ -119,6 +119,7 @@ def guiding_fn_value_stop_criterion(func_id, limit=None):
 
 
 def initialise_optimiser(params, Ne, No):
+    params = dict(params)
     # handle guiding function
     gf_name = params['guiding_function']
     gf_id = fn.function_from_name(gf_name)
@@ -126,6 +127,10 @@ def initialise_optimiser(params, Ne, No):
         raise ValueError('Invalid guiding function: {}'.format(gf_name))
     gf_params = params.get('guiding_function_parameters', {})
     gf_evaluator = be.EVALUATORS[gf_id](Ne, No, **gf_params)
+    # update
+    params['minimise'] = fn.is_minimiser(gf_id)
+    params['guiding_function'] = lambda x: x.function_value(gf_evaluator)
+
     # Handle stopping condition (may be user specified)
     # defaults to the guiding function optima
     condition = params.get('stopping_condition', ['guiding', None])
@@ -138,17 +143,17 @@ def initialise_optimiser(params, Ne, No):
         stop_functor = fn_value_stop_criterion(sf_id, sf_evaluator, sf_limit)
     else:
         stop_functor = guiding_fn_value_stop_criterion(gf_id, sf_limit)
+    # update
+    params['stopping_condition'] = stop_functor
+
     # variable max iterations
     if str(params.get('max_iterations', '')).endswith('n'):
         n = int(str(params['max_iterations'])[:-1])
         max_it = n * No
         params['max_iterations'] = max_it
-    # update
-    params['minimise'] = fn.is_minimiser(gf_id)
-    params['guide_functor'] = lambda x: x.function_value(gf_evaluator)
-    params['stop_functor'] = stop_functor
 
-    return OPTIMISERS[params['name']](**params)
+    name = params.pop('name')
+    return OPTIMISERS[name](**params)
 
 
 def build_training_set(mapping):
@@ -206,8 +211,6 @@ def learn_bool_net(parameters, verbose=False):
 
     training_set = build_training_set(parameters['mapping'])
 
-    optimiser = initialise_optimiser(parameters['optimiser'], training_set.Ne, training_set.No)
-
     learner_params = parameters['learner']
     convert_target_orders(learner_params, training_set.No)
 
@@ -231,26 +234,27 @@ def learn_bool_net(parameters, verbose=False):
         Ng = n * training_set.No
         learner_params['network']['Ng'] = Ng
 
-    setup_end_time = time.monotonic()
+    record = build_parameter_record(parameters)
+
+    optimiser = initialise_optimiser(parameters['optimiser'], training_set.Ne, training_set.No)
+    learner = LEARNERS[learner_params['name']]
 
     # learn the network
-    learner = LEARNERS[learner_params['name']]
+    setup_end_time = time.monotonic()
     learner_result = learner.run(optimiser, learner_params, verbose)
-
     learning_end_time = time.monotonic()
 
-    results = build_result_map(parameters, learner_result)
-
+    record.update(build_result_record(parameters, learner_result))
     end_time = time.monotonic()
 
-    # add timing results
+    # record timing
     if parameters.get('verbose_timing'):
-        results['setup_time'] = setup_end_time - start_time
-        results['result_time'] = end_time - learning_end_time
-        results['total_time'] = end_time - start_time
-    results['learning_time'] = learning_end_time - setup_end_time
+        record['setup_time'] = setup_end_time - start_time
+        record['result_time'] = end_time - learning_end_time
+        record['total_time'] = end_time - start_time
+    record['learning_time'] = learning_end_time - setup_end_time
 
-    return results
+    return record
 
 
 def build_states(mapping, gates):
@@ -302,14 +306,44 @@ def build_states(mapping, gates):
     return S_trg, S_test
 
 
-def build_result_map(parameters, learner_result):
+def build_parameter_record(parameters):
+    record = {}
+    if 'actual_noise' in parameters:
+        record['actual_noise'] = parameters['actual_noise']
 
-    parameters['learner']['optimiser'].pop('guide_functor')
-    parameters['learner']['optimiser'].pop('stop_functor')
+    for k, v in parameters.items():
+        if re.match(r'notes.*', k):
+            record[k] = v
 
+    # handle requests to log keys
+    log_keys = parameters.get('log_keys', [])
+
+    # strip out warning flags
+    log_keys_just_paths = [[k, v] for k, _, v in log_keys]
+
+    # match dict paths to given patterns and pull out corresponding values
+    passed_through_params = cf.filter_keys(parameters, log_keys_just_paths)
+
+    # Generating warnings for missing but required patterns
+    for key, required, pattern in log_keys:
+        # handle keys that contain insert positions
+        if '{}' in key:
+            checker = re.compile(key.format('.*')).fullmatch
+        else:
+            checker = re.compile(key).fullmatch
+        # check at least one key in the result dict matches the given key
+        if required and all(checker(k) is None for k in passed_through_params):
+            logging.warning(('log_keys: %s is required but does not match any '
+                             'path in the configuration.'), pattern)
+
+    record.update(passed_through_params)
+    return record
+
+
+def build_result_record(parameters, learner_result):
     gf_id = fn.function_from_name(
-        parameters['learner']['optimiser']['guiding_function'])
-    gf_params = parameters['learner']['optimiser'].get(
+        parameters['optimiser']['guiding_function'])
+    gf_params = parameters['optimiser'].get(
             'guiding_function_parameters', {})
 
     final_network = learner_result['network']
@@ -340,17 +374,7 @@ def build_result_map(parameters, learner_result):
         partial_nets = [net.gates.tolist() for net in partial_nets]
         learner_result['extra']['partial_networks'] = partial_nets
 
-    # if 'feature_sets' in learner_result['extra']:
-    #     F = learner_result['extra']['feature_sets']
-    #     for strata, strata_f_sets in enumerate(F):
-    #         for target, fs in enumerate(strata_f_sets):
-    #             # only record FSes if they exist
-    #             if fs is not None:
-    #                 key = 'fs_s{}_t{}'.format(strata, target)
-    #                 learner_result['extra'][key] = fs
-    #     learner_result['extra'].pop('feature_sets')
-
-    results = {
+    record = {
         'Ni':           final_network.Ni,
         'No':           final_network.No,
         'Ng':           final_network.Ng,
@@ -371,47 +395,6 @@ def build_result_map(parameters, learner_result):
         'test_errs':    np.asarray(test_state.function_value(eval_per_output_err_test)),
         'test_mccs':    np.asarray(test_state.function_value(eval_per_output_mcc_test)),
         }
-    results.update(learner_result['extra'])
+    record.update(learner_result['extra'])
 
-    if 'actual_noise' in parameters:
-        results['actual_noise'] = parameters['actual_noise']
-
-    # for bit, v in enumerate(final_network.max_node_depths()):
-    #     key = 'max_depth_tgt_{}'.format(bit)
-    #     results[key] = v
-
-    for k, v in parameters.items():
-        if re.match(r'notes.*', k):
-            results[k] = v
-
-    # handle requests to log keys
-    log_keys = parameters.get('log_keys', [])
-
-    # strip out warning flags
-    log_keys_just_paths = [[k, v] for k, _, v in log_keys]
-
-    # match dict paths to given patterns and pull out corresponding values
-    passed_through_params = cf.filter_keys(parameters, log_keys_just_paths)
-
-    # Generate warnings for reserved keys - needs to run before merging dicts
-    for key, _, _ in log_keys:
-        if key in results:
-            logging.warning(
-                'log_keys: %s ignored - reserved key.', key)
-
-    # Generating warnings for missing but required patterns
-    for key, required, pattern in log_keys:
-        # handle keys that contain insert positions
-        if '{}' in key:
-            checker = re.compile(key.format('.*')).fullmatch
-        else:
-            checker = re.compile(key).fullmatch
-        # check at least one key in the result dict matches the given key
-        if required and all(checker(k) is None for k in passed_through_params):
-            logging.warning(('log_keys: %s is required but does not match any '
-                             'path in the configuration.'), pattern)
-
-    # merge dictionaries, giving preference to results ahead of parameters
-    passed_through_params.update(results)
-
-    return passed_through_params
+    return record

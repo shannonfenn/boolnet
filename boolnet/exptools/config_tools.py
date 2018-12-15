@@ -266,8 +266,7 @@ def insert_default_log_keys(settings):
         ['config_num', True, ['configuration_number']],
         ['trg_set_num', True, ['training_set_number']],
         ['tfs', True, ['learner', 'network', 'node_funcs']],
-        ['guiding_function', True, ['learner', 'optimiser',
-                                    'guiding_function']],
+        ['guiding_function', True, ['optimiser', 'guiding_function']],
         ['given_tgt_order', True, ['learner', 'target_order']],
         ['targets', False, ['data', 'targets']],
         ['sample_seed', False, ['sampling', 'seed']],
@@ -279,7 +278,7 @@ def insert_default_log_keys(settings):
         ['fs_masking', False, ['learner', 'minfs_masking']],
         ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
         ['fs_solver', False, ['learner', 'minfs_solver']],
-        ['opt_{}', False, ['learner', 'optimiser', '.*']],
+        ['opt_{}', False, ['optimiser', '.*']],
     ]
     # give preference to user log_keys
     defaults.extend(settings['base_config'].get('log_keys', []))

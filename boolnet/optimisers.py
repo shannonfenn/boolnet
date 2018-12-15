@@ -4,7 +4,6 @@ from copy import copy
 from itertools import chain, repeat
 from collections import deque, namedtuple
 import operator as op
-import sys
 import logging
 
 
@@ -26,16 +25,16 @@ def geometric(a, r, n):
 
 class RestartLocalSearch:
 
-    def __init__(self, guide_functor, minimise, stop_functor,
+    def __init__(self, guiding_function, minimise, stopping_condition,
                  return_option='best', max_restarts=0):
-        self.guiding_function = guide_functor
+        self.guiding_function = guiding_function
         if minimise:
             self.is_as_good = op.le
             self.is_better = op.lt
         else:
             self.is_as_good = op.ge
             self.is_better = op.gt
-        self.stopping_condition = stop_functor
+        self.stopping_condition = stopping_condition
         self.return_option = return_option
         self.max_restarts = max_restarts
 
