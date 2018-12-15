@@ -24,7 +24,7 @@ def parse_arguments():
                         type=argparse.FileType('r'),
                         help='experiment config filename.')
     parser.add_argument('-d', '--directory', type=str, metavar='dir',
-                        default='~/HMRI/experiments/results',
+                        default='~/HMRI/experiments-bn/results',
                         help='base directory to create result directory in.')
     parser.add_argument('-b', '--batch-mode', action='store_true',
                         help='suppress progress bars.')
@@ -96,13 +96,16 @@ def main():
 
     # generate learning tasks
     try:
-        configurations = cfg.generate_configurations(settings,
-                                                     args.batch_mode)
+        configurations, base_seed = cfg.generate_configurations(
+            settings, args.batch_mode)
         print('{} configurations generated.'.format(len(configurations)))
         tasks = cfg.generate_tasks(configurations, args.batch_mode)
         print('{} tasks generated.\n'.format(len(tasks)))
 
         os.makedirs(os.path.join(result_dir, 'tasks'))
+
+        with open(os.path.join(result_dir, 'base_seed'), 'w') as f:
+            f.write(f'{base_seed}\n')
 
         dump_tasks(tasks, result_dir, args.batch_mode)
     except cfg.ValidationError as err:
