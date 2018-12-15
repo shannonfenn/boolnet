@@ -24,7 +24,7 @@ def build_filename(params, extension, key='filename'):
     return filename
 
 
-def get_seed(key):
+def get_seed(group, key):
     ''' Keeps a registry of seeds for each key, if given a new
         key get_seed() generates a new seed for that key, but if
         given an existing key it returns that seed. Allows any number
@@ -32,11 +32,22 @@ def get_seed(key):
     if 'registry' not in get_seed.__dict__:
         # first call, create the registry
         get_seed.registry = {}
-    if key not in get_seed.registry:
+    if group not in get_seed.registry:
+        # non-existant group, initialise
+        get_seed.registry[group] = {}
+    if key not in get_seed.registry[group]:
         # non-existant key, generate a seed
-        random.seed()  # use default randomness source to get a seed
-        get_seed.registry[key] = random.randint(1, 2**32-1)
-    return get_seed.registry[key]
+        get_seed.registry[group][key] = random.randint(1, 2**32-1)
+    return get_seed.registry[group][key]
+
+
+def gen_and_update_seed(params, seed_key, group):
+    s = params[seed_key]
+    if isinstance(s, str):
+        # s is actually a name
+        s = get_seed(group, s)
+        params[seed_key] = s
+    return s
 
 
 def load_samples(params, N, Ni, Nt=None):
@@ -61,11 +72,8 @@ def load_samples(params, N, Ni, Nt=None):
         # of training indices across multiple configurations
         Ns = params['Ns']
         Ne = params['Ne']
-        s = params['seed']
-        if isinstance(s, str):
-            # s is actually a name
-            s = get_seed(s)
-            params['seed'] = s
+        s = gen_and_update_seed(params, 'seed', 'sampling')
+        before_sampling = random.getstate()
         random.seed(s)
         if 'test' in params:
             Ne_test = params['test']
@@ -84,6 +92,7 @@ def load_samples(params, N, Ni, Nt=None):
             training_indices = np.array([
                 random.sample(range(N), Ne) for i in range(Ns)])
             test_indices = [None]*Ns
+        random.setstate(before_sampling)
     return training_indices, test_indices
 
 
@@ -93,11 +102,19 @@ def load_dataset(settings):
     dtype = data_settings['type']
 
     if dtype == 'file':
-        instance, N, Ni = file_instance(data_settings)
+        instance, N, Ni, No = file_instance(data_settings)
     elif dtype == 'split':
-        instance, N, Ni, Nt = split_instance(data_settings)
+        instance, N, Ni, No, Nt = split_instance(data_settings)
     elif dtype == 'generated':
-        instance, N, Ni = generated_instance(data_settings)
+        instance, N, Ni, No = generated_instance(data_settings)
+
+    if 'targets' in data_settings:
+        targets = data_settings['targets']
+        if targets == 'random':
+            targets = list(range(No))
+            random.shuffle(targets)
+            data_settings['targets'] = targets
+        instance['targets'] = targets
 
     # check for problematic case
     problematic = (dtype == 'split' and
@@ -137,15 +154,7 @@ def file_instance(params):
     instance = {'type': 'file_unsplit',
                 'file': filename}
 
-    if 'targets' in params:
-        targets = params['targets']
-        if targets == 'random':
-            # create a random permutation of size No
-            targets = np.random.permutation(No)
-            params['targets'] = targets
-        instance['targets'] = targets
-
-    return instance, N, Ni
+    return instance, N, Ni, No
 
 
 def split_instance(params):
@@ -164,15 +173,7 @@ def split_instance(params):
                 'trg_file': trg_filename,
                 'test_file': test_filename}
 
-    if 'targets' in params:
-        targets = params['targets']
-        if targets == 'random':
-            # create a random permutation of size No
-            targets = np.random.permutation(No)
-            params['targets'] = targets
-        instance['targets'] = targets
-
-    return instance, Ne_trg, Ni, Ne_test
+    return instance, Ne_trg, Ni, No, Ne_test
 
 
 def generated_instance(params):
@@ -180,22 +181,16 @@ def generated_instance(params):
     operator = params['operator']
 
     No = params.get('out_width', Nb)  # defaults to operand width
-    targets = params.get('targets', None)
-    if targets == 'random':
-        # create a random permutation of size No
-        targets = np.random.permutation(No)
-        params['targets'] = targets
 
     instance = {
         'type': 'operator',
         'operator': operator,
         'Nb': Nb,
-        'No': No,
-        'targets': targets
+        'No': No
     }
     Ni = opit.num_operands[operator] * Nb
 
-    return instance, 2**Ni, Ni
+    return instance, 2**Ni, Ni, No
 
 
 # def handle_initial_network(settings):
@@ -294,6 +289,11 @@ def generate_configurations(settings, batch_mode):
         raise ValidationError(
             'Top-level config invalid: {}'.format(err))
 
+    primary_seed = settings['seed']
+    if primary_seed is None:
+        primary_seed = random.randint(2**32-1)
+    random.seed(primary_seed)
+
     # insert default log_keys values into base config
     insert_default_log_keys(settings)
 
@@ -328,7 +328,7 @@ def generate_configurations(settings, batch_mode):
         # clean up progress bar before printing anything else
         if not batch_mode:
             bar.finish()
-    return configurations
+    return configurations, primary_seed
 
 
 def generate_tasks(configurations, batch_mode):
@@ -344,6 +344,10 @@ def generate_tasks(configurations, batch_mode):
             # for each sample
             for i, instance in enumerate(instances):
                 task = deepcopy(context)
+                if 'seed' in task['learner']:
+                    gen_and_update_seed(task['learner'], 'seed', 'learner')
+                else:
+                    task['learner']['seed'] = random.randint(1, 2**32-1)
                 task['mapping'] = instance
                 task['training_set_number'] = i
                 tasks.append(task)

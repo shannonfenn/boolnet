@@ -50,8 +50,7 @@ def IsDir(d):
 
 guiding_functions = fn.scalar_function_names()
 
-
-seed_schema = Any(None, str, All(int, Range(min=0)))
+seed_schema = Any(Default(None), str, All(int, Range(min=0)))
 
 target_subset_schema = Any('random', [All(int, Range(min=0))])
 
@@ -90,7 +89,7 @@ sampling_schema = Any(
         'type':           'generated',
         'Ns':             All(int, Range(min=1)),
         'Ne':             All(int, Range(min=1)),
-        'seed':           seed_schema,
+        Optional('seed'): seed_schema,
         Optional('test'): All(int, Range(min=0))
         }),
     # read from file
@@ -99,16 +98,12 @@ sampling_schema = Any(
         'filename':         str,
         Optional('test'):   str,
         Optional('dir'):    IsDir,
-        # allow for now, but don't force
-        Optional('seed'):   seed_schema,
         }),
     # given in config file
     Schema({
         'type':             'given',
         'indices':          [[All(int, Range(min=0))]],
         Optional('test'):   [[All(int, Range(min=0))]],
-        # allow for now, but don't force
-        Optional('seed'):   seed_schema,
         }),
     # blank - data is already split
     Schema({'type': 'blank'})
@@ -198,7 +193,7 @@ learner_schema = Schema(
                                 'classifierchain_plus'),
             'network':      network_schema,
             'target_order': target_order_schema,
-            'seed':         Any(None, All(int, Range(min=0)), Default(None)),
+            Optional('seed'):                   seed_schema,
             Optional('minfs_masking'):          bool,
             Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
             Optional('minfs_solver_params'):    minfs_params_schema,
@@ -253,19 +248,22 @@ instance_schema = Schema({
 list_msg = '\'list\' must be a sequence of mappings.'
 prod_msg = '\'product\' must be a sequence of sequences of mappings.'
 experiment_schema = Schema({
-    'name':                     str,
+    'name':         str,
+    'seed':         seed_schema,
     # Must be any dict
-    'base_config':              Schema({}, extra_keys=Allow),
+    'base_config':  Schema({}, extra_keys=Allow),
     # only one of 'list_config' or 'product_config' are allowed
     # Must be a list of dicts
-    Optional('list'):    Msg(All(Schema([Schema({}, extra_keys=Allow)]),
-                                 Length(min=1)), list_msg),
+    Optional('list'):           Msg(All(Schema([Schema({},
+                                                extra_keys=Allow)]),
+                                        Length(min=1)), list_msg),
     # Must be a length >= 2 list of lists of dicts
-    Optional('product'): Msg(All([All(Schema([Schema({}, extra_keys=Allow)]),
-                                      Length(min=1))],
-                                 Length(min=2)), prod_msg),
+    Optional('product'):        Msg(All([All(Schema([Schema({},
+                                                     extra_keys=Allow)]),
+                                             Length(min=1))],
+                                        Length(min=2)), prod_msg),
     # optional level of debug logging
-    Optional('debug_level'):        In(['none', 'warning', 'info', 'debug']),
-    Entire: Exclusive('list', 'product')
+    Optional('debug_level'):    In(['none', 'warning', 'info', 'debug']),
 
+    Entire: Exclusive('list', 'product')
     })
