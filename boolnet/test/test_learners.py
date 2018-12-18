@@ -3,7 +3,6 @@ import numpy as np
 import boolnet.learners.classifierchain as cc
 from boolnet.network.networkstate import BNState
 from boolnet.utils import PackedMatrix
-# from boolnet.learners import build_mask
 
 
 def random_network(Ng, Ni, No, node_funcs):

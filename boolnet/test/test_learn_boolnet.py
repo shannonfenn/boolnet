@@ -1,44 +1,43 @@
-# import yaml
-# import json
-# import os
-# import tempfile
-# from pytest import yield_fixture
-# from boolnet.exptools.config_tools import generate_configurations
-# from boolnet.learn_boolnet import learn_bool_net
+import re
+import yaml
+import json
+import pytest
+from glob import glob
+from itertools import count
+from boolnet.utils import NumpyAwareJSONEncoder
+from boolnet.exptools import config_tools
+from boolnet.exptools import learn_boolnet
 
 
-# TEST_DIR = 'boolnet/test/runs/'
+def task_expectation_pairs():
+    for folder in glob('boolnet/test/runs/*/'):
+        with open(f'{folder}/config.yaml') as f:
+            top_config = yaml.load(f)
+        tasks, _ = config_tools.generate_tasks(top_config, True)
+        with open(f'{folder}/expected.json') as f:
+            for i, tsk, exp in zip(count(), tasks, f):
+                tsk['id'] = i
+                exp = json.loads(exp)
+                strip_times(exp)
+                yield tsk, exp
 
 
-# # #################### Global fixtures #################### #
-# @yield_fixture(params=['basic', 'stratified'])
-# def harness(request):
-#     # load experiment file
-#     print(os.getcwd())
-#     with open(TEST_DIR + 'settings-{}.yaml'.format(request.param)) as f:
-#         settings = yaml.load(f, Loader=yaml.CSafeLoader)
-
-#     with tempfile.TemporaryDirectory() as tmpdirname:
-#         settings['inter_file_base'] = os.path.join(tmpdirname, 'inter_')
-#         settings['data']['dir'] = TEST_DIR + 'data/'
-
-#         with open(TEST_DIR + 'expected-{}.json'.format(request.param)) as f:
-#             expected = json.load(f)
-
-#         yield settings, expected
+def strip_times(record):
+    to_remove = [k for k in record if re.fullmatch('.*_time', k)]
+    for k in to_remove:
+        record.pop(k)
 
 
-# def test(harness):
-#     settings, expected = harness
-#     configurations = generate_configurations(settings)
-#     # Run the actual learning as a parallel process
-#     # runs the given configurations
-#     actual = map(learn_bool_net, configurations)
-
-#     for exp, act in zip(expected, actual):
-#         # assert exp == act
-#         for k in exp:
-#             print(k)
-#             assert exp[k] == act[k]
-
-#     # assert expected == actual
+@pytest.mark.parametrize('task,expected', task_expectation_pairs())
+def test_run(task, expected):
+    result = learn_boolnet.learn_bool_net(task, False)
+    strip_times(result)
+    result['id'] = task['id']
+    # pass through json dump/load to deal with annoying floating point issues
+    actual = json.loads(json.dumps(result, cls=NumpyAwareJSONEncoder,
+                        separators=(',', ':')))
+    print(expected)
+    print()
+    print(actual)
+    # assert False
+    assert actual == expected

@@ -1,0 +1,47 @@
+---
+name: gen10_unittest
+
+seed: 3354645
+
+# common params
+base_config:
+  data: 
+    type: file
+    targets: random
+
+  sampling:
+    type: generated
+    Ns: 1
+
+  learner:
+    minfs_selection_metric: cardinality>first
+    network:
+      Ng: 41n
+      node_funcs: [7]
+
+  optimiser:
+    name:             LAHC
+    cost_list_length: 250
+    max_restarts:     0
+    guiding_function: e1
+    max_iterations:   10000
+
+product:
+  - 
+    - {notes_tmt: mono-e1, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e1, max_iterations: 10000n}}
+    - {notes_tmt: mono-e2-lsb, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e2, max_iterations: 10000n}}
+    - {notes_tmt: mono-e3-lsb, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e3, max_iterations: 10000n}}
+    - {notes_tmt: mono-e6-lsb, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e6, max_iterations: 10000n}}
+    - {notes_tmt: mono-e2-auto, learner: {name: monolithic, target_order: auto}, optimiser: {guiding_function: e2, max_iterations: 10000n}}
+    - {notes_tmt: mono-e3-auto, learner: {name: monolithic, target_order: auto}, optimiser: {guiding_function: e3, max_iterations: 10000n}}
+    - {notes_tmt: mono-e6-auto, learner: {name: monolithic, target_order: auto}, optimiser: {guiding_function: e6, max_iterations: 10000n}}
+    - {notes_tmt: split-raps, learner: {name: split, minfs_solver: raps, target_order: lsb, minfs_masking: yes, minfs_solver_params: {iterations: 10, improvement_iterations: 25, search_magnitude: 0.3, priority: 0.05, restriction: 0.15, improvement: 0.15}}}
+    - {notes_tmt: strat-raps-all, learner: {name: stratified, minfs_solver: raps, minfs_prefilter: all, target_order: auto, minfs_masking: yes, reuse_gates: yes, minfs_solver_params: {iterations: 10, improvement_iterations: 25, search_magnitude: 0.3, priority: 0.05, restriction: 0.15, improvement: 0.15}}}
+    - {notes_tmt: strat-raps-reduced, learner: {name: stratified, minfs_solver: raps, minfs_prefilter: prev-strata+prev-fs+input, target_order: auto, minfs_masking: yes, reuse_gates: yes, minfs_solver_params: {iterations: 10, improvement_iterations: 25, search_magnitude: 0.3, priority: 0.05, restriction: 0.15, improvement: 0.15}}}
+    - {notes_tmt: cc-auto, learner: {name: classifierchain, target_order: auto}}
+    - {notes_tmt: cc-random, learner: {name: classifierchain, target_order: random}}
+    - {notes_tmt: cc-plus, learner: {name: classifierchain_plus, target_order: auto}}
+  -
+    - {sampling: {Ne: 16, seed: s0}}
+  -
+    - {notes_ds: gen0, data: {filename: ~/HMRI/experiments-bn/datasets/functions/gen10/0.npz}}
