@@ -11,6 +11,40 @@ import boolnet.bintools.operator_iterator as opit
 import boolnet.utils as utils
 
 
+class SeedHandler:
+    def __init__(self, primary_seed):
+        self.registry = {}
+        if primary_seed is None:
+            primary_seed = random.randint(2**32-1)
+        self.primary_seed = primary_seed
+        random.seed(primary_seed)
+
+    def _randint(self):
+        return random.randint(1, 2**32-1)
+
+    def _lookup(self, group, key):
+        ''' Keeps a registry of seeds for each key, if given a new
+            key get_seed() generates a new seed for that key, but if
+            given an existing key it returns that seed. Allows any number
+            of named seeds.'''
+        if group not in self.registry:
+            # non-existant group, initialise
+            self.registry[group] = {}
+        if key not in self.registry[group]:
+            # non-existant key, generate a seed
+            self.registry[group][key] = self._randint()
+        return self.registry[group][key]
+
+    def generate_seed(self, group, seed):
+        if seed is None:
+            return self._randint()
+        elif isinstance(seed, str):
+            # s is actually a name
+            return self._lookup(group, seed)
+        else:
+            return seed
+
+
 def build_filename(params, extension, key='filename'):
     ''' filename helper with optional directory'''
     filename = os.path.expanduser(params[key])
@@ -24,33 +58,7 @@ def build_filename(params, extension, key='filename'):
     return filename
 
 
-def get_seed(group, key):
-    ''' Keeps a registry of seeds for each key, if given a new
-        key get_seed() generates a new seed for that key, but if
-        given an existing key it returns that seed. Allows any number
-        of named seeds.'''
-    if 'registry' not in get_seed.__dict__:
-        # first call, create the registry
-        get_seed.registry = {}
-    if group not in get_seed.registry:
-        # non-existant group, initialise
-        get_seed.registry[group] = {}
-    if key not in get_seed.registry[group]:
-        # non-existant key, generate a seed
-        get_seed.registry[group][key] = random.randint(1, 2**32-1)
-    return get_seed.registry[group][key]
-
-
-def gen_and_update_seed(params, seed_key, group):
-    s = params[seed_key]
-    if isinstance(s, str):
-        # s is actually a name
-        s = get_seed(group, s)
-        params[seed_key] = s
-    return s
-
-
-def load_samples(params, N, Ni, Nt=None):
+def load_samples(seed_handler, params, N, Ni, Nt=None):
     if params['type'] == 'given':
         training_indices = np.array(params['indices'], dtype=np.uintp)
         if 'test' in params:
@@ -72,9 +80,10 @@ def load_samples(params, N, Ni, Nt=None):
         # of training indices across multiple configurations
         Ns = params['Ns']
         Ne = params['Ne']
-        s = gen_and_update_seed(params, 'seed', 'sampling')
+        seed = seed_handler.generate_seed('sampling_seeds', params['seed'])
+        params['seed'] = seed
         before_sampling = random.getstate()
-        random.seed(s)
+        random.seed(seed)
         if 'test' in params:
             Ne_test = params['test']
             if Nt is None:
@@ -96,7 +105,7 @@ def load_samples(params, N, Ni, Nt=None):
     return training_indices, test_indices
 
 
-def load_dataset(settings):
+def load_dataset(settings, seed_handler):
     data_settings = settings['data']
 
     dtype = data_settings['type']
@@ -129,10 +138,10 @@ def load_dataset(settings):
             return [instance]
         else:
             training_indices, test_indices = load_samples(
-                settings['sampling'], N, Ni, Nt)
+                seed_handler, settings['sampling'], N, Ni, Nt)
     else:
         training_indices, test_indices = load_samples(
-            settings['sampling'], N, Ni)
+            seed_handler, settings['sampling'], N, Ni)
 
     contexts = []
     for trg, test in zip(training_indices, test_indices):
@@ -281,26 +290,8 @@ def insert_default_log_keys(settings):
     return settings
 
 
-def generate_configurations(settings, batch_mode):
-    # validate the given schema
-    try:
-        sch.experiment_schema(settings)
-    except Invalid as err:
-        raise ValidationError(
-            'Top-level config invalid: {}'.format(err))
-
-    primary_seed = settings['seed']
-    if primary_seed is None:
-        primary_seed = random.randint(2**32-1)
-    random.seed(primary_seed)
-
-    # insert default log_keys values into base config
-    insert_default_log_keys(settings)
-
-    # the configurations approach involves having a multiple config dicts and
-    # updating them with each element of the configurations list or product
-    variable_sets, base_settings = split_variables_from_base(settings)
-
+def _generate_configurations(variable_sets, base_settings,
+                             seed_handler, batch_mode):
     # Build up the configuration list
     configurations = []
 
@@ -319,7 +310,7 @@ def generate_configurations(settings, batch_mode):
             # record the config number for debugging
             context['configuration_number'] = conf_num
             # load the data for this configuration
-            instances = load_dataset(context)
+            instances = load_dataset(context, seed_handler)
 
             configurations.append((context, instances))
             if not batch_mode:
@@ -328,10 +319,10 @@ def generate_configurations(settings, batch_mode):
         # clean up progress bar before printing anything else
         if not batch_mode:
             bar.finish()
-    return configurations, primary_seed
+    return configurations
 
 
-def generate_tasks(configurations, batch_mode):
+def _generate_tasks(configurations, seed_handler, batch_mode):
     # Build up the task list
     tasks = []
 
@@ -344,10 +335,8 @@ def generate_tasks(configurations, batch_mode):
             # for each sample
             for i, instance in enumerate(instances):
                 task = deepcopy(context)
-                if 'seed' in task['learner']:
-                    gen_and_update_seed(task['learner'], 'seed', 'learner')
-                else:
-                    task['learner']['seed'] = random.randint(1, 2**32-1)
+                task['learner']['seed'] = seed_handler.generate_seed(
+                    'learner_seeds', task['learner'].get('seed', None))
                 task['mapping'] = instance
                 task['training_set_number'] = i
                 tasks.append(task)
@@ -358,3 +347,24 @@ def generate_tasks(configurations, batch_mode):
         if not batch_mode:
             bar.finish()
     return tasks
+
+
+def generate_tasks(settings, batch_mode):
+    # validate the given schema
+    try:
+        sch.experiment_schema(settings)
+    except Invalid as err:
+        raise ValidationError(
+            'Top-level config invalid: {}'.format(err))
+
+    seed_handler = SeedHandler(settings['seed'])
+    # insert default log_keys values into base config
+    insert_default_log_keys(settings)
+    # the configurations approach involves having a multiple config dicts and
+    # updating them with each element of the configurations list or product
+    variable_sets, base_settings = split_variables_from_base(settings)
+
+    configurations = _generate_configurations(variable_sets, base_settings,
+                                              seed_handler, batch_mode)
+    tasks = _generate_tasks(configurations, seed_handler, batch_mode)
+    return tasks, seed_handler.primary_seed
