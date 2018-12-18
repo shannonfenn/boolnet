@@ -96,17 +96,11 @@ def main():
 
     # generate learning tasks
     try:
-        configurations, base_seed = cfg.generate_configurations(
-            settings, args.batch_mode)
-        print('{} configurations generated.'.format(len(configurations)))
-        tasks = cfg.generate_tasks(configurations, args.batch_mode)
+        tasks, base_seed = cfg.generate_tasks(settings, args.batch_mode)
         print('{} tasks generated.\n'.format(len(tasks)))
-
         os.makedirs(os.path.join(result_dir, 'tasks'))
-
         with open(os.path.join(result_dir, 'base_seed'), 'w') as f:
             f.write(f'{base_seed}\n')
-
         dump_tasks(tasks, result_dir, args.batch_mode)
     except cfg.ValidationError as err:
         print(err)
