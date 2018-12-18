@@ -67,7 +67,7 @@ class Learner:
             # unpack inputs to minFS solver
             mfs_features = pk.unpackmat(self.X, self.D.Ne)
             mfs_targets = pk.unpackmat(self.Y, self.D.Ne)
-            _, F = mfs.ranked_feature_sets(
+            _, F, _ = mfs.ranked_feature_sets(
                 mfs_features, mfs_targets, self.minfs_metric,
                 self.minfs_solver, self.minfs_params)
             for t, fs in enumerate(F):

@@ -69,7 +69,7 @@ def minfs_target_order(X, Y, solver, metric, params):
                     if t not in curriculum]
         Y_temp = Y[:, to_learn]
         # use external solver for minFS
-        ranking, F = mfs.ranked_feature_sets(
+        ranking, F, _ = mfs.ranked_feature_sets(
             X_temp, Y_temp, metric, solver, params)
         # randomly pick from top ranked targets
         idx = np.random.choice(np.where(ranking == 0)[0])

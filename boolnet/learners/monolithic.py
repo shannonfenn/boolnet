@@ -36,7 +36,7 @@ class Learner:
             mfs_Y = pk.unpackmat(Y, Ne)
 
             # use external solver for minFS
-            rank, feature_sets = mfs.ranked_feature_sets(
+            rank, feature_sets, _ = mfs.ranked_feature_sets(
                 mfs_X, mfs_Y, mfs_metric, mfs_solver, mfs_params)
 
             if mfs_tie_handling == 'random':

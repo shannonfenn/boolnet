@@ -83,7 +83,7 @@ def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
         mfs_X = [pk.unpackmat(Xp[fs, :], Ne) for fs in F_in]
     mfs_Y = pk.unpackmat(Yp[targets, :], Ne)
 
-    ranking, result_feature_sets = mfs.ranked_feature_sets(
+    ranking, result_feature_sets, _ = mfs.ranked_feature_sets(
         mfs_X, mfs_Y, metric, solver, solver_params)
 
     # remap feature sets using given feature indices

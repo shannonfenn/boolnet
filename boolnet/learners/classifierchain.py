@@ -52,7 +52,7 @@ def minfs_target_order(X, Y, solver, metric, params, tie_handling):
     mfs_Y = pk.unpackmat(Y, Y.Ne)
 
     # use external solver for minFS
-    rank, feature_sets = mfs.ranked_feature_sets(
+    rank, feature_sets, _ = mfs.ranked_feature_sets(
         mfs_X, mfs_Y, metric, solver, params)
 
     if tie_handling == 'random':
