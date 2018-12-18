@@ -42,6 +42,7 @@ def seed_rng(seed):
     if seed is None:
         random.seed()
         seed = random.randint(1, 2**32)
+    random.seed(seed)
     np.random.seed(seed)
     fastrand.seed(seed)
     return seed
