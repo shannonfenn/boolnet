@@ -80,83 +80,82 @@ def minfs_target_order(X, Y, solver, metric, params):
     return curriculum, feature_sets
 
 
-class Learner:
-    def run(self, optimiser, parameters, verbose=False):
+def run(self, optimiser, parameters, verbose=False):
+    t0 = time()
+
+    if verbose:
+        print('Initialising...')
+
+    # Instance
+    D = parameters['training_set']
+    X, Y = np.split(D, [D.Ni])
+
+    # Gate generation
+    model_generator = parameters['model_generator']
+    total_budget = parameters['network']['Ng']
+    total_budget -= D.No  # We need OR gates at the end for tgt reordering
+    budgets = spacings(total_budget, D.No)
+
+    # get target order
+    mfs_solver = parameters.get('minfs_solver', 'cplex')
+    mfs_metric = parameters['minfs_selection_metric']
+    mfs_params = parameters.get('minfs_solver_params', {})
+    target_order, feature_sets = minfs_target_order(
+            X, Y, mfs_solver, mfs_metric, mfs_params)
+
+    opt_results = []
+    optimisation_times = []
+    other_times = []
+
+    init_time = time() - t0
+
+    if verbose:
+        print('done. Time taken: {}'.format(init_time))
+        print('Beginning training loop...')
+
+    for i, budget in enumerate(budgets):
         t0 = time()
 
-        if verbose:
-            print('Initialising...')
+        target_index = target_order[i]
 
-        # Instance
-        D = parameters['training_set']
-        X, Y = np.split(D, [D.Ni])
+        D_i = make_partial_instance(X, Y, target_index, target_order[:i])
 
-        # Gate generation
-        model_generator = parameters['model_generator']
-        total_budget = parameters['network']['Ng']
-        total_budget -= D.No  # We need OR gates at the end for tgt reordering
-        budgets = spacings(total_budget, D.No)
+        # build the network state
+        gates = model_generator(budget, D_i.Ni, D_i.No)
 
-        # get target order
-        mfs_solver = parameters.get('minfs_solver', 'cplex')
-        mfs_metric = parameters['minfs_selection_metric']
-        mfs_params = parameters.get('minfs_solver_params', {})
-        target_order, feature_sets = minfs_target_order(
-                X, Y, mfs_solver, mfs_metric, mfs_params)
+        state = BNState(gates, D_i)
 
-        opt_results = []
-        optimisation_times = []
-        other_times = []
-
-        init_time = time() - t0
+        t1 = time()
 
         if verbose:
-            print('done. Time taken: {}'.format(init_time))
-            print('Beginning training loop...')
+            print('Optimising target {}...'.format(target_index))
+        # run the optimiser
+        partial_result = optimiser.run(state)
+        opt_results.append(partial_result)
+        t2 = time()
 
-        for i, budget in enumerate(budgets):
-            t0 = time()
+        if verbose:
+            print('done. Time taken: {}'.format(t2 - t1))
 
-            target_index = target_order[i]
+        other_times.append(t1 - t0)
+        optimisation_times.append(t2 - t1)
 
-            D_i = make_partial_instance(X, Y, target_index, target_order[:i])
+    partial_networks = [r.representation for r in opt_results]
+    accumulated_gates = join_networks(
+        partial_networks, mfs.inverse_permutation(target_order))
 
-            # build the network state
-            gates = model_generator(budget, D_i.Ni, D_i.No)
-
-            state = BNState(gates, D_i)
-
-            t1 = time()
-
-            if verbose:
-                print('Optimising target {}...'.format(target_index))
-            # run the optimiser
-            partial_result = optimiser.run(state)
-            opt_results.append(partial_result)
-            t2 = time()
-
-            if verbose:
-                print('done. Time taken: {}'.format(t2 - t1))
-
-            other_times.append(t1 - t0)
-            optimisation_times.append(t2 - t1)
-
-        partial_networks = [r.representation for r in opt_results]
-        accumulated_gates = join_networks(
-            partial_networks, mfs.inverse_permutation(target_order))
-
-        return {
-            'network': BNState(accumulated_gates, D),
-            'target_order': target_order,
-            'extra': {
-                'partial_networks': partial_networks,
-                'best_err': [r.error for r in opt_results],
-                'best_step': [r.best_iteration for r in opt_results],
-                'steps': [r.iteration for r in opt_results],
-                'feature_sets': feature_sets,
-                'restarts': [r.restarts for r in opt_results],
-                'opt_time': optimisation_times,
-                'other_time': other_times,
-                'init_time': init_time
-                }
+    return {
+        'network': BNState(accumulated_gates, D),
+        'target_order': target_order,
+        'extra': {
+            'partial_networks': partial_networks,
+            'best_err': [r.error for r in opt_results],
+            'best_step': [r.best_iteration for r in opt_results],
+            'steps': [r.iteration for r in opt_results],
+            'feature_sets': feature_sets,
+            'restarts': [r.restarts for r in opt_results],
+            'opt_time': optimisation_times,
+            'other_time': other_times,
+            'init_time': init_time
             }
+        }
