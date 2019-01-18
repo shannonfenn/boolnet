@@ -69,7 +69,7 @@ def make_partial_instance(X, Y, feature_sets, target_index):
                         Ne=X.Ne, Ni=len(fs))
 
 
-def run(self, optimiser, parameters, verbose=False):
+def run(optimiser, parameters, verbose=False):
     t0 = time()
 
     D = parameters['training_set']

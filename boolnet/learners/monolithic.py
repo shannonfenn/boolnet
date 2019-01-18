@@ -6,7 +6,7 @@ from boolnet.network.networkstate import BNState
 from time import time
 
 
-def run(self, optimiser, parameters):
+def run(optimiser, parameters):
     t0 = time()
 
     # Gate generation

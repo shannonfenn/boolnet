@@ -138,7 +138,7 @@ class Learner():
         self.use_minfs_selection = parameters.get('minfs_masking', False)
         self.minfs_metric = parameters.get('minfs_selection_metric', None)
         self.minfs_prefilter = parameters.get('minfs_prefilter', None)
-        self.shrink_subnets = parameters.get('shrink_subnets', True)
+        self.shrink_subnets = parameters.get('shrink_subnets', False)
         self.reuse_gates = parameters.get('reuse_gates', False)
         # Initialise
         self.remaining_budget = self.budget

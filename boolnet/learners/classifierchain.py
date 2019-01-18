@@ -62,7 +62,7 @@ def minfs_target_order(X, Y, solver, metric, params, tie_handling):
         raise ValueError('Invalid choice for tie_handling.')
 
 
-def run(self, optimiser, parameters, verbose=False):
+def run(optimiser, parameters, verbose=False):
     t0 = time()
 
     if verbose:

@@ -29,7 +29,7 @@ OPTIMISERS = {
 
 LEARNERS = {
     'monolithic': monolithic,
-    'stratified': stratified,
+    'stratified': stratified.Learner(),
     'stratmultipar': stratified_multipar,
     'split': split,
     'classifierchain': classifierchain,
@@ -242,7 +242,7 @@ def learn_bool_net(parameters, verbose=False):
 
     # learn the network
     setup_end_time = time.monotonic()
-    learner_result = learner.run(optimiser, learner_params, verbose)
+    learner_result = learner.run(optimiser, learner_params)
     learning_end_time = time.monotonic()
 
     record.update(build_result_record(parameters, learner_result))

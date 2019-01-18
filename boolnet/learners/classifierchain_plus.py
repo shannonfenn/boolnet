@@ -80,7 +80,7 @@ def minfs_target_order(X, Y, solver, metric, params):
     return curriculum, feature_sets
 
 
-def run(self, optimiser, parameters, verbose=False):
+def run(optimiser, parameters, verbose=False):
     t0 = time()
 
     if verbose:
