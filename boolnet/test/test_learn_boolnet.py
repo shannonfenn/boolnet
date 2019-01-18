@@ -31,7 +31,7 @@ def strip_times(record):
 @pytest.mark.parametrize('task,expected', task_expectation_pairs())
 def test_run(task, expected):
     print(task['id'], task['learner']['name'])
-    result = learn_boolnet.learn_bool_net(task, False)
+    result = learn_boolnet.learn_bool_net(task)
     strip_times(result)
     result['id'] = task['id']
     # pass through json dump/load to deal with annoying floating point issues

@@ -69,7 +69,7 @@ def make_partial_instance(X, Y, feature_sets, target_index):
                         Ne=X.Ne, Ni=len(fs))
 
 
-def run(optimiser, parameters, verbose=False):
+def run(optimiser, parameters):
     t0 = time()
 
     D = parameters['training_set']
@@ -92,16 +92,10 @@ def run(optimiser, parameters, verbose=False):
     # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
     accumulated_network = BNState(np.empty((0, 3)), X)
 
-    if verbose:
-        print('Getting feature sets...')
-
     get_feature_sets(D, X, Y, feature_sets, use_minfs_selection,
                      minfs_metric, minfs_solver, minfs_params)
 
     feature_selection_time = time() - t0
-
-    if verbose:
-        print('done. Time taken: {}'.format(feature_selection_time))
 
     for target_index, size in enumerate(budgets):
         t0 = time()
@@ -113,14 +107,9 @@ def run(optimiser, parameters, verbose=False):
 
         t1 = time()
 
-        if verbose:
-            print('Target {} Optimising...'.format(target_index))
         # run the optimiser
         partial_result = optimiser.run(state)
         t2 = time()
-
-        if verbose:
-            print('done. Time taken: {}'.format(t2 - t1))
 
         # record result
         opt_results.append(partial_result)

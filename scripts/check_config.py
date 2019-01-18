@@ -18,7 +18,6 @@ def main():
     parser.add_argument('experiment',
                         type=argparse.FileType('r'),
                         help='experiment config filename.')
-    parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
                         help='directory to store results in (in own subdir).')
@@ -41,12 +40,6 @@ def main():
         return
 
     print('\nExperiment config is valid.')
-
-    if args.verbose:
-        print('\nConfigurations:')
-        for cfg in configurations:
-            print()
-            print(cfg)
 
 
 if __name__ == '__main__':

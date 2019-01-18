@@ -225,7 +225,7 @@ class Learner():
         new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
         network.set_gates(new_gates)
 
-    def run(self, optimiser, parameters, verbose=False):
+    def run(self, optimiser, parameters):
         # setup accumulated network
         # loop:
         #   make partial network
@@ -246,18 +246,10 @@ class Learner():
         other_times = []
 
         for i in range(self.D.No):
-            if verbose:
-                print('Strata {}'.format(i))
             t0 = time()
-
-            if verbose:
-                print('  Determining target...')
 
             # determine next target index
             target = self.determine_next_target(i, inputs)
-
-            if verbose:
-                print('  done. Target {} selected.'.format(target))
 
             D_partial = self.make_partial_instance(i, target, inputs)
 
@@ -270,17 +262,9 @@ class Learner():
 
             t1 = time()
 
-            if verbose:
-                print('  time taken: {}'.format(t1 - t0))
-                print('  Optimising...')
-
             partial_result = optimiser.run(state)
 
             t2 = time()
-
-            if verbose:
-                print('  done. Error: {}'.format(partial_result.error))
-                print('  time taken: {}'.format(t2 - t1))
 
             # record result
             opt_results.append(partial_result)

@@ -62,11 +62,8 @@ def minfs_target_order(X, Y, solver, metric, params, tie_handling):
         raise ValueError('Invalid choice for tie_handling.')
 
 
-def run(optimiser, parameters, verbose=False):
+def run(optimiser, parameters):
     t0 = time()
-
-    if verbose:
-        print('Initialising...')
 
     # Instance
     D = parameters['training_set']
@@ -97,10 +94,6 @@ def run(optimiser, parameters, verbose=False):
 
     init_time = time() - t0
 
-    if verbose:
-        print('done. Time taken: {}'.format(init_time))
-        print('Beginning training loop...')
-
     for i, budget in enumerate(budgets):
         t0 = time()
 
@@ -115,15 +108,11 @@ def run(optimiser, parameters, verbose=False):
 
         t1 = time()
 
-        if verbose:
-            print('Optimising target {}...'.format(target_index))
         # run the optimiser
         partial_result = optimiser.run(state)
         opt_results.append(partial_result)
         t2 = time()
 
-        if verbose:
-            print('done. Time taken: {}'.format(t2 - t1))
 
         other_times.append(t1 - t0)
         optimisation_times.append(t2 - t1)
