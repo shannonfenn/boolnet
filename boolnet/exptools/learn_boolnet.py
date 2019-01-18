@@ -28,12 +28,12 @@ OPTIMISERS = {
 
 
 LEARNERS = {
-    'monolithic': monolithic.Learner(),
-    'stratified': stratified.Learner(),
-    'stratmultipar': stratified_multipar.Learner(),
-    'split': split.Learner(),
-    'classifierchain': classifierchain.Learner(),
-    'classifierchain_plus': classifierchain_plus.Learner(),
+    'monolithic': monolithic,
+    'stratified': stratified,
+    'stratmultipar': stratified_multipar,
+    'split': split,
+    'classifierchain': classifierchain,
+    'classifierchain_plus': classifierchain_plus,
     }
 
 
