@@ -9,16 +9,9 @@ cimport boolnet.network.algorithms as algorithms
 
 cdef class BoolNet:    
     def __init__(self, gates, size_t Ni, size_t No):
-        # copy gate array
-        self.gates = np.array(gates, dtype=np.uint32, copy=True)
-
-        # Store size values
-        self.Ng = self.gates.shape[0]
         self.Ni = Ni
         self.No = No
-
-        self.connected = np.zeros(self.Ng + Ni, dtype=np.uint8)
-
+        self.set_gates(gates)
         self._check_network_invariants()
         self._update_connected()
 
@@ -47,10 +40,13 @@ cdef class BoolNet:
         # return the last No values
         return depths[-No:]
 
-    cpdef set_gates(self, np.uint32_t[:, :] gates):
-        self.gates[...] = gates
+    cpdef set_gates(self, gates):
+        self.gates = np.array(gates, dtype=np.uint32, copy=True)
+        self.Ng = self.gates.shape[0]
+        self.connected = np.zeros(self.Ng + self.Ni, dtype=np.uint8)
         # check invariants hold
         self._check_network_invariants()
+        self._update_connected()
 
     cpdef randomise(self):
         # this has the side effect of clearing the history since we don't

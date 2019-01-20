@@ -152,6 +152,7 @@ cdef class BNState:
 
     cpdef set_gates(self, np.uint32_t[:, :] gates):
         # force reevaluation
+        assert gates.shape[0] == self.network.gates.shape[0]
         self.evaluated = False
         self.invalid_start = 0
         self.network.set_gates(gates)

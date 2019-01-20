@@ -19,7 +19,7 @@ cdef class BoolNet:
         np.uint8_t[:] connected
         deque[Move] inverse_moves
 
-    cpdef set_gates(self, np.uint32_t[:, :] gates)
+    cpdef set_gates(self, gates)
 
     # properties
     cpdef connected_gates(self)
