@@ -5,25 +5,25 @@ import os.path
 import boolnet.bintools.functions as fn
 
 
-def conditionally_required(trigger_key, trigger_val, required_key):
+def conditionally_required(trigger_key, trigger_vals, required_key):
     ''' if trigger_key = trigger_val then required_key must be present.'''
     def validator(d):
-        required = (trigger_key in d and d[trigger_key] == trigger_val)
+        required = (trigger_key in d and d[trigger_key] in trigger_vals)
         if required and required_key not in d:
-            raise Invalid('\'{}\' = \'{}\' requires \'{}\'.'.format(
-                trigger_key, trigger_val, required_key))
+            raise Invalid('\'{}\' in \'{}\' requires \'{}\'.'.format(
+                trigger_key, trigger_vals, required_key))
         # Return the dictionary
         return d
     return validator
 
 
-def conditionally_forbidden(trigger_key, trigger_val, required_key):
+def conditionally_forbidden(trigger_key, trigger_vals, required_key):
     ''' if trigger_key = trigger_val then required_key must NOT be present.'''
     def validator(d):
-        required = (trigger_key in d and d[trigger_key] == trigger_val)
+        required = (trigger_key in d and d[trigger_key] in trigger_vals)
         if required and required_key in d:
             raise Invalid('\'{}\' = \'{}\' forbids \'{}\'.'.format(
-                trigger_key, trigger_val, required_key))
+                trigger_key, trigger_vals, required_key))
         # Return the dictionary
         return d
     return validator
@@ -204,23 +204,24 @@ learner_schema = Schema(
             Optional('reuse_gates'):            bool,
             }),
         conditionally_required(
-            'minfs_masking', True, 'minfs_selection_metric'),
+            'minfs_masking', [True], 'minfs_selection_metric'),
         conditionally_required(
-            'target_order', 'auto', 'minfs_selection_metric'),
+            'target_order', ['auto'], 'minfs_selection_metric'),
         conditionally_required(
-            'name', 'stratified', 'minfs_prefilter'),
+            'name', ['stratified'], 'minfs_prefilter'),
         # if name monolithic then some minfs keys are not allowed
-        conditionally_forbidden('name', 'monolithic', 'minfs_masking'),
-        conditionally_forbidden('name', 'monolithic', 'minfs_prefilter'),
-        conditionally_forbidden('name', 'monolithic', 'reuse_gates'),
-        conditionally_forbidden('name', 'monolithic', 'shrink_subnets'),
-        conditionally_forbidden('name', 'split', 'minfs_prefilter'),
-        conditionally_forbidden('name', 'split', 'reuse_gates'),
-        conditionally_forbidden('name', 'split', 'shrink_subnets'),
-        conditionally_forbidden('name', 'classifierchain', 'minfs_masking'),
-        conditionally_forbidden('name', 'classifierchain', 'minfs_prefilter'),
-        conditionally_forbidden('name', 'classifierchain', 'reuse_gates'),
-        conditionally_forbidden('name', 'classifierchain', 'shrink_subnets'),
+        conditionally_forbidden('name',
+                                ['monolithic', 'classifierchain'],
+                                'minfs_masking'),
+        conditionally_forbidden('name',
+                                ['monolithic', 'split', 'classifierchain'],
+                                'minfs_prefilter'),
+        conditionally_forbidden('name',
+                                ['monolithic', 'split', 'classifierchain'],
+                                'reuse_gates'),
+        conditionally_forbidden('name',
+                                ['monolithic', 'split', 'classifierchain'],
+                                'shrink_subnets'),
         )
     )
 
