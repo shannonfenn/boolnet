@@ -46,14 +46,14 @@ def make_partial_instance(X, Y, target_index, chain):
                         Ne=X.Ne, Ni=X.shape[0] + Xsub.shape[0])
 
 
-def minfs_target_order(X, Y, solver, metric, params, tie_handling):
+def minfs_target_order(X, Y, tie_handling, minfs_params):
     # determine the target order by ranking feature sets
     mfs_X = pk.unpackmat(X, X.Ne)
     mfs_Y = pk.unpackmat(Y, Y.Ne)
 
     # use external solver for minFS
     rank, feature_sets, _ = mfs.ranked_feature_sets(
-        mfs_X, mfs_Y, metric, solver, params)
+        mfs_X, mfs_Y, **minfs_params)
 
     if tie_handling == 'random':
         # randomly pick from possible exact orders
@@ -62,29 +62,25 @@ def minfs_target_order(X, Y, solver, metric, params, tie_handling):
         raise ValueError('Invalid choice for tie_handling.')
 
 
-def run(optimiser, parameters):
+def run(optimiser, model_generator, network_params, training_set,
+        tie_handling='random', target_order=None, minfs_params={},
+        apply_mask=False):
     t0 = time()
 
     # Instance
-    D = parameters['training_set']
+    D = training_set
     X, Y = np.split(D, [D.Ni])
 
     # Gate generation
-    model_generator = parameters['model_generator']
-    total_budget = parameters['network']['Ng']
+    total_budget = network_params['Ng']
     total_budget -= D.No  # We need OR gates at the end for tgt reordering
     budgets = spacings(total_budget, D.No)
 
     # get target order
-    target_order = parameters['target_order']
     if target_order is None:
         # these parameters only required if auto-targetting
-        mfs_solver = parameters.get('minfs_solver', 'cplex')
-        mfs_metric = parameters['minfs_selection_metric']
-        mfs_params = parameters.get('minfs_solver_params', {})
-        mfs_tie_handling = parameters.get('minfs_tie_handling', 'random')
         target_order, feature_sets = minfs_target_order(
-                X, Y, mfs_solver, mfs_metric, mfs_params, mfs_tie_handling)
+                X, Y, tie_handling, minfs_params)
     else:
         feature_sets = None
 
@@ -106,14 +102,13 @@ def run(optimiser, parameters):
 
         state = BNState(gates, D_i)
 
-        t1 = time()
-
         # run the optimiser
+        t1 = time()
         partial_result = optimiser.run(state)
-        opt_results.append(partial_result)
         t2 = time()
 
 
+        opt_results.append(partial_result)
         other_times.append(t1 - t0)
         optimisation_times.append(t2 - t1)
 

@@ -6,24 +6,16 @@ from boolnet.network.networkstate import BNState
 from time import time
 
 
-def run(optimiser, parameters):
+def run(optimiser, model_generator, network_params, training_set,
+        target_order=None, minfs_params={}, tie_handling='random'):
+
     t0 = time()
 
     # Gate generation
-    model_generator = parameters['model_generator']
-    budget = parameters['network']['Ng']
-    # get target order
-    target_order = parameters['target_order']
-    if target_order is None:
-        # this key is only required if auto-targetting
-        mfs_metric = parameters['minfs_selection_metric']
-    # Optional minfs solver time limit
-    mfs_params = parameters.get('minfs_solver_params', {})
-    mfs_solver = parameters.get('minfs_solver', 'cplex')
-    mfs_tie_handling = parameters.get('minfs_tie_handling', 'random')
+    budget = network_params['Ng']
 
     # Instance
-    D = parameters['training_set']
+    D = training_set
     X, Y = np.split(D, [D.Ni])
     Ni, No, Ne = D.Ni, D.No, D.Ne
 
@@ -34,18 +26,20 @@ def run(optimiser, parameters):
 
         # use external solver for minFS
         rank, feature_sets, _ = mfs.ranked_feature_sets(
-            mfs_X, mfs_Y, mfs_metric, mfs_solver, mfs_params)
+            mfs_X, mfs_Y, **minfs_params)
 
-        if mfs_tie_handling == 'random':
+        if tie_handling == 'random':
             # randomly pick from possible exact orders
             target_order = mfs.order_from_rank(rank)
-        elif mfs_tie_handling == 'min_depth':
+        elif tie_handling == 'min_depth':
             # can do using a tuple to sort where the second element is the
             # inverse of the largest feature (i.e. the greatest depth)
             raise NotImplementedError(
                 'min_depth tie breaking not implemented.')
         else:
             raise ValueError('Invalid choice for tie_handling.')
+    else:
+        feature_sets = None
 
     # build the network state
     gates = model_generator(budget, Ni, No)
@@ -74,6 +68,7 @@ def run(optimiser, parameters):
         'network': opt_result.representation,
         'target_order': target_order,
         'extra': {
+            'feature_sets': feature_sets,
             'best_err': [opt_result.error],
             'best_step': [opt_result.best_iteration],
             'steps': [opt_result.iteration],

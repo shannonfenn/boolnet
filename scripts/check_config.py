@@ -29,9 +29,7 @@ def main():
 
     # test generation of tasks
     try:
-        configurations = config_tools.generate_configurations(settings, False)
-        print('{} configurations.'.format(len(configurations)))
-        tasks = config_tools.generate_tasks(configurations, False)
+        tasks = config_tools.generate_tasks(settings, False)
         print('{} tasks.'.format(len(tasks)))
     except config_tools.ValidationError as err:
         print()

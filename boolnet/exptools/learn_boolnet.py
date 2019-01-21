@@ -29,7 +29,7 @@ OPTIMISERS = {
 
 LEARNERS = {
     'monolithic': monolithic,
-    'stratified': stratified.Learner(),
+    'stratified': stratified,
     'stratmultipar': stratified_multipar,
     'split': split,
     'classifierchain': classifierchain,
@@ -204,9 +204,7 @@ def add_noise(mapping, rate):
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
-    seed = seed_rng(parameters['learner'].get('seed', None))
-    # if no given seed then store to allow reporting in results
-    parameters['learner']['seed'] = seed
+    seed = seed_rng(parameters['learner'].pop('seed', None))
 
     convert_file_datasets(parameters)
 
@@ -222,7 +220,7 @@ def learn_bool_net(parameters):
     learner_params['training_set'] = training_set
 
     # prepare model generator
-    node_funcs = parameters['learner']['network']['node_funcs']
+    node_funcs = parameters['learner']['network_params']['node_funcs']
     if not all(f in range(16) for f in node_funcs):
         raise ValueError('\'node_funcs\' must come from [0, 15]: {}'.
                          format(node_funcs))
@@ -230,19 +228,19 @@ def learn_bool_net(parameters):
         Ng, Ni, No, node_funcs)
 
     # Handle flexible network size
-    if str(learner_params['network']['Ng']).endswith('n'):
-        n = int(str(learner_params['network']['Ng'])[:-1])
+    if str(learner_params['network_params']['Ng']).endswith('n'):
+        n = int(str(learner_params['network_params']['Ng'])[:-1])
         Ng = n * training_set.No
-        learner_params['network']['Ng'] = Ng
+        learner_params['network_params']['Ng'] = Ng
 
-    record = build_parameter_record(parameters)
+    record = build_parameter_record(parameters, seed)
 
     optimiser = initialise_optimiser(parameters['optimiser'], training_set.Ne, training_set.No)
-    learner = LEARNERS[learner_params['name']]
+    learner = LEARNERS[learner_params.pop('name')]
 
     # learn the network
     setup_end_time = time.monotonic()
-    learner_result = learner.run(optimiser, learner_params)
+    learner_result = learner.run(optimiser, **learner_params)
     learning_end_time = time.monotonic()
 
     record.update(build_result_record(parameters, learner_result))
@@ -307,8 +305,8 @@ def build_states(mapping, gates):
     return S_trg, S_test
 
 
-def build_parameter_record(parameters):
-    record = {}
+def build_parameter_record(parameters, learner_seed):
+    record = {'learner_seed': learner_seed}
     if 'actual_noise' in parameters:
         record['actual_noise'] = parameters['actual_noise']
 

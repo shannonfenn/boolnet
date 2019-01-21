@@ -157,15 +157,6 @@ optimiser_schema = Any(
         }),
     )
 
-
-fs_selection_metric_schema = Any(
-    'cardinality>first', 'cardinality>random', 'cardinality>entropy',
-    'cardinality>feature_diversity', 'cardinality>pattern_diversity')
-
-fs_prefilter_schema = Any(
-    'all',  # 'prev-strata',   # Not implemented
-    'prev-strata+input', 'prev-strata+prev-fs', 'prev-strata+prev-fs+input')
-
 minfs_params_schema = Any(
     # CPLEX
     Schema({
@@ -182,46 +173,47 @@ minfs_params_schema = Any(
         }),
     )
 
-target_order_schema = Any('auto', 'msb', 'lsb',
-                          'random', All(list, permutation))
+minfs_schema = Schema({
+    'solver':                       Any('cplex', 'greedy', 'raps'),
+    'metric':                       Any('cardinality>first',
+                                        'cardinality>random',
+                                        'cardinality>entropy',
+                                        'cardinality>feature_diversity',
+                                        'cardinality>pattern_diversity'),
+    Optional('solver_params'):      minfs_params_schema,
+    Optional('provide_prior_soln'): bool
+    })
 
 learner_schema = Schema(
     All(
         Schema({
-            'name':         Any('monolithic', 'stratified', 'split',
-                                'stratmultipar', 'classifierchain',
-                                'classifierchain_plus'),
-            'network':      network_schema,
-            'target_order': target_order_schema,
-            Optional('seed'):                   seed_schema,
-            Optional('minfs_masking'):          bool,
-            Optional('minfs_solver'):           Any('cplex', 'greedy', 'raps'),
-            Optional('minfs_solver_params'):    minfs_params_schema,
-            Optional('minfs_selection_metric'): fs_selection_metric_schema,
-            Optional('minfs_tie_handling'):     Any('random', 'all'),
-            Optional('minfs_prefilter'):        fs_prefilter_schema,
-            Optional('shrink_subnets'):            bool,
-            Optional('reuse_gates'):            bool,
+            'name':             Any('monolithic', 'stratified', 'split',
+                                    'stratmultipar', 'classifierchain',
+                                    'classifierchain_plus'),
+            'network_params':   network_schema,
+            'target_order':     Any('auto', 'msb', 'lsb',
+                                    'random', All(list, permutation)),
+            Optional('seed'):               seed_schema,
+            Optional('minfs_params'):       minfs_schema,
+            Optional('tie_handling'):       Any('random', 'all'),
+            Optional('prefilter'):          Any(Default(''),
+                                                'prev-strata+input',
+                                                'prev-strata+prev-fs',
+                                                'prev-strata+prev-fs+input'),
+            Optional('apply_mask'):         bool,
+            Optional('shrink_subnets'):     bool,
             }),
-        conditionally_required(
-            'minfs_masking', [True], 'minfs_selection_metric'),
-        conditionally_required(
-            'target_order', ['auto'], 'minfs_selection_metric'),
-        conditionally_required(
-            'name', ['stratified'], 'minfs_prefilter'),
+        conditionally_required('apply_mask', [True], 'minfs_params'),
+        conditionally_required('target_order', ['auto'], 'minfs_params'),
         # if name monolithic then some minfs keys are not allowed
-        conditionally_forbidden('name',
-                                ['monolithic', 'classifierchain'],
-                                'minfs_masking'),
-        conditionally_forbidden('name',
-                                ['monolithic', 'split', 'classifierchain'],
-                                'minfs_prefilter'),
-        conditionally_forbidden('name',
-                                ['monolithic', 'split', 'classifierchain'],
-                                'reuse_gates'),
-        conditionally_forbidden('name',
-                                ['monolithic', 'split', 'classifierchain'],
-                                'shrink_subnets'),
+        conditionally_forbidden('name', ['monolithic'], 'apply_mask'),
+        conditionally_forbidden('name', ['monolithic'], 'shrink_subnets'),
+        conditionally_forbidden('name', ['monolithic', 'split',
+                                         'classifierchain',
+                                         'classifierchain_plus'],
+                                'prefilter'),
+        conditionally_forbidden('name', ['split', 'classifierchain_plus'],
+                                'tie_handling'),
         )
     )
 

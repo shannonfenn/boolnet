@@ -50,7 +50,7 @@ def make_partial_instance(X, Y, target_index, chain, feature_set=None):
     return PackedMatrix(mat, Ne=X.Ne, Ni=X.shape[0] + Xsub.shape[0])
 
 
-def minfs_target_order(X, Y, solver, metric, params):
+def minfs_target_order(X, Y, minfs_params):
     # determine the target order by ranking feature sets
     X = unpack(X)
     Y = unpack(Y)
@@ -70,7 +70,7 @@ def minfs_target_order(X, Y, solver, metric, params):
         Y_temp = Y[:, to_learn]
         # use external solver for minFS
         ranking, F, _ = mfs.ranked_feature_sets(
-            X_temp, Y_temp, metric, solver, params)
+            X_temp, Y_temp, **minfs_params)
         # randomly pick from top ranked targets
         idx = np.random.choice(np.where(ranking == 0)[0])
         feature_sets.append(F[idx])
@@ -80,25 +80,21 @@ def minfs_target_order(X, Y, solver, metric, params):
     return curriculum, feature_sets
 
 
-def run(optimiser, parameters):
+def run(optimiser, model_generator, network_params, training_set,
+        target_order=None, minfs_params={}, apply_mask=False):
     t0 = time()
 
     # Instance
-    D = parameters['training_set']
+    D = training_set
     X, Y = np.split(D, [D.Ni])
 
     # Gate generation
-    model_generator = parameters['model_generator']
-    total_budget = parameters['network']['Ng']
+    total_budget = network_params['Ng']
     total_budget -= D.No  # We need OR gates at the end for tgt reordering
     budgets = spacings(total_budget, D.No)
 
     # get target order
-    mfs_solver = parameters.get('minfs_solver', 'cplex')
-    mfs_metric = parameters['minfs_selection_metric']
-    mfs_params = parameters.get('minfs_solver_params', {})
-    target_order, feature_sets = minfs_target_order(
-            X, Y, mfs_solver, mfs_metric, mfs_params)
+    target_order, feature_sets = minfs_target_order(X, Y, minfs_params)
 
     opt_results = []
     optimisation_times = []
@@ -108,24 +104,20 @@ def run(optimiser, parameters):
 
     for i, budget in enumerate(budgets):
         t0 = time()
-
         target_index = target_order[i]
-
         D_i = make_partial_instance(X, Y, target_index, target_order[:i])
 
         # build the network state
         gates = model_generator(budget, D_i.Ni, D_i.No)
-
         state = BNState(gates, D_i)
 
-        t1 = time()
-
         # run the optimiser
+        t1 = time()
         partial_result = optimiser.run(state)
-        opt_results.append(partial_result)
         t2 = time()
 
 
+        opt_results.append(partial_result)
         other_times.append(t1 - t0)
         optimisation_times.append(t2 - t1)
 

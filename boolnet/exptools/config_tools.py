@@ -266,22 +266,13 @@ def split_variables_from_base(settings):
 def insert_default_log_keys(settings):
     defaults = [
         ['learner', True, ['learner', 'name']],
-        ['learner_seed', True, ['learner', 'seed']],
         ['config_num', True, ['configuration_number']],
         ['trg_set_num', True, ['training_set_number']],
-        ['tfs', True, ['learner', 'network', 'node_funcs']],
+        ['tfs', True, ['learner', 'network_params', 'node_funcs']],
         ['guiding_function', True, ['optimiser', 'guiding_function']],
         ['given_tgt_order', True, ['learner', 'target_order']],
         ['targets', False, ['data', 'targets']],
         ['sample_seed', False, ['sampling', 'seed']],
-        ['fs_sel_metric', False, ['learner', 'minfs_selection_metric']],
-        ['fs_prefilt', False, ['learner', 'minfs_prefilter']],
-        ['shrink_subnets', False, ['learner', 'shrink_subnets']],
-        ['reuse_gates', False, ['learner', 'reuse_gates']],
-        ['fs_tie', False, ['learner', 'minfs_tie_handling']],
-        ['fs_masking', False, ['learner', 'minfs_masking']],
-        ['fs_timelimit', False, ['learner', 'minfs_time_limit']],
-        ['fs_solver', False, ['learner', 'minfs_solver']],
         ['opt_{}', False, ['optimiser', '.*']],
     ]
     # give preference to user log_keys

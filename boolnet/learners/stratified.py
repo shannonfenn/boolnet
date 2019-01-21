@@ -8,100 +8,63 @@ from boolnet.network.networkstate import BNState
 from time import time
 
 
-def prefilter_features(Ni, strata_sizes, strata, targets, fs_table, method):
-    if strata == 0:
-        prev_strata_range = []
-    else:
-        strata_limits = (sum(strata_sizes[:strata-1]) + Ni,
-                         sum(strata_sizes[:strata]) + Ni)
+def prefilter_features(Ni, strata_sizes, prev_fs, method):
+    input_range = set(range(Ni))
+
+    if strata_sizes:
+        strata_limits = (sum(strata_sizes[:-1]) + Ni,
+                         sum(strata_sizes) + Ni)
         prev_strata_range = list(range(*strata_limits))
+    else:
+        return sorted(input_range)
 
-    input_range = list(range(Ni))
-
-    if method == 'all':
+    if not method:
         # bound on Nf: none
-        return list(range(sum(strata_sizes[:strata]) + Ni))
-    elif method == 'prev-strata':
-        # bound on Nf: L
-        # Note: no guarantee that the prior strata contains a valid fs
-        raise NotImplementedError(
-            'Not implemented since can result in invalid minFS instance.')
-    elif method == 'prev-strata+input':
+        return list(range(sum(strata_sizes) + Ni))
+
+    #   combination               bound on Nf
+    # prev-strata+input             L + Ni
+    # prev-strata+prev-fs           L + Ni
+    # prev-strata+prev-fs+input     L + 2xNi
+
+    filtered_features = set()
+
+    if 'input' in method:
+        filtered_features.update(input_range)
+
+    if 'prev-strata' in method:
         # bound on Nf: L + Ni
-        return input_range + prev_strata_range
-    elif method == 'prev-strata+prev-fs':
+        filtered_features.update(prev_strata_range)
+
+    if 'prev-fs' in method and prev_fs:
         # bound on Nf: L + Ni
         # this actually produces a list of feature matrices
-        if strata == 0:
-            # there is no prior fs
-            return input_range
-        else:
-            filtered_features = []
-            for t in targets:
-                prev_fs = fs_table[strata - 1][t]
-                if prev_fs is None:
-                    prev_fs = set()
-                else:
-                    prev_fs = set(prev_fs)
-                f = prev_fs.union(prev_strata_range)
-                f = sorted(f)
-                filtered_features.append(f)
-            return filtered_features
-    elif method == 'prev-strata+prev-fs+input':
-        # bound on Nf: L + 2xNi
-        # this actually produces a list of feature matrices
-        if strata == 0:
-            # there is no prior fs
-            return input_range
-        else:
-            filtered_features = []
-            for t in targets:
-                prev_fs = fs_table[strata - 1][t]
-                if prev_fs is None:
-                    prev_fs = set()
-                else:
-                    prev_fs = set(prev_fs)
-                f = prev_fs.union(input_range, prev_strata_range)
-                f = sorted(f)
-                filtered_features.append(f)
-            return filtered_features
+        filtered_features.update(prev_fs)
+
+    return sorted(filtered_features)
+
+
+def ranked_fs_helper(Xp, Yp, Ni, strata_sizes, targets, prev_fsets,
+                     prefilter, tie_handling, minfs_params):
+    if 'prev-fs' in prefilter:
+        F_in = [prefilter_features(Ni, strata_sizes, prev_fsets[t], prefilter)
+                for t in targets]
+        mfs_X = [pk.unpackmat(Xp[fs, :], Xp.Ne) for fs in F_in]
+        fs_maps = F_in
     else:
-        raise ValueError('Invalid prefilter: {}'.format(method))
+        F_in = prefilter_features(Ni, strata_sizes, None, prefilter)
+        mfs_X = pk.unpackmat(Xp[F_in, :], Xp.Ne)
+        fs_maps = (F_in for i in range(len(targets)))
 
+    mfs_Y = pk.unpackmat(Yp[targets, :], Xp.Ne)
 
-def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
-                     prefilter_method, metric, solver, solver_params,
-                     tie_handling='random', provide_prior_soln=False):
-
-    F_in = prefilter_features(Ni, strata_sizes, strata, targets, fs_table,
-                              prefilter_method)
-
-    # unpack inputs to minFS solver
-    if isinstance(F_in[0], int):
-        mfs_X = pk.unpackmat(Xp[F_in, :], Ne)
-    else:
-        mfs_X = [pk.unpackmat(Xp[fs, :], Ne) for fs in F_in]
-    mfs_Y = pk.unpackmat(Yp[targets, :], Ne)
-
-    ranking, result_feature_sets, _ = mfs.ranked_feature_sets(
-        mfs_X, mfs_Y, metric, solver, solver_params)
+    ranking, feature_sets, _ = mfs.ranked_feature_sets(
+        mfs_X, mfs_Y, **minfs_params)
 
     # remap feature sets using given feature indices
-    if isinstance(F_in[0], int):
-        fs_maps = (F_in for i in range(len(targets)))
-    else:
-        fs_maps = F_in
-    for fs, fsmap in zip(result_feature_sets, fs_maps):
+    for fs, fsmap in zip(feature_sets, fs_maps):
         for i, f in enumerate(fs):
             fs[i] = fsmap[f]
-
-    # update feature set table
-    for t, fs in zip(targets, result_feature_sets):
-        if len(fs) == 0:
-            # replace empty feature sets
-            fs_table[strata, t] = list(range(Xp.shape[0]))
-        else:
-            fs_table[strata, t] = fs
 
     if tie_handling == 'random':
         # randomly pick from top ranked targets
@@ -116,116 +79,104 @@ def ranked_fs_helper(Xp, Yp, Ne, Ni, strata_sizes, strata, targets, fs_table,
     else:
         raise ValueError('Invalid choice for tie_handling.')
 
-    return next_targets.tolist()
+    return next_targets, feature_sets
 
 
-class Learner():
+def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
+                     prefilter, solver, metric, solver_params):
+    F_in = prefilter_features(Ni, strata_sizes, prev_fs, prefilter)
+    X = pk.unpackmat(Xp[F_in, :], Xp.Ne)
+    Y = pk.unpackmat(yp, Xp.Ne)
 
-    def _setup(self, parameters):
-        # Gate generation
-        self.model_generator = parameters['model_generator']
-        self.budget = parameters['network']['Ng']
-        # get target order
-        self.target_order = parameters['target_order']
-        # Instance
-        self.D = parameters['training_set']
-        self.X, self.Y = np.split(self.D, [self.D.Ni])
-        # Optional
-        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
-        self.minfs_params = parameters.get('minfs_solver_params', {})
-        self.minfs_tie_handling = parameters.get('minfs_tie_handling',
-                                                 'random')
-        self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.minfs_metric = parameters.get('minfs_selection_metric', None)
-        self.minfs_prefilter = parameters.get('minfs_prefilter', None)
-        self.shrink_subnets = parameters.get('shrink_subnets', False)
-        self.reuse_gates = parameters.get('reuse_gates', False)
-        # Initialise
-        self.remaining_budget = self.budget
-        self.strata_sizes = []
-        self.learned_targets = []
-        self.feature_sets = np.empty((self.D.No, self.D.No), dtype=list)
+    fs, _, _ = mfs.best_feature_set(X, Y, metric, solver, solver_params)
+    # remap feature sets using given feature indices
+    fs = [F_in[f] for f in fs]
+    return fs
 
-    def determine_next_target(self, strata, inputs):
-        if self.target_order is None:
-            # get unlearned targets
-            to_learn = np.setdiff1d(range(self.D.No), self.learned_targets)
-        elif self.use_minfs_selection:
-            # get next target from given ordering
-            to_learn = [self.target_order[strata]]
-        else:
-            return self.target_order[strata]
-        next_target = ranked_fs_helper(
-            inputs, self.Y, self.D.Ne, self.D.Ni,
-            self.strata_sizes, strata, to_learn, self.feature_sets,
-            self.minfs_prefilter, self.minfs_metric, self.minfs_solver,
-            self.minfs_params, self.minfs_tie_handling, False)
 
-        return next_target
+def get_next_target(Xsub, Y, Ni, given_order, to_learn, strata_sizes,
+                    prev_fsets, prefilter, use_filtering, tie_handling,
+                    minfs_params):
+    fsets = np.empty_like(prev_fsets)
+    if given_order:
+        # get the feature set now
+        next_target = given_order.pop()
+        if use_filtering:
+            y = Y[next_target, :]
+            fsets[next_target] = single_fs_helper(
+                Xsub, y, Ni, strata_sizes, prev_fsets[next_target],
+                prefilter, tie_handling, minfs_params)
+    else:
+        next_target, partial_fsets = ranked_fs_helper(
+            Xsub, Y, Ni, strata_sizes, to_learn, prev_fsets,
+            prefilter, tie_handling, minfs_params)
+        fsets[to_learn] = partial_fsets
+    return next_target, fsets
 
-    def make_partial_instance(self, strata, target_index, inputs):
-        if self.use_minfs_selection:
-            # subsample the inputs for below
-            fs = self.feature_sets[strata, target_index]
-            inputs = inputs[fs]
 
-        target = self.Y[target_index]
+def partial_instance(Xsub, Y, t, feature_sets, apply_mask):
+    if apply_mask:
+        fs = feature_sets[t]
+        if len(fs) > 0:     # empty fs should pass inputs through
+            Xsub = Xsub[fs]
+    return PackedMatrix(np.vstack((Xsub, Y[t, :])), Xsub.Ne, Xsub.shape[0])
 
-        return PackedMatrix(np.vstack((inputs, target)),
-                            Ne=self.D.Ne, Ni=inputs.shape[0])
 
-    def join_networks(self, base, new, strata, target_index):
-        # simple: build up a map for all sources, for sources after the
-        # original minfs input just have them as + Ni_offset (whatever that is,
-        # might including old.Ng) and for the former ones use the fs mapping
+def join_networks(base, new, fs, apply_mask, shrink):
+    # simple: build up a map for all sources, for sources after the
+    # original minfs input just have them as + Ni_offset (whatever that is,
+    # might including old.Ng) and for the former ones use the fs mapping
+    if apply_mask and fs:
+        # build a map for replacing sources
+        new_input_map = fs
+        # difference in input sizes plus # of non-output base gates
+        # offset = base.Ni - new.Ni + base.Ng - base.No
+        offset = base.Ni + base.Ng - base.No
+        new_gate_map = list(range(offset,
+                                  offset + new.Ng - new.No))
+        new_output_map = list(range(offset + new.Ng - new.No + base.No,
+                                    offset + new.Ng + base.No))
+        sources_map = new_input_map + new_gate_map + new_output_map
 
-        if self.use_minfs_selection:
-            # build a map for replacing sources
-            new_input_map = self.feature_sets[strata][target_index]
-            # difference in input sizes plus # of non-output base gates
-            # offset = base.Ni - new.Ni + base.Ng - base.No
-            offset = base.Ni + base.Ng - base.No
-            new_gate_map = list(range(offset,
-                                      offset + new.Ng - new.No))
-            new_output_map = list(range(offset + new.Ng - new.No + base.No,
-                                        offset + new.Ng + base.No))
-            sources_map = new_input_map + new_gate_map + new_output_map
+        # apply to all but the last column (transfer functions) of the gate
+        # matrix. Use numpy array: cython memoryview slicing is broken
+        remapped_new_gates = np.array(new.gates)
+        for gate in remapped_new_gates:
+            for i in range(gate.size - 1):
+                gate[i] = sources_map[gate[i]]
+    else:
+        # Can just be tacked on since new.Ni = base.Ni + base.Ng - base.No
+        remapped_new_gates = new.gates
 
-            # apply to all but the last column (transfer functions) of the gate
-            # matrix. Use numpy array: cython memoryview slicing is broken
-            remapped_new_gates = np.array(new.gates)
-            for gate in remapped_new_gates:
-                for i in range(gate.size - 1):
-                    gate[i] = sources_map[gate[i]]
+    gates = np.vstack((base.gates[:-base.No, :],
+                       remapped_new_gates[:-new.No, :],
+                       base.gates[-base.No:, :],
+                       remapped_new_gates[-new.No:, :]))
 
-            accumulated_gates = np.vstack((base.gates[:-base.No, :],
-                                           remapped_new_gates[:-new.No, :],
-                                           base.gates[-base.No:, :],
-                                           remapped_new_gates[-new.No:, :]))
-        else:
-            # The gates can be tacked on since new.Ni = base.Ni + base.Ng
-            accumulated_gates = np.vstack((base.gates[:-base.No, :],
-                                           new.gates[:-new.No, :],
-                                           base.gates[-base.No:, :],
-                                           new.gates[-new.No:, :]))
+    if shrink:
+        gates = alg.filter_connected(gates, base.Ni, base.No + new.No)
 
-        new_target = np.vstack((base.target_matrix, new.target_matrix))
+    D_new = PackedMatrix(np.vstack((base.input_matrix,
+                                    base.target_matrix,
+                                    new.target_matrix)),
+                         Ne=base.Ne, Ni=base.Ni)
 
-        D_new = PackedMatrix(np.vstack((self.X, new_target)),
-                             Ne=self.D.Ne, Ni=self.D.Ni)
+    return BNState(gates, D_new)
 
-        return BNState(accumulated_gates, D_new)
 
-    def reorder_network_outputs(self, network):
-        # all non-output gates are left alone, and the output gates are
-        # reordered by the inverse permutation of "learned_targets"
-        new_out_order = mfs.inverse_permutation(self.learned_targets)
-        new_gates = np.array(network.gates)
-        No = network.No
-        new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
-        network.set_gates(new_gates)
+def reorder_network_outputs(network, learned_order):
+    # all non-output gates are left alone, and the output gates are
+    # reordered by the inverse permutation of "learned_targets"
+    new_out_order = mfs.inverse_permutation(learned_order)
+    new_gates = np.array(network.gates)
+    No = network.No
+    new_gates[-No:, :] = new_gates[-No:, :][new_out_order]
+    network.set_gates(new_gates)
 
-    def run(self, optimiser, parameters):
+
+def run(optimiser, model_generator, network_params, training_set,
+        target_order=None, tie_handling='random', minfs_params={},
+        apply_mask=False, prefilter=None, shrink_subnets=False):
         # setup accumulated network
         # loop:
         #   make partial network
@@ -233,88 +184,91 @@ class Learner():
         #   hook into accumulated network
         # reorganise outputs
 
-        self._setup(parameters)
+        # Unpack parameters
+        X, Y = np.split(training_set, [training_set.Ni])
 
+        # Initialise
+        budget = network_params['Ng']
+        strata_budgets = []
+        strata_sizes = []
+        learned_targets = []
         opt_results = []
-
-        inputs = self.X.copy()
-
-        # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
-        accumulated_network = BNState(np.empty((0, 3)), inputs)
-
         optimisation_times = []
         other_times = []
+        fs_record = []
+        to_learn = list(range(training_set.No))
+        feature_sets = np.empty(training_set.No, dtype=list)
+        # will be used as a stack
+        target_order = reversed(target_order) if target_order else None
+        # make an initial accumulator state with no gates
+        accumulated = BNState(np.empty((0, 3)), X)
 
-        for i in range(self.D.No):
+        while(to_learn):
             t0 = time()
+            # don't include output gates as possible inputs
+            # new Ni = Ng - No + Ni
+            # NEED INPUTS TOO
+            Xsub = accumulated.activation_matrix
+            Xsub = Xsub[:accumulated.Ni+accumulated.Ng-accumulated.No, :]
+            Xsub = PackedMatrix(Xsub, Ne=training_set.Ne, Ni=Xsub.shape[0])
 
             # determine next target index
-            target = self.determine_next_target(i, inputs)
+            target, feature_sets = get_next_target(
+                Xsub, Y, training_set.Ni, target_order, to_learn, strata_sizes,
+                feature_sets, prefilter, filter, tie_handling, minfs_params)
 
-            D_partial = self.make_partial_instance(i, target, inputs)
+            Dsub = partial_instance(Xsub, Y, target, feature_sets, apply_mask)
 
             # ### build state to be optimised ### #
             # next batch of gates
-            size = self.remaining_budget // (self.D.No - i)
-            gates = self.model_generator(size, D_partial.Ni,
-                                         D_partial.No)
-            state = BNState(gates, D_partial)
+            size = (budget - accumulated.Ng) // len(to_learn)
+            gates = model_generator(size, Dsub.Ni, Dsub.No)
+            state = BNState(gates, Dsub)
 
+            # optimise
             t1 = time()
-
             partial_result = optimiser.run(state)
-
             t2 = time()
 
-            # record result
+            new_state = BNState(partial_result.representation.gates, Dsub)
+            accumulated = join_networks(accumulated, new_state,
+                                        feature_sets[target], apply_mask,
+                                        shrink_subnets)
+
             opt_results.append(partial_result)
+            learned_targets.append(target)
+            fs_record.append(feature_sets)
+            strata_budgets.append(size - Dsub.No)
+            strata_sizes.append(
+                accumulated.Ng - accumulated.No - sum(strata_sizes))
 
-            net = partial_result.representation
-            if self.shrink_subnets:
-                # percolate
-                new_gates = alg.filter_connected(net.gates, net.Ni, net.No)
-                result_state = BNState(new_gates, D_partial)
-                if self.reuse_gates:
-                    size = new_gates.shape[0]
-            else:
-                result_state = BNState(net.gates, D_partial)
-
-            # update node budget and strata sizes
-            self.remaining_budget -= size
-            self.strata_sizes.append(result_state.Ng - result_state.No)
-
-            accumulated_network = self.join_networks(
-                accumulated_network, result_state, i, target)
-
-            # don't include output gates as possible inputs
-            # new Ni = Ng - No + Ni
-            No = accumulated_network.No
-            inputs = accumulated_network.activation_matrix[:-No, :]
-            inputs = PackedMatrix(inputs, Ne=self.D.Ne, Ni=inputs.shape[0])
-
-            self.learned_targets.append(target)
-
-            t3 = time()
             optimisation_times.append(t2 - t1)
-            other_times.append(t3 - t2 + t1 - t0)
+            other_times.append(time() - t2 + t1 - t0)
+
+            to_learn = sorted(set(to_learn).difference(learned_targets))
 
         # reorder the outputs to match the original target order
         # NOTE: This is why output gates are not included as possible inputs
-        self.reorder_network_outputs(accumulated_network.representation)
+        reorder_network_outputs(accumulated.representation, learned_targets)
+
+        # remove Nones
+        fs_record = [[fs for fs in fsets if fs is not None]
+                     for fsets in fs_record]
 
         return {
-            'network': accumulated_network.representation,
-            'target_order': self.learned_targets,
+            'network': accumulated.representation,
+            'target_order': learned_targets,
             'extra': {
                 'partial_networks': [r.representation for r in opt_results],
                 'best_err': [r.error for r in opt_results],
                 'best_step': [r.best_iteration for r in opt_results],
                 'steps': [r.iteration for r in opt_results],
-                'feature_sets': self.feature_sets,
+                'feature_sets': fs_record,
                 'restarts': [r.restarts for r in opt_results],
                 'opt_time': optimisation_times,
                 'other_time': other_times,
-                'strata_sizes': self.strata_sizes,
+                'strata_budgets': strata_budgets,
+                'strata_sizes': strata_sizes,
                 }
             }
 

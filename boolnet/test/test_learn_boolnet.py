@@ -29,7 +29,7 @@ def specific_harnesses(name, ids):
     tasks, _ = config_tools.generate_tasks(top_config, True)
     with open(f'boolnet/test/runs/{name}/expected.json') as f:
         for i, tsk, exp in zip(count(), tasks, f):
-            if i in ids:
+            if not ids or i in ids:
                 tsk['id'] = i
                 exp = json.loads(exp)
                 strip_times(exp)
@@ -42,7 +42,7 @@ def strip_times(record):
         record.pop(k)
 
 
-# @pytest.mark.parametrize('task,expected', specific_harnesses('gen10', [1, 3, 12]))
+# @pytest.mark.parametrize('task,expected', specific_harnesses('gen10', None))
 @pytest.mark.parametrize('task,expected', task_expectation_pairs())
 def test_run(task, expected):
     print(task['id'], task['learner']['name'], task['notes_tmt'])
@@ -56,12 +56,10 @@ def test_run(task, expected):
     # TEMPORARY
     if 'feature_sets' in actual and 'feature_sets' not in expected:
         actual.pop('feature_sets')
-    if 'feature_sets' in expected and 'feature_sets' not in actual:
-        expected.pop('feature_sets')
-    actual.pop('fs_sel_metric', None)
-    expected.pop('fs_sel_metric', None)
+    if 'strata_budgets' in actual and 'strata_budgets' not in expected:
+        actual.pop('strata_budgets')
 
     print(expected)
     print()
     print(actual)
-    assert actual == expected
+    assert expected == actual

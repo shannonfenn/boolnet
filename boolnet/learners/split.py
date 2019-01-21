@@ -8,7 +8,7 @@ from time import time
 
 
 def join_networks(base, new, t, D, X, feature_sets, use_minfs_selection):
-    if use_minfs_selection:
+    if use_minfs_selection and feature_sets[t]:
         # build a map for replacing sources
         new_input_map = list(feature_sets[t])
     else:
@@ -43,46 +43,41 @@ def join_networks(base, new, t, D, X, feature_sets, use_minfs_selection):
     return BNState(accumulated_gates, new_D)
 
 
-def get_feature_sets(D, X, Y, feature_sets, use_minfs_selection,
-                     minfs_metric, minfs_solver, minfs_params):
+def get_feature_sets(D, X, Y, feature_sets, apply_mask, minfs_params):
     # default - in case of empty fs or fs-selection not enabled
-    for t in range(D.No):
-        feature_sets[t] = list(range(D.Ni))
+    # for t in range(D.No):
+    #     feature_sets[t] = list(range(D.Ni))
 
-    if use_minfs_selection:
+    if apply_mask:
         # unpack inputs to minFS solver
         mfs_features = pk.unpackmat(X, D.Ne)
         mfs_targets = pk.unpackmat(Y, D.Ne)
         _, F, _ = mfs.ranked_feature_sets(
-            mfs_features, mfs_targets, minfs_metric,
-            minfs_solver, minfs_params)
+            mfs_features, mfs_targets, **minfs_params)
         for t, fs in enumerate(F):
-            if fs:
-                feature_sets[t] = fs
+            feature_sets[t] = fs
 
 
 def make_partial_instance(X, Y, feature_sets, target_index):
     target = Y[target_index]
     fs = feature_sets[target_index]
-    Xsub = X[fs, :]
+    if fs:
+        Xsub = X[fs, :]
+    else:
+        Xsub = X
     return PackedMatrix(np.vstack((Xsub, target)),
-                        Ne=X.Ne, Ni=len(fs))
+                        Ne=X.Ne, Ni=Xsub.shape[0])
 
 
-def run(optimiser, parameters):
+def run(optimiser, model_generator, network_params, training_set,
+        target_order=None, minfs_params={}, apply_mask=False):
     t0 = time()
 
-    D = parameters['training_set']
+    D = training_set
     X, Y = np.split(D, [D.Ni])
     # Gate generation
-    model_generator = parameters['model_generator']
-    budget = parameters['network']['Ng']
-    budgets = spacings(budget, D.No)
+    budgets = spacings(network_params['Ng'], D.No)
     # Optional feature selection params
-    use_minfs_selection = parameters.get('minfs_masking', False)
-    minfs_metric = parameters.get('minfs_selection_metric', None)
-    minfs_params = parameters.get('minfs_solver_params', {})
-    minfs_solver = parameters.get('minfs_solver', 'cplex')
     feature_sets = np.empty(D.No, dtype=list)
 
     opt_results = []
@@ -92,8 +87,7 @@ def run(optimiser, parameters):
     # make a state with Ng = No = 0 and set the inp mat = self.input_matrix
     accumulated_network = BNState(np.empty((0, 3)), X)
 
-    get_feature_sets(D, X, Y, feature_sets, use_minfs_selection,
-                     minfs_metric, minfs_solver, minfs_params)
+    get_feature_sets(D, X, Y, feature_sets, apply_mask, minfs_params)
 
     feature_selection_time = time() - t0
 
@@ -105,9 +99,8 @@ def run(optimiser, parameters):
         gates = model_generator(size, D_partial.Ni, 1)
         state = BNState(gates, D_partial)
 
-        t1 = time()
-
         # run the optimiser
+        t1 = time()
         partial_result = optimiser.run(state)
         t2 = time()
 
@@ -119,7 +112,7 @@ def run(optimiser, parameters):
                                D_partial)
         accumulated_network = join_networks(
             accumulated_network, result_state, target_index, D, X,
-            feature_sets, use_minfs_selection)
+            feature_sets, apply_mask)
 
         t3 = time()
         optimisation_times.append(t2 - t1)
