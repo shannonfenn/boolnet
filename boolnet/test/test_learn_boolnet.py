@@ -42,7 +42,7 @@ def strip_times(record):
         record.pop(k)
 
 
-# @pytest.mark.parametrize('task,expected', specific_harnesses('gen10', None))
+# @pytest.mark.parametrize('task,expected', specific_harnesses('add3', None))
 @pytest.mark.parametrize('task,expected', task_expectation_pairs())
 def test_run(task, expected):
     print(task['id'], task['learner']['name'], task['notes_tmt'])
@@ -52,12 +52,6 @@ def test_run(task, expected):
     # pass through json dump/load to deal with annoying floating point issues
     actual = json.loads(json.dumps(result, cls=NumpyAwareJSONEncoder,
                         separators=(',', ':')))
-
-    # TEMPORARY
-    if 'feature_sets' in actual and 'feature_sets' not in expected:
-        actual.pop('feature_sets')
-    if 'strata_budgets' in actual and 'strata_budgets' not in expected:
-        actual.pop('strata_budgets')
 
     print(expected)
     print()
