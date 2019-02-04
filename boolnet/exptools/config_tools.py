@@ -123,7 +123,10 @@ def load_dataset(settings, seed_handler):
             targets = list(range(No))
             random.shuffle(targets)
             data_settings['targets'] = targets
-        instance['targets'] = targets
+    else:
+        targets = None
+    instance['targets'] = targets
+
 
     # check for problematic case
     problematic = (dtype == 'split' and
