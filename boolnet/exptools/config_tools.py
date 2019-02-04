@@ -15,7 +15,7 @@ class SeedHandler:
     def __init__(self, primary_seed):
         self.registry = {}
         if primary_seed is None:
-            primary_seed = random.randint(2**32-1)
+            primary_seed = random.randint(0, 2**32-1)
         self.primary_seed = primary_seed
         random.seed(primary_seed)
 
