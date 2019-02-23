@@ -3,6 +3,7 @@ import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 
 from boolnet.utils import PackedMatrix, spacings
+from boolnet.network.boolnet import BoolNet
 from boolnet.network.networkstate import BNState
 from time import time
 
@@ -10,9 +11,11 @@ from time import time
 def join_networks(networks, order):
     # The first network doesn't need modification
     Ni = networks[0].Ni
+    No = len(networks)
+    assert len(order) == No
     prev_outputs = [Ni + networks[0].Ng - 1]
     remapped_gate_batches = [np.array(networks[0].gates, copy=True)]
-    for n in range(1, len(networks)):
+    for n in range(1, No):
         net = networks[n]
         sources_map = (list(range(Ni)) +
                        prev_outputs +
@@ -36,7 +39,7 @@ def join_networks(networks, order):
         outputs[i, :-1] = prev_outputs[o]
     remapped_gate_batches.append(outputs)
 
-    return np.vstack(remapped_gate_batches)
+    return BoolNet(np.vstack(remapped_gate_batches), Ni, No)
 
 
 def make_partial_instance(X, Y, target_index, chain):
@@ -106,11 +109,11 @@ def run(optimiser, model_generator, network_params, training_set,
         optimisation_times.append(t2 - t1)
 
     partial_networks = [r.representation for r in opt_results]
-    accumulated_gates = join_networks(
+    accumulated_net = join_networks(
         partial_networks, mfs.inverse_permutation(target_order))
 
     return {
-        'network': BNState(accumulated_gates, D),
+        'network': accumulated_net,
         'target_order': target_order,
         'extra': {
             'partial_networks': partial_networks,

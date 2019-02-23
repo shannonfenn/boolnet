@@ -210,7 +210,8 @@ learner_schema = Schema(All(
             }),
         Schema({
             'name':                         Any('split', 'classifierchain',
-                                                'classifierchain_plus'),
+                                                'classifierchain_plus',
+                                                'ecc_member'),
             'network_params':               network_schema,
             'target_order':                 target_order_schema,
             Optional('seed'):               seed_schema,
