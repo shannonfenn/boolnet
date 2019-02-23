@@ -22,15 +22,10 @@ class Learner:
         self.D = parameters['training_set']
         self.X, self.Y = np.split(self.D, [self.D.Ni])
         # Optional
-        self.minfs_solver = parameters.get('minfs_solver', 'cplex')
-        self.minfs_params = parameters.get('minfs_solver_params', {})
-        self.minfs_tie_handling = parameters.get('minfs_tie_handling',
-                                                 'random')
+        self.minfs_params = parameters.get('minfs_params', {})
         self.use_minfs_selection = parameters.get('minfs_masking', False)
-        self.minfs_metric = parameters.get('minfs_selection_metric', None)
-        self.minfs_prefilter = parameters.get('minfs_prefilter', None)
+        self.minfs_prefilter = parameters.get('prefilter', None)
         self.shrink_subnets = parameters.get('shrink_subnets', True)
-        self.reuse_gates = parameters.get('reuse_gates', False)
         # Initialise
         self.remaining_budget = self.budget
         self.strata_sizes = []
@@ -51,11 +46,16 @@ class Learner:
         else:
             return self.target_order[strata]
 
-        next_targets = ranked_fs_helper(
-            inputs, self.Y, self.D.Ne, self.D.Ni, self.strata_sizes,
-            strata, to_learn, self.feature_sets, self.minfs_prefilter,
-            self.minfs_metric, self.minfs_solver, self.minfs_params,
-            'all', False)
+        if strata == 0:
+            prev_fsets = self.feature_sets[0]
+        else:
+            prev_fsets = self.feature_sets[strata - 1]
+
+        ranking, next_fsets = ranked_fs_helper(
+            inputs, self.Y, self.D.Ni, self.strata_sizes, to_learn,
+            prev_fsets, self.minfs_prefilter, self.minfs_params)
+        self.feature_sets[to_learn] = next_fsets
+        next_targets = to_learn[np.where(ranking == 0)[0]]
 
         print('next: ', next_targets)
 

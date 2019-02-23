@@ -10,7 +10,6 @@ from boolnet.exptools.learn_boolnet import learn_bool_net
 
 
 def run_single_experiment(expfile):
-    # task = pickle.load(open(expfile, 'rb'))
     task = pickle.load(gzip.open(expfile, 'rb'))
     result = learn_bool_net(task)
     result['id'] = task['id']

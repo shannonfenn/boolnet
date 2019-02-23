@@ -7,7 +7,7 @@ from time import time
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, minfs_params={}, tie_handling='random'):
+        target_order=None, minfs_params={}):
 
     t0 = time()
 
@@ -27,17 +27,8 @@ def run(optimiser, model_generator, network_params, training_set,
         # use external solver for minFS
         rank, feature_sets, _ = mfs.ranked_feature_sets(
             mfs_X, mfs_Y, **minfs_params)
-
-        if tie_handling == 'random':
-            # randomly pick from possible exact orders
-            target_order = mfs.order_from_rank(rank)
-        elif tie_handling == 'min_depth':
-            # can do using a tuple to sort where the second element is the
-            # inverse of the largest feature (i.e. the greatest depth)
-            raise NotImplementedError(
-                'min_depth tie breaking not implemented.')
-        else:
-            raise ValueError('Invalid choice for tie_handling.')
+        # randomly pick from possible exact orders
+        target_order = mfs.order_from_rank(rank)
     else:
         feature_sets = None
 

@@ -157,7 +157,7 @@ optimiser_schema = Any(
         }),
     )
 
-minfs_params_schema = Any(
+solver_params_schema = Any(
     # CPLEX
     Schema({
         Optional('time_limit'):       Range(min=0.0),
@@ -180,22 +180,27 @@ minfs_schema = Schema({
                                         'cardinality>entropy',
                                         'cardinality>feature_diversity',
                                         'cardinality>pattern_diversity'),
-    Optional('solver_params'):      minfs_params_schema,
+    Optional('solver_params'):      solver_params_schema,
     Optional('provide_prior_soln'): bool
     })
 
-learner_schema = Schema(
-    All(
+target_order_schema = Any('auto', 'msb', 'lsb', 'random',
+                          All(list, permutation))
+learner_schema = Schema(All(
+    Any(
         Schema({
-            'name':             Any('monolithic', 'stratified', 'split',
-                                    'stratmultipar', 'classifierchain',
-                                    'classifierchain_plus'),
-            'network_params':   network_schema,
-            'target_order':     Any('auto', 'msb', 'lsb',
-                                    'random', All(list, permutation)),
+            'name':                         'monolithic',
+            'network_params':               network_schema,
+            'target_order':                 target_order_schema,
             Optional('seed'):               seed_schema,
             Optional('minfs_params'):       minfs_schema,
-            Optional('tie_handling'):       Any('random', 'all'),
+            }),
+        Schema({
+            'name':                         Any('stratified', 'stratmultipar'),
+            'network_params':               network_schema,
+            'target_order':                 target_order_schema,
+            Optional('seed'):               seed_schema,
+            Optional('minfs_params'):       minfs_schema,
             Optional('prefilter'):          Any(Default(''),
                                                 'prev-strata+input',
                                                 'prev-strata+prev-fs',
@@ -203,19 +208,19 @@ learner_schema = Schema(
             Optional('apply_mask'):         bool,
             Optional('shrink_subnets'):     bool,
             }),
-        conditionally_required('apply_mask', [True], 'minfs_params'),
-        conditionally_required('target_order', ['auto'], 'minfs_params'),
-        # if name monolithic then some minfs keys are not allowed
-        conditionally_forbidden('name', ['monolithic'], 'apply_mask'),
-        conditionally_forbidden('name', ['monolithic'], 'shrink_subnets'),
-        conditionally_forbidden('name', ['monolithic', 'split',
-                                         'classifierchain',
-                                         'classifierchain_plus'],
-                                'prefilter'),
-        conditionally_forbidden('name', ['split', 'classifierchain_plus'],
-                                'tie_handling'),
-        )
-    )
+        Schema({
+            'name':                         Any('split', 'classifierchain',
+                                                'classifierchain_plus'),
+            'network_params':               network_schema,
+            'target_order':                 target_order_schema,
+            Optional('seed'):               seed_schema,
+            Optional('minfs_params'):       minfs_schema,
+            Optional('apply_mask'):         bool,
+            }),
+        ),
+    conditionally_required('apply_mask', [True], 'minfs_params'),
+    conditionally_required('target_order', ['auto'], 'minfs_params'),
+    ))
 
 
 log_keys_schema = Schema(

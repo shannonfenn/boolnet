@@ -45,7 +45,7 @@ def prefilter_features(Ni, strata_sizes, prev_fs, method):
 
 
 def ranked_fs_helper(Xp, Yp, Ni, strata_sizes, targets, prev_fsets,
-                     prefilter, tie_handling, minfs_params):
+                     prefilter, minfs_params):
     if 'prev-fs' in prefilter:
         F_in = [prefilter_features(Ni, strata_sizes, prev_fsets[t], prefilter)
                 for t in targets]
@@ -66,20 +66,7 @@ def ranked_fs_helper(Xp, Yp, Ni, strata_sizes, targets, prev_fsets,
         for i, f in enumerate(fs):
             fs[i] = fsmap[f]
 
-    if tie_handling == 'random':
-        # randomly pick from top ranked targets
-        next_targets = targets[np.random.choice(np.where(ranking == 0)[0])]
-    elif tie_handling == 'min_depth':
-        # can do using a tuple to sort where the second element is the
-        # inverse of the largest feature (i.e. the greatest depth)
-        raise NotImplementedError('min_depth tie handling not available.')
-    elif tie_handling == 'all':
-        # return all top ranked targets
-        next_targets = targets[np.where(ranking == 0)[0]]
-    else:
-        raise ValueError('Invalid choice for tie_handling.')
-
-    return next_targets, feature_sets
+    return ranking, feature_sets
 
 
 def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
@@ -107,9 +94,11 @@ def get_next_target(Xsub, Y, Ni, given_order, to_learn, strata_sizes,
                 Xsub, y, Ni, strata_sizes, prev_fsets[next_target],
                 prefilter, tie_handling, minfs_params)
     else:
-        next_target, partial_fsets = ranked_fs_helper(
+        ranking, partial_fsets = ranked_fs_helper(
             Xsub, Y, Ni, strata_sizes, to_learn, prev_fsets,
             prefilter, tie_handling, minfs_params)
+        # randomly pick from top ranked targets
+        next_target = targets[np.random.choice(np.where(ranking == 0)[0])]
         fsets[to_learn] = partial_fsets
     return next_target, fsets
 

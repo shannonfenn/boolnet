@@ -127,7 +127,6 @@ def load_dataset(settings, seed_handler):
         targets = None
     instance['targets'] = targets
 
-
     # check for problematic case
     problematic = (dtype == 'split' and
                    settings['sampling']['type'] == 'blank' and

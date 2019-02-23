@@ -46,7 +46,7 @@ def make_partial_instance(X, Y, target_index, chain):
                         Ne=X.Ne, Ni=X.shape[0] + Xsub.shape[0])
 
 
-def minfs_target_order(X, Y, tie_handling, minfs_params):
+def minfs_target_order(X, Y, minfs_params):
     # determine the target order by ranking feature sets
     mfs_X = pk.unpackmat(X, X.Ne)
     mfs_Y = pk.unpackmat(Y, Y.Ne)
@@ -55,16 +55,11 @@ def minfs_target_order(X, Y, tie_handling, minfs_params):
     rank, feature_sets, _ = mfs.ranked_feature_sets(
         mfs_X, mfs_Y, **minfs_params)
 
-    if tie_handling == 'random':
-        # randomly pick from possible exact orders
-        return mfs.order_from_rank(rank), feature_sets
-    else:
-        raise ValueError('Invalid choice for tie_handling.')
+    return mfs.order_from_rank(rank), feature_sets
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        tie_handling='random', target_order=None, minfs_params={},
-        apply_mask=False):
+        target_order=None, minfs_params={}, apply_mask=False):
     t0 = time()
 
     # Instance
@@ -79,8 +74,7 @@ def run(optimiser, model_generator, network_params, training_set,
     # get target order
     if target_order is None:
         # these parameters only required if auto-targetting
-        target_order, feature_sets = minfs_target_order(
-                X, Y, tie_handling, minfs_params)
+        target_order, feature_sets = minfs_target_order(X, Y, minfs_params)
     else:
         feature_sets = None
 
@@ -106,7 +100,6 @@ def run(optimiser, model_generator, network_params, training_set,
         t1 = time()
         partial_result = optimiser.run(state)
         t2 = time()
-
 
         opt_results.append(partial_result)
         other_times.append(t1 - t0)
