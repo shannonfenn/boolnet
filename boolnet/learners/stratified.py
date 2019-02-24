@@ -82,8 +82,7 @@ def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
 
 
 def get_next_target(Xsub, Y, Ni, given_order, to_learn, strata_sizes,
-                    prev_fsets, prefilter, use_filtering, tie_handling,
-                    minfs_params):
+                    prev_fsets, prefilter, use_filtering, minfs_params):
     fsets = np.empty_like(prev_fsets)
     if given_order:
         # get the feature set now
@@ -92,13 +91,13 @@ def get_next_target(Xsub, Y, Ni, given_order, to_learn, strata_sizes,
             y = Y[next_target, :]
             fsets[next_target] = single_fs_helper(
                 Xsub, y, Ni, strata_sizes, prev_fsets[next_target],
-                prefilter, tie_handling, minfs_params)
+                prefilter, minfs_params)
     else:
         ranking, partial_fsets = ranked_fs_helper(
             Xsub, Y, Ni, strata_sizes, to_learn, prev_fsets,
-            prefilter, tie_handling, minfs_params)
+            prefilter, minfs_params)
         # randomly pick from top ranked targets
-        next_target = targets[np.random.choice(np.where(ranking == 0)[0])]
+        next_target = to_learn[np.random.choice(np.where(ranking == 0)[0])]
         fsets[to_learn] = partial_fsets
     return next_target, fsets
 
@@ -164,102 +163,102 @@ def reorder_network_outputs(network, learned_order):
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, tie_handling='random', minfs_params={},
-        apply_mask=False, prefilter=None, shrink_subnets=False):
-        # setup accumulated network
-        # loop:
-        #   make partial network
-        #   optimise it
-        #   hook into accumulated network
-        # reorganise outputs
+        target_order=None, minfs_params={}, apply_mask=False, prefilter=None,
+        shrink_subnets=False):
+    # setup accumulated network
+    # loop:
+    #   make partial network
+    #   optimise it
+    #   hook into accumulated network
+    # reorganise outputs
 
-        # Unpack parameters
-        X, Y = np.split(training_set, [training_set.Ni])
+    # Unpack parameters
+    X, Y = np.split(training_set, [training_set.Ni])
 
-        # Initialise
-        budget = network_params['Ng']
-        strata_budgets = []
-        strata_sizes = []
-        learned_targets = []
-        opt_results = []
-        optimisation_times = []
-        other_times = []
-        fs_record = []
-        to_learn = list(range(training_set.No))
-        feature_sets = np.empty(training_set.No, dtype=list)
-        # will be used as a stack
-        target_order = reversed(target_order) if target_order else None
-        # make an initial accumulator state with no gates
-        accumulated = BNState(np.empty((0, 3)), X)
+    # Initialise
+    budget = network_params['Ng']
+    strata_budgets = []
+    strata_sizes = []
+    learned_targets = []
+    opt_results = []
+    optimisation_times = []
+    other_times = []
+    fs_record = []
+    to_learn = list(range(training_set.No))
+    feature_sets = np.empty(training_set.No, dtype=list)
+    # will be used as a stack
+    target_order = reversed(target_order) if target_order else None
+    # make an initial accumulator state with no gates
+    accumulated = BNState(np.empty((0, 3)), X)
 
-        while(to_learn):
-            t0 = time()
-            # don't include output gates as possible inputs
-            # new Ni = Ng - No + Ni
-            # NEED INPUTS TOO
-            Xsub = accumulated.activation_matrix
-            Xsub = Xsub[:accumulated.Ni+accumulated.Ng-accumulated.No, :]
-            Xsub = PackedMatrix(Xsub, Ne=training_set.Ne, Ni=Xsub.shape[0])
+    while(to_learn):
+        t0 = time()
+        # don't include output gates as possible inputs
+        # new Ni = Ng - No + Ni
+        # NEED INPUTS TOO
+        Xsub = accumulated.activation_matrix
+        Xsub = Xsub[:accumulated.Ni+accumulated.Ng-accumulated.No, :]
+        Xsub = PackedMatrix(Xsub, Ne=training_set.Ne, Ni=Xsub.shape[0])
 
-            # determine next target index
-            target, feature_sets = get_next_target(
-                Xsub, Y, training_set.Ni, target_order, to_learn, strata_sizes,
-                feature_sets, prefilter, filter, tie_handling, minfs_params)
+        # determine next target index
+        target, feature_sets = get_next_target(
+            Xsub, Y, training_set.Ni, target_order, to_learn, strata_sizes,
+            feature_sets, prefilter, filter, minfs_params)
 
-            Dsub = partial_instance(Xsub, Y, target, feature_sets, apply_mask)
+        Dsub = partial_instance(Xsub, Y, target, feature_sets, apply_mask)
 
-            # ### build state to be optimised ### #
-            # next batch of gates
-            size = (budget - accumulated.Ng) // len(to_learn)
-            gates = model_generator(size, Dsub.Ni, Dsub.No)
-            state = BNState(gates, Dsub)
+        # ### build state to be optimised ### #
+        # next batch of gates
+        size = (budget - accumulated.Ng) // len(to_learn)
+        gates = model_generator(size, Dsub.Ni, Dsub.No)
+        state = BNState(gates, Dsub)
 
-            # optimise
-            t1 = time()
-            partial_result = optimiser.run(state)
-            t2 = time()
+        # optimise
+        t1 = time()
+        partial_result = optimiser.run(state)
+        t2 = time()
 
-            new_state = BNState(partial_result.representation.gates, Dsub)
-            accumulated = join_networks(accumulated, new_state,
-                                        feature_sets[target], apply_mask,
-                                        shrink_subnets)
+        new_state = BNState(partial_result.representation.gates, Dsub)
+        accumulated = join_networks(accumulated, new_state,
+                                    feature_sets[target], apply_mask,
+                                    shrink_subnets)
 
-            opt_results.append(partial_result)
-            learned_targets.append(target)
-            fs_record.append(feature_sets)
-            strata_budgets.append(size - Dsub.No)
-            strata_sizes.append(
-                accumulated.Ng - accumulated.No - sum(strata_sizes))
+        opt_results.append(partial_result)
+        learned_targets.append(target)
+        fs_record.append(feature_sets)
+        strata_budgets.append(size - Dsub.No)
+        strata_sizes.append(
+            accumulated.Ng - accumulated.No - sum(strata_sizes))
 
-            optimisation_times.append(t2 - t1)
-            other_times.append(time() - t2 + t1 - t0)
+        optimisation_times.append(t2 - t1)
+        other_times.append(time() - t2 + t1 - t0)
 
-            to_learn = sorted(set(to_learn).difference(learned_targets))
+        to_learn = sorted(set(to_learn).difference(learned_targets))
 
-        # reorder the outputs to match the original target order
-        # NOTE: This is why output gates are not included as possible inputs
-        reorder_network_outputs(accumulated.representation, learned_targets)
+    # reorder the outputs to match the original target order
+    # NOTE: This is why output gates are not included as possible inputs
+    reorder_network_outputs(accumulated.representation, learned_targets)
 
-        # remove Nones
-        fs_record = [[fs for fs in fsets if fs is not None]
-                     for fsets in fs_record]
+    # remove Nones
+    fs_record = [[fs for fs in fsets if fs is not None]
+                 for fsets in fs_record]
 
-        return {
-            'network': accumulated.representation,
-            'target_order': learned_targets,
-            'extra': {
-                'partial_networks': [r.representation for r in opt_results],
-                'best_err': [r.error for r in opt_results],
-                'best_step': [r.best_iteration for r in opt_results],
-                'steps': [r.iteration for r in opt_results],
-                'feature_sets': fs_record,
-                'restarts': [r.restarts for r in opt_results],
-                'opt_time': optimisation_times,
-                'other_time': other_times,
-                'strata_budgets': strata_budgets,
-                'strata_sizes': strata_sizes,
-                }
+    return {
+        'network': accumulated.representation,
+        'target_order': learned_targets,
+        'extra': {
+            'partial_networks': [r.representation for r in opt_results],
+            'best_err': [r.error for r in opt_results],
+            'best_step': [r.best_iteration for r in opt_results],
+            'steps': [r.iteration for r in opt_results],
+            'feature_sets': fs_record,
+            'restarts': [r.restarts for r in opt_results],
+            'opt_time': optimisation_times,
+            'other_time': other_times,
+            'strata_budgets': strata_budgets,
+            'strata_sizes': strata_sizes,
             }
+        }
 
     # def handle_single_FS(self, feature, target):
     #     # When we have a 1FS we have already learned the target,
