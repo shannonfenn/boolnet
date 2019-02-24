@@ -90,7 +90,7 @@ def run(optimiser, model_generator, network_params, training_set,
 
     # Gate generation
     total_budget = network_params['Ng']
-    total_budget -= D.No  # We need OR gates at the end for tgt reordering
+    # total_budget -= D.No  # We need OR gates at the end for tgt reordering
     budgets = spacings(total_budget, D.No)
 
     # get target order
@@ -115,7 +115,6 @@ def run(optimiser, model_generator, network_params, training_set,
         t1 = time()
         partial_result = optimiser.run(state)
         t2 = time()
-
 
         opt_results.append(partial_result)
         other_times.append(t1 - t0)
