@@ -7,7 +7,7 @@ seed: 9987744
 base_config:
   data: 
     type: file
-    filename: ~/HMRI/experiments-bn/datasets/functions/cpar7.npz
+    filename: boolnet/test/runs/cpar7/cpar7.npz
     targets: random
 
   sampling:
@@ -50,9 +50,9 @@ product:
     - {notes_tmt: strat-raps-reduced, learner: {name: stratified, prefilter: prev-strata+prev-fs+input, target_order: auto, apply_mask: yes}}
     - {notes_tmt: strat-raps-all-shrink, learner: {name: stratified, prefilter: ~, target_order: auto, apply_mask: yes, shrink_subnets: yes}}
     - {notes_tmt: strat-raps-reduced-shrink, learner: {name: stratified, prefilter: prev-strata+prev-fs+input, target_order: auto, apply_mask: yes, shrink_subnets: yes}}
-    - {notes_tmt: cc-auto, learner: {name: classifierchain, target_order: auto}}
-    - {notes_tmt: cc-random, learner: {name: classifierchain, target_order: random}}
-    - {notes_tmt: cc-plus, learner: {name: classifierchain_plus, target_order: auto}}
+    - {notes_tmt: cc-auto, learner: {name: classifierchain, target_order: auto, network_params: {Ng: 50n}}}
+    - {notes_tmt: cc-random, learner: {name: classifierchain, target_order: random, network_params: {Ng: 50n}}}
+    - {notes_tmt: cc-plus, learner: {name: classifierchain_plus, target_order: auto, network_params: {Ng: 50n}}}
   -
     - {sampling: {Ne: 32, seed: s0}} 
 ...

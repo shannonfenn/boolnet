@@ -49,7 +49,7 @@ def test_classifierchain_join_networks(execution_number):
 
     print(combined)
 
-    combined = BNState(combined, D)
+    combined = BNState(combined.gates, D)
     actual = np.array(combined.output_matrix)
 
     np.testing.assert_array_equal(expected, actual)
