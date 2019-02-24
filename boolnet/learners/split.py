@@ -91,7 +91,10 @@ def run(optimiser, model_generator, network_params, training_set,
 
     feature_selection_time = time() - t0
 
-    for target_index, size in enumerate(budgets):
+    if target_order is None:
+        target_order = list(range(D.No))
+
+    for target_index, size in zip(target_order, budgets):
         t0 = time()
 
         D_partial = make_partial_instance(X, Y, feature_sets, target_index)
@@ -120,7 +123,7 @@ def run(optimiser, model_generator, network_params, training_set,
 
     return {
         'network': accumulated_network.representation,
-        'target_order': list(range(D.No)),
+        'target_order': target_order,
         'extra': {
             'partial_networks': [r.representation for r in opt_results],
             'best_err': [r.error for r in opt_results],

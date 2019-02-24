@@ -62,7 +62,7 @@ def minfs_target_order(X, Y, minfs_params):
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, minfs_params={}, apply_mask=False):
+        target_order=None, minfs_params={}):
     t0 = time()
 
     # Instance
