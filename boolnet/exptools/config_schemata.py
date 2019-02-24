@@ -209,12 +209,17 @@ learner_schema = Schema(All(
             Optional('shrink_subnets'):     bool,
             }),
         Schema({
-            'name':                         Any('classifierchain',
-                                                'ecc_member'),
+            'name':                         'classifierchain',
             'network_params':               network_schema,
             'target_order':                 target_order_schema,
             Optional('seed'):               seed_schema,
             Optional('minfs_params'):       minfs_schema,
+            }),
+        Schema({
+            'name':                         'ecc_member',
+            'network_params':               network_schema,
+            'target_order':                 target_order_schema,
+            Optional('seed'):               seed_schema,
             }),
         Schema({
             'name':                         Any('split',
@@ -227,7 +232,7 @@ learner_schema = Schema(All(
             }),
         ),
     conditionally_required('apply_mask', [True], 'minfs_params'),
-    conditionally_required('target_order', ['auto'], 'minfs_params'),
+    # conditionally_required('target_order', ['auto'], 'minfs_params'),
     ))
 
 

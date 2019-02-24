@@ -5,7 +5,7 @@ from time import time
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, minfs_params={}, apply_mask=False):
+        target_order=None, minfs_params={}):
     t0 = time()
 
     # sample the training set with replacement - Bagging
@@ -21,7 +21,7 @@ def run(optimiser, model_generator, network_params, training_set,
     # train CC and return
     results = classifierchain.run(
         optimiser, model_generator, network_params, training_set,
-        target_order, minfs_params, apply_mask)
+        target_order, minfs_params)
 
     results['extra']['init_time'] += t1 - t0
 
