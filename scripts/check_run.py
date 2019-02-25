@@ -60,6 +60,14 @@ def get_remaining_experiments(args, fast=True):
     return '\n'.join(remaining)
 
 
+def memorised(record):
+    if record['learner'] == 'ecc_member':
+        # this learner uses bagging so gets non zero trg error even when mem'd
+        return sum(record['best_err']) == 0
+    else:
+        record['trg_err'] == 0
+
+
 def get_non_memorised_experiments(args, fast=True):
     directory = args.dir
     all_json = glob.glob(join(directory, '*.json'))
@@ -70,7 +78,7 @@ def get_non_memorised_experiments(args, fast=True):
             records = [json.loads(line) for line in f if line.strip()]
         failed_ids.extend(record['id']
                           for record in records
-                          if record['trg_err'] != 0)
+                          if not memorised(record))
 
     explist = get_all_experiments(directory)
     expmap = dict()
@@ -109,7 +117,7 @@ def parse_file(fname, swallow_errors):
                       file=sys.stderr)
             num_error += 1
         else:
-            if record['trg_err'] == 0:
+            if memorised(record):
                 num_succeeded += 1
             else:
                 num_failed += 1
