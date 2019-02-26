@@ -16,6 +16,7 @@ import boolnet.learners.split as split
 import boolnet.learners.classifierchain as classifierchain
 import boolnet.learners.classifierchain_plus as classifierchain_plus
 import boolnet.learners.ecc_member as ecc_member
+import boolnet.learners.apriori_curricula_wrapper as wrapper
 import boolnet.optimisers as optimisers
 import boolnet.exptools.fastrand as fastrand
 import boolnet.exptools.config_filtering as cf
@@ -36,6 +37,7 @@ LEARNERS = {
     'classifierchain': classifierchain,
     'classifierchain_plus': classifierchain_plus,
     'ecc_member': ecc_member,
+    'wrapper': wrapper,
     }
 
 
@@ -237,12 +239,13 @@ def learn_bool_net(parameters):
 
     record = build_parameter_record(parameters, seed)
 
-    optimiser = initialise_optimiser(parameters['optimiser'], training_set.Ne, training_set.No)
+    learner_params['optimiser'] = initialise_optimiser(
+        parameters['optimiser'], training_set.Ne, training_set.No)
     learner = LEARNERS[learner_params.pop('name')]
 
     # learn the network
     setup_end_time = time.monotonic()
-    learner_result = learner.run(optimiser, **learner_params)
+    learner_result = learner.run(**learner_params)
     learning_end_time = time.monotonic()
 
     record.update(build_result_record(parameters, learner_result))

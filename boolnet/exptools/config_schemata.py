@@ -230,6 +230,14 @@ learner_schema = Schema(All(
             Optional('minfs_params'):       minfs_schema,
             Optional('apply_mask'):         bool,
             }),
+        # a bit hacky for now - the learner will have to catch config errors
+        Schema({
+            'name':                         'wrapper',
+            'sublearner':                   str,
+            'curricula_method':             Any('minfs', 'CEbCC'),
+            'target_order':                 'auto',
+            Optional('options'):            Schema({}, extra_keys=Allow)
+            }, extra_keys=Allow),
         ),
     conditionally_required('apply_mask', [True], 'minfs_params'),
     # conditionally_required('target_order', ['auto'], 'minfs_params'),
