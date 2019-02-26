@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as stats
 import bitpacking.packing as pk
 import minfs.feature_selection as mfs
 from pyitlib import discrete_random_variable as drv
@@ -59,3 +60,22 @@ def CEbCC(Y, variant=1):
         A = [t for t in A if t != target]
 
     return curriculum, H
+
+
+def effect_relation_matrix(Y):
+    E = np.empty((Y.shape[1], Y.shape[1]))
+    for i, yi in enumerate(Y.T):
+        for j, yj in enumerate(Y.T):
+            E[i, j] = np.abs(yj[yi == 0].mean() - yj[yi == 1].mean())
+    np.fill_diagonal(E, 0)
+    normaliser = E.sum(axis=0)
+    normaliser[np.where(normaliser == 0)] = 1  # prevent division by zero
+    return E / normaliser
+
+
+def label_effects_rank(Y, t):
+    E = effect_relation_matrix(Y)
+    v = np.linalg.matrix_power(E, t).sum(axis=1)
+    ranks = stats.rankdata(-v, 'min') - 1  # ranked high(0) to low(n-1)
+    curricula = mfs.order_from_rank(ranks)
+    return curricula, v

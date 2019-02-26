@@ -31,6 +31,9 @@ def run(training_set, sublearner, curricula_method, options={}, **kwargs):
     elif curricula_method == 'CEbCC':
         target_order, H = cur.CEbCC(Y, **options)
         extra = {'curricula_H': H}
+    elif curricula_method == 'label_effects':
+        target_order, v = cur.label_effects_rank(Y, **options)
+        extra = {'curricula_v': v}
     else:
         raise ValueError(f'Invalid curricula method: {curricula_method}')
     curricula_time = time() - t0
