@@ -44,6 +44,7 @@ def strip_times(record):
 
 # @pytest.mark.parametrize('task,expected', specific_harnesses('add3', None))
 @pytest.mark.parametrize('task,expected', task_expectation_pairs())
+@pytest.mark.slow
 def test_run(task, expected):
     print(task['id'], task['learner']['name'], task['notes_tmt'])
     result = learn_boolnet.learn_bool_net(task)
