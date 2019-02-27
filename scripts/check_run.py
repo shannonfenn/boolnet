@@ -31,8 +31,7 @@ def get_all_experiments(directory):
     return all_exps
 
 
-def get_remaining_experiments(args, fast=True):
-    directory = args.dir
+def get_remaining_experiments(directory, fast=True):
     all_json = glob.glob(join(directory, '*.json'))
 
     finished_ids = []
@@ -57,7 +56,7 @@ def get_remaining_experiments(args, fast=True):
     remaining = natsorted(exp_filename
                           for i, exp_filename in expmap.items()
                           if i not in finished_ids)
-    return '\n'.join(remaining)
+    return remaining
 
 
 def memorised(record):
@@ -68,8 +67,7 @@ def memorised(record):
         return record['trg_err'] == 0
 
 
-def get_non_memorised_experiments(args, fast=True):
-    directory = args.dir
+def get_non_memorised_experiments(directory, fast=True):
     all_json = glob.glob(join(directory, '*.json'))
 
     failed_ids = []
@@ -95,16 +93,16 @@ def get_non_memorised_experiments(args, fast=True):
 
     failed_ids = natsorted(failed_ids)
     failed_paths = (expmap[i] for i in failed_ids)
-    return '\n'.join(failed_paths)
+    return failed_paths
 
 
-def parse_file(fname, swallow_errors):
+def parse_file(fname, verbose):
     num_succeeded = num_failed = num_error = 0
     try:
         with open(fname, 'r') as stream:
             lines = [line for line in stream if line.strip()]
     except OSError as e:
-        if not swallow_errors:
+        if verbose:
             print(f'Warning: could not read {fname}\n{e}',
                   file=sys.stderr)
 
@@ -112,7 +110,7 @@ def parse_file(fname, swallow_errors):
         try:
             record = json.loads(line)
         except (ValueError, TypeError) as e:
-            if not swallow_errors:
+            if verbose:
                 print(f'Warning: bad json line {fname}\n{e}',
                       file=sys.stderr)
             num_error += 1
@@ -124,21 +122,31 @@ def parse_file(fname, swallow_errors):
     return num_succeeded, num_failed, num_error
 
 
-def summary(args):
-    directory = args.dir
-    swallow_errors = not args.verbose
+def summary(directory, verbose):
     all_json = glob.glob(join(directory, '*.json'))
 
     num_exp = len(get_all_experiments(directory))
     num_succeeded = num_failed = num_error = 0
     for fname in all_json:
-        s, f, e = parse_file(fname, swallow_errors)
+        s, f, e = parse_file(fname, verbose)
         num_succeeded += s
         num_failed += f
         num_error += e
     return (f'remaining: {num_exp - num_succeeded - num_failed - num_error} '
             f'memorised: {num_succeeded} not-memorised: {num_failed} '
             f'json-error: {num_error}')
+
+
+def __summary(args):
+    return summary(args.dir, args.verbose)
+
+
+def __get_non_memorised_experiments(args):
+    return '\n'.join(get_non_memorised_experiments(args.dir))
+
+
+def __get_remaining_experiments(args):
+    return '\n'.join(get_remaining_experiments(args.dir))
 
 
 def main():
@@ -149,17 +157,17 @@ def main():
 
     parser_remaining = subparsers.add_parser('rem')
     parser_remaining.add_argument('dir', type=directory_type)
-    parser_remaining.set_defaults(func=get_remaining_experiments)
+    parser_remaining.set_defaults(func=__get_remaining_experiments)
 
     parser_failed = subparsers.add_parser('not')
     parser_failed.add_argument('dir', type=directory_type)
-    parser_failed.set_defaults(func=get_non_memorised_experiments)
+    parser_failed.set_defaults(func=__get_non_memorised_experiments)
 
     parser_summary = subparsers.add_parser('sum')
     parser_summary.add_argument('dir', type=directory_type)
     parser_summary.add_argument('--verbose', '-v', action='store_true',
                                 help='verbose json errors.')
-    parser_summary.set_defaults(func=summary)
+    parser_summary.set_defaults(func=__summary)
 
     args = parser.parse_args()
 

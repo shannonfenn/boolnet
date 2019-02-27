@@ -6,8 +6,31 @@ try:
 except ImportError:
     from yaml import SafeLoader as Loader
 import argparse                     # CLI
+from good import Invalid
+import boolnet.exptools.config_tools as cft
+import boolnet.exptools.config_schemata as sch
 
-import boolnet.exptools.config_tools as config_tools
+
+def check(settings, full=False):
+    # validate the given schema
+    try:
+        sch.experiment_schema(settings)
+    except Invalid as err:
+        raise cft.ValidationError(
+            'Top-level config invalid: {}'.format(err))
+    seed_handler = cft.SeedHandler(settings['seed'])
+    # insert default log_keys values into base config
+    cft.insert_default_log_keys(settings)
+    # the configurations approach involves having a multiple config dicts and
+    # updating them with each element of the configurations list or product
+    variable_sets, base_settings = cft.split_variables_from_base(settings)
+
+    configurations = cft._generate_configurations(
+        variable_sets, base_settings, seed_handler, False)
+    print('{} configurations.'.format(len(configurations)))
+    if full:
+        tasks = cft._generate_tasks(configurations, seed_handler, False)
+        print('{} tasks.'.format(len(tasks)))
 
 
 def main():
@@ -21,6 +44,8 @@ def main():
     parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
                         default='experiments/results',
                         help='directory to store results in (in own subdir).')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='generate tasks as well.')
 
     args = parser.parse_args()
 
@@ -29,15 +54,13 @@ def main():
 
     # test generation of tasks
     try:
-        tasks = config_tools.generate_tasks(settings, False)
-        print('{} tasks.'.format(len(tasks)))
-    except config_tools.ValidationError as err:
+        check(settings, args.v)
+        print('\nExperiment config is valid.')
+    except cft.ValidationError as err:
         print()
         print(err)
         print('\nExperiment config is NOT valid.')
         return
-
-    print('\nExperiment config is valid.')
 
 
 if __name__ == '__main__':
