@@ -75,4 +75,4 @@ def label_effects_rank(Y, t):
     v = np.linalg.matrix_power(E, t).sum(axis=1)
     ranks = stats.rankdata(-v, 'min') - 1  # ranked high(0) to low(n-1)
     curricula = mfs.order_from_rank(ranks)
-    return curricula, v
+    return curricula, v, E
