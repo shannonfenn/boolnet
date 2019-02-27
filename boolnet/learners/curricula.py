@@ -37,14 +37,11 @@ def CEbCC(Y, variant=1):
     while A:
         # Step 4.
         # for each element i in A , calculate SH
-        print(A)
         if variant in [1, 2]:
             SH = H[A, :][:, A].sum(axis=1)
         elif variant in [3, 4]:
             SH = H[A, :][:, A].sum(axis=0)
-        print(SH)
 
-        print(np.nonzero(SH == SH.min()))
         # Step 5. i ∗ = argmin SH ( i )      SKF note: break ties randomly
         if variant in [1, 3]:
             target = A[np.random.choice(np.flatnonzero(SH == SH.min()))]
