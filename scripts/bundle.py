@@ -3,6 +3,7 @@
 import argparse
 import glob
 import itertools
+import sys
 import os
 from os.path import isdir, expanduser, abspath, join
 from natsort import natsorted
@@ -30,6 +31,7 @@ def bundle(dir, num=None, experiments=None):
 
     if not experiments:
         print("No experiments found.")
+        sys.exit(1)
         return
 
     num = min(num, len(experiments))
