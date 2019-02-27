@@ -41,9 +41,6 @@ def main():
     parser.add_argument('experiment',
                         type=argparse.FileType('r'),
                         help='experiment config filename.')
-    parser.add_argument('-r', '--result-dir', type=str, metavar='dir',
-                        default='experiments/results',
-                        help='directory to store results in (in own subdir).')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='generate tasks as well.')
 
@@ -54,7 +51,7 @@ def main():
 
     # test generation of tasks
     try:
-        check(settings, args.v)
+        check(settings, args.verbose)
         print('\nExperiment config is valid.')
     except cft.ValidationError as err:
         print()

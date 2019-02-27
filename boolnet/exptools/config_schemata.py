@@ -234,7 +234,8 @@ learner_schema = Schema(All(
         Schema({
             'name':                         'wrapper',
             'sublearner':                   str,
-            'curricula_method':             Any('minfs', 'CEbCC'),
+            'curricula_method':             Any('minfs', 'CEbCC',
+                                                'label_effects'),
             'target_order':                 'auto',
             Optional('options'):            Schema({}, extra_keys=Allow)
             }, extra_keys=Allow),
