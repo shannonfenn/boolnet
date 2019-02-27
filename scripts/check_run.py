@@ -65,7 +65,7 @@ def memorised(record):
         # this learner uses bagging so gets non zero trg error even when mem'd
         return sum(record['best_err']) == 0
     else:
-        record['trg_err'] == 0
+        return record['trg_err'] == 0
 
 
 def get_non_memorised_experiments(args, fast=True):
