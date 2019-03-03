@@ -71,6 +71,7 @@ def effect_relation_matrix(Y):
 
 
 def label_effects_rank(Y, t):
+    Y = pk.unpackmat(Y, Y.Ne)
     E = effect_relation_matrix(Y)
     v = np.linalg.matrix_power(E, t).sum(axis=1)
     ranks = stats.rankdata(-v, 'min') - 1  # ranked high(0) to low(n-1)
