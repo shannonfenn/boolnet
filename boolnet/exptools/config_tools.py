@@ -272,7 +272,7 @@ def insert_default_log_keys(settings):
         ['trg_set_num', True, ['training_set_number']],
         ['tfs', True, ['learner', 'network_params', 'node_funcs']],
         ['guiding_function', True, ['optimiser', 'guiding_function']],
-        ['given_tgt_order', True, ['learner', 'target_order']],
+        ['given_tgt_order', False, ['learner', 'target_order']],
         ['targets', False, ['data', 'targets']],
         ['sample_seed', False, ['sampling', 'seed']],
         ['opt_{}', False, ['optimiser', '.*']],

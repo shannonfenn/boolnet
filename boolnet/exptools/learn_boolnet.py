@@ -92,17 +92,18 @@ def convert_file_datasets(parameters):
 
 
 def convert_target_orders(parameters, No):
-    order = parameters['target_order']
-    if order == 'lsb':
-        parameters['target_order'] = np.arange(No, dtype=np.uintp)
-    elif order == 'msb':
-        parameters['target_order'] = np.arange(No, dtype=np.uintp)[::-1]
-    elif order == 'random':
-        parameters['target_order'] = np.random.permutation(No).astype(np.uintp)
-    elif order == 'auto':
-        parameters['target_order'] = None
-    else:
-        parameters['target_order'] = np.array(order, dtype=np.uintp)
+    if 'target_order' in parameters:
+        order = parameters['target_order']
+        if order == 'lsb':
+            parameters['target_order'] = np.arange(No, dtype=np.uintp)
+        elif order == 'msb':
+            parameters['target_order'] = np.arange(No, dtype=np.uintp)[::-1]
+        elif order == 'random':
+            parameters['target_order'] = np.random.permutation(No).astype(np.uintp)
+        elif order == 'auto':
+            parameters['target_order'] = None
+        else:
+            parameters['target_order'] = np.array(order, dtype=np.uintp)
 
 
 def fn_value_stop_criterion(func_id, evaluator, limit=None):

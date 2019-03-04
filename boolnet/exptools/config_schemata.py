@@ -1,5 +1,5 @@
 from good import (
-    Schema, message, All, Any, Range, Allow, Default, Match, Msg,
+    Schema, message, All, Any, Range, Allow, Reject, Default, Match, Msg,
     In, Optional, Exclusive, Length, Invalid, Entire, truth)
 import os.path
 import boolnet.bintools.functions as fn
@@ -218,7 +218,7 @@ learner_schema = Schema(All(
         Schema({
             'name':                         'ecc_member',
             'network_params':               network_schema,
-            'target_order':                 target_order_schema,
+            Optional('target_order'):       target_order_schema,
             Optional('seed'):               seed_schema,
             }),
         Schema({
@@ -236,7 +236,7 @@ learner_schema = Schema(All(
             'sublearner':                   str,
             'curricula_method':             Any('minfs', 'CEbCC',
                                                 'label_effects'),
-            'target_order':                 'auto',
+            Reject('target_order'):         None,
             Optional('options'):            Schema({}, extra_keys=Allow)
             }, extra_keys=Allow),
         ),
