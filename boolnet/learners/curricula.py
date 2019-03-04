@@ -63,7 +63,10 @@ def effect_relation_matrix(Y):
     E = np.empty((Y.shape[1], Y.shape[1]))
     for i, yi in enumerate(Y.T):
         for j, yj in enumerate(Y.T):
-            E[i, j] = np.abs(yj[yi == 0].mean() - yj[yi == 1].mean())
+            if all(yi) or not any(yi):
+                E[i, j] = 0
+            else:
+                E[i, j] = np.abs(yj[yi == 0].mean() - yj[yi == 1].mean())
     np.fill_diagonal(E, 0)
     normaliser = E.sum(axis=0)
     normaliser[np.where(normaliser == 0)] = 1  # prevent division by zero
