@@ -42,7 +42,10 @@ def run(training_set, sublearner, curricula_method, options={}, **kwargs):
     extra['sublearner'] = sublearner
     extra['curricula_time'] = curricula_time
 
-    results = SUBLEARNERS[sublearner].run(training_set=training_set, **kwargs)
+    results = SUBLEARNERS[sublearner].run(
+        training_set=training_set, target_order=target_order, **kwargs)
+    if 'target_order' not in results:
+        results['target_order'] = target_order
     results['extra'].update(extra)
 
     return results
