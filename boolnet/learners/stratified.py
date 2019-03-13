@@ -163,8 +163,8 @@ def reorder_network_outputs(network, learned_order):
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, minfs_params={}, apply_mask=False, prefilter=None,
-        shrink_subnets=False):
+        target_order=None, minfs_params={}, apply_mask=True, prefilter=None,
+        shrink_subnets=True):
     # setup accumulated network
     # loop:
     #   make partial network
