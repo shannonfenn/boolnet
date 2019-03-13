@@ -4,6 +4,7 @@ import argparse
 import pickle
 import json
 import gzip
+import os
 
 from boolnet.utils import NumpyAwareJSONEncoder
 from boolnet.exptools.learn_boolnet import learn_bool_net
@@ -26,12 +27,14 @@ def process_single_experiments(expfile):
 
 def process_multiple_experiments(explistfile):
     resultfile = explistfile + '.json'
-    with open(explistfile) as tasks, open(resultfile, 'w') as ostream:
+    with open(explistfile) as tasks, open(resultfile, 'w', 1) as ostream:
         for line in tasks:
             result = run_single_experiment(line.strip())
             json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
                       separators=(',', ':'))
             ostream.write('\n')
+            ostream.flush()
+            os.fsync(ostream.fileno())
 
 
 def main():
