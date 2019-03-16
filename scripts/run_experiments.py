@@ -5,6 +5,7 @@ import pickle
 import json
 import gzip
 import os
+import sys
 
 from boolnet.utils import NumpyAwareJSONEncoder
 from boolnet.exptools.learn_boolnet import learn_bool_net
@@ -17,7 +18,7 @@ def run_single_experiment(expfile):
     return result
 
 
-def process_single_experiments(expfile):
+def process_single_experiment(expfile):
     resultfile = expfile + '.json'
     result = run_single_experiment(expfile)
     with open(resultfile, 'w') as ostream:
@@ -29,12 +30,16 @@ def process_multiple_experiments(explistfile):
     resultfile = explistfile + '.json'
     with open(explistfile) as tasks, open(resultfile, 'w', 1) as ostream:
         for line in tasks:
-            result = run_single_experiment(line.strip())
-            json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
-                      separators=(',', ':'))
-            ostream.write('\n')
-            ostream.flush()
-            os.fsync(ostream.fileno())
+            try:
+                result = run_single_experiment(line.strip())
+            except ValueError as err:
+                print(err, file=sys.stderr)
+            else:
+                json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
+                          separators=(',', ':'))
+                ostream.write('\n')
+                ostream.flush()
+                os.fsync(ostream.fileno())
 
 
 def main():
@@ -46,7 +51,7 @@ def main():
     if args.experiment.endswith('.explist'):
         process_multiple_experiments(args.experiment)
     elif args.experiment.endswith('.exp'):
-        process_single_experiments(args.experiment)
+        process_single_experiment(args.experiment)
     else:
         parser.error('[experiment] must be .exp or .explist')
 
