@@ -81,7 +81,8 @@ def minfs_target_order(X, Y, minfs_params):
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, minfs_params={}, apply_mask=False):
+        target_order=None, minfs_params={}, apply_mask=False,
+        force_memorisation=True):
     t0 = time()
 
     # Instance
@@ -104,8 +105,8 @@ def run(optimiser, model_generator, network_params, training_set,
 
     for i, budget in enumerate(budgets):
         t0 = time()
-        target_index = target_order[i]
-        D_i = make_partial_instance(X, Y, target_index, target_order[:i])
+        target = target_order[i]
+        D_i = make_partial_instance(X, Y, target, target_order[:i])
 
         # build the network state
         gates = model_generator(budget, D_i.Ni, D_i.No)
@@ -114,6 +115,9 @@ def run(optimiser, model_generator, network_params, training_set,
         # run the optimiser
         t1 = time()
         partial_result = optimiser.run(state)
+        if force_memorisation and partial_result.error > 0:
+            raise ValueError(f'Stage {i} target {target} failed to memorise '
+                             f'error: {partial_result.error}')
         t2 = time()
 
         opt_results.append(partial_result)

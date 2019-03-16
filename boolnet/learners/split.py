@@ -70,7 +70,8 @@ def make_partial_instance(X, Y, feature_sets, target_index):
 
 
 def run(optimiser, model_generator, network_params, training_set,
-        target_order=None, minfs_params={}, apply_mask=False):
+        target_order=None, minfs_params={}, apply_mask=False,
+        force_memorisation=True):
     t0 = time()
 
     D = training_set
@@ -94,10 +95,10 @@ def run(optimiser, model_generator, network_params, training_set,
     if target_order is None:
         target_order = list(range(D.No))
 
-    for target_index, size in zip(target_order, budgets):
+    for target, size in zip(target_order, budgets):
         t0 = time()
 
-        D_partial = make_partial_instance(X, Y, feature_sets, target_index)
+        D_partial = make_partial_instance(X, Y, feature_sets, target)
         # build the network state
         gates = model_generator(size, D_partial.Ni, 1)
         state = BNState(gates, D_partial)
@@ -105,6 +106,9 @@ def run(optimiser, model_generator, network_params, training_set,
         # run the optimiser
         t1 = time()
         partial_result = optimiser.run(state)
+        if force_memorisation and partial_result.error > 0:
+            raise ValueError(f'Target {target} failed to memorise '
+                             f'error: {partial_result.error}')
         t2 = time()
 
         # record result
@@ -114,7 +118,7 @@ def run(optimiser, model_generator, network_params, training_set,
         result_state = BNState(partial_result.representation.gates,
                                D_partial)
         accumulated_network = join_networks(
-            accumulated_network, result_state, target_index, D, X,
+            accumulated_network, result_state, target, D, X,
             feature_sets, apply_mask)
 
         t3 = time()

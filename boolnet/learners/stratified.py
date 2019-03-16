@@ -164,7 +164,7 @@ def reorder_network_outputs(network, learned_order):
 
 def run(optimiser, model_generator, network_params, training_set,
         target_order=None, minfs_params={}, apply_mask=True, prefilter=None,
-        shrink_subnets=True):
+        shrink_subnets=True, force_memorisation=True):
     # setup accumulated network
     # loop:
     #   make partial network
@@ -216,6 +216,10 @@ def run(optimiser, model_generator, network_params, training_set,
         # optimise
         t1 = time()
         partial_result = optimiser.run(state)
+        if force_memorisation and partial_result.error > 0:
+            raise ValueError(f'Stage {len(opt_results)} target {target} '
+                             f'failed to memorise '
+                             f'error: {partial_result.error}')
         t2 = time()
 
         new_state = BNState(partial_result.representation.gates, Dsub)
