@@ -171,6 +171,7 @@ def run(optimiser, model_generator, network_params, training_set,
     #   optimise it
     #   hook into accumulated network
     # reorganise outputs
+    t0 = time()
 
     # Unpack parameters
     X, Y = np.split(training_set, [training_set.Ni])
@@ -192,7 +193,7 @@ def run(optimiser, model_generator, network_params, training_set,
     accumulated = BNState(np.empty((0, 3)), X)
 
     while(to_learn):
-        t0 = time()
+        t1 = time()
         # don't include output gates as possible inputs
         # new Ni = Ng - No + Ni
         # NEED INPUTS TOO
@@ -214,13 +215,14 @@ def run(optimiser, model_generator, network_params, training_set,
         state = BNState(gates, Dsub)
 
         # optimise
-        t1 = time()
+        t2 = time()
         partial_result = optimiser.run(state)
         if force_memorisation and partial_result.error > 0:
             raise ValueError(f'Stage {len(opt_results)} target {target} '
                              f'failed to memorise '
-                             f'error: {partial_result.error}')
-        t2 = time()
+                             f'error: {partial_result.error} '
+                             f'stage time: {time()-t1} total time: {time()-t0}')
+        t3 = time()
 
         new_state = BNState(partial_result.representation.gates, Dsub)
         accumulated = join_networks(accumulated, new_state,
@@ -234,8 +236,9 @@ def run(optimiser, model_generator, network_params, training_set,
         strata_sizes.append(
             accumulated.Ng - accumulated.No - sum(strata_sizes))
 
-        optimisation_times.append(t2 - t1)
-        other_times.append(time() - t2 + t1 - t0)
+        t4 = time()
+        optimisation_times.append(t3 - t2)
+        other_times.append(t4 - t3 + t2 - t1)
 
         to_learn = sorted(set(to_learn).difference(learned_targets))
 

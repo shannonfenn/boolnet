@@ -96,7 +96,7 @@ def run(optimiser, model_generator, network_params, training_set,
         target_order = list(range(D.No))
 
     for target, size in zip(target_order, budgets):
-        t0 = time()
+        t1 = time()
 
         D_partial = make_partial_instance(X, Y, feature_sets, target)
         # build the network state
@@ -104,12 +104,13 @@ def run(optimiser, model_generator, network_params, training_set,
         state = BNState(gates, D_partial)
 
         # run the optimiser
-        t1 = time()
+        t2 = time()
         partial_result = optimiser.run(state)
         if force_memorisation and partial_result.error > 0:
             raise ValueError(f'Target {target} failed to memorise '
-                             f'error: {partial_result.error}')
-        t2 = time()
+                             f'error: {partial_result.error} '
+                             f'stage time: {time()-t1} total time: {time()-t0}')
+        t3 = time()
 
         # record result
         opt_results.append(partial_result)
@@ -121,9 +122,9 @@ def run(optimiser, model_generator, network_params, training_set,
             accumulated_network, result_state, target, D, X,
             feature_sets, apply_mask)
 
-        t3 = time()
-        optimisation_times.append(t2 - t1)
-        other_times.append(t3 - t2 + t1 - t0)
+        t4 = time()
+        optimisation_times.append(t3 - t2)
+        other_times.append(t4 - t3 + t2 - t1)
 
     return {
         'network': accumulated_network.representation,

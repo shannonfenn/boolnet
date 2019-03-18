@@ -88,7 +88,7 @@ def run(optimiser, model_generator, network_params, training_set,
     init_time = time() - t0
 
     for i, budget in enumerate(budgets):
-        t0 = time()
+        t1 = time()
 
         target = target_order[i]
 
@@ -100,16 +100,17 @@ def run(optimiser, model_generator, network_params, training_set,
         state = BNState(gates, D_i)
 
         # run the optimiser
-        t1 = time()
+        t2 = time()
         partial_result = optimiser.run(state)
         if force_memorisation and partial_result.error > 0:
             raise ValueError(f'Stage {i} target {target} failed to memorise '
-                             f'error: {partial_result.error}')
-        t2 = time()
+                             f'error: {partial_result.error} '
+                             f'stage time: {time()-t1} total time: {time()-t0}')
+        t3 = time()
 
         opt_results.append(partial_result)
-        other_times.append(t1 - t0)
-        optimisation_times.append(t2 - t1)
+        other_times.append(t2 - t1)
+        optimisation_times.append(t3 - t2)
 
     partial_networks = [r.representation for r in opt_results]
     accumulated_net = join_networks(
