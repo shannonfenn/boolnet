@@ -262,7 +262,7 @@ def learn_bool_net(parameters):
     return record
 
 
-def build_states(mapping, gates):
+def train_test_split(mapping):
     if mapping['type'] == 'raw_split':
         trg_indices = mapping.get('training_indices', None)
         test_indices = mapping.get('test_indices', None)
@@ -272,9 +272,6 @@ def build_states(mapping, gates):
             M_trg = utils.sample_packed(M_trg, mapping['training_indices'])
         if test_indices is not None:
             M_test = utils.sample_packed(M_test, mapping['test_indices'])
-        S_trg = ns.BNState(gates, M_trg)
-        S_test = ns.BNState(gates, M_test)
-
     elif mapping['type'] == 'raw_unsplit':
         M = mapping['matrix']
         trg_indices = mapping['training_indices']
@@ -284,9 +281,6 @@ def build_states(mapping, gates):
         else:
             M_trg = utils.sample_packed(M, trg_indices)
             M_test = utils.sample_packed(M, test_indices)
-        S_trg = ns.BNState(gates, M_trg)
-        S_test = ns.BNState(gates, M_test)
-
     elif mapping['type'] == 'operator':
         trg_indices = mapping['training_indices']
         test_indices = mapping['test_indices']
@@ -302,12 +296,15 @@ def build_states(mapping, gates):
         M_trg = gen.packed_from_operator(trg_indices, Nb, No, op, tgts)
         M_test = gen.packed_from_operator(test_indices, Nb, No, op, tgts,
                                           exclude)
-        S_trg = ns.BNState(gates, M_trg)
-        S_test = ns.BNState(gates, M_test)
-
     else:
         raise ValueError('Invalid mapping type: {}'.format(mapping['type']))
+    return M_trg, M_test
 
+
+def build_states(mapping, gates):
+    M_trg, M_test = train_test_split(mapping)
+    S_trg = ns.BNState(gates, M_trg)
+    S_test = ns.BNState(gates, M_test)
     return S_trg, S_test
 
 
