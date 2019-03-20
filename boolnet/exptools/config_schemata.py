@@ -207,6 +207,7 @@ learner_schema = Schema(All(
                                                 'prev-strata+prev-fs+input'),
             Optional('apply_mask'):         bool,
             Optional('shrink_subnets'):     bool,
+            Optional('early_terminate'):    bool,
             }),
         Schema({
             'name':                         'classifierchain',
@@ -214,6 +215,7 @@ learner_schema = Schema(All(
             'target_order':                 target_order_schema,
             Optional('seed'):               seed_schema,
             Optional('minfs_params'):       minfs_schema,
+            Optional('early_terminate'):    bool,
             }),
         Schema({
             'name':                         'ecc_member',
@@ -229,6 +231,7 @@ learner_schema = Schema(All(
             Optional('seed'):               seed_schema,
             Optional('minfs_params'):       minfs_schema,
             Optional('apply_mask'):         bool,
+            Optional('early_terminate'):    bool,
             }),
         # a bit hacky for now - the learner will have to catch config errors
         Schema({

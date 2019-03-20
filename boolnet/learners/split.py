@@ -71,7 +71,7 @@ def make_partial_instance(X, Y, feature_sets, target_index):
 
 def run(optimiser, model_generator, network_params, training_set,
         target_order=None, minfs_params={}, apply_mask=False,
-        force_memorisation=True):
+        early_terminate=True):
     t0 = time()
 
     D = training_set
@@ -106,7 +106,7 @@ def run(optimiser, model_generator, network_params, training_set,
         # run the optimiser
         t2 = time()
         partial_result = optimiser.run(state)
-        if force_memorisation and partial_result.error > 0:
+        if early_terminate and partial_result.error > 0:
             raise ValueError(f'Target {target} failed to memorise '
                              f'error: {partial_result.error} '
                              f'stage time: {time()-t1} total time: {time()-t0}')
