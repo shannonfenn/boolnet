@@ -6,6 +6,7 @@ import json
 import gzip
 import os
 import sys
+import traceback
 
 from boolnet.utils import NumpyAwareJSONEncoder
 from boolnet.exptools.learn_boolnet import learn_bool_net
@@ -34,6 +35,8 @@ def process_multiple_experiments(explistfile):
                 result = run_single_experiment(line.strip())
             except ValueError as err:
                 print(err, file=sys.stderr)
+                print(line, file=sys.stderr)
+                print(traceback.format_exc(), file=sys.stderr)
             else:
                 json.dump(result, ostream, cls=NumpyAwareJSONEncoder,
                           separators=(',', ':'))
