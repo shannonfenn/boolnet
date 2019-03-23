@@ -70,12 +70,12 @@ def ranked_fs_helper(Xp, Yp, Ni, strata_sizes, targets, prev_fsets,
 
 
 def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
-                     prefilter, solver, metric, solver_params):
+                     prefilter, minfs_params):
     F_in = prefilter_features(Ni, strata_sizes, prev_fs, prefilter)
     X = pk.unpackmat(Xp[F_in, :], Xp.Ne)
-    Y = pk.unpackmat(yp, Xp.Ne)
+    y = pk.unpackvec(yp, Xp.Ne)
 
-    fs, _, _ = mfs.best_feature_set(X, Y, metric, solver, solver_params)
+    fs, _, _ = mfs.best_feature_set(X, y, **minfs_params)
     # remap feature sets using given feature indices
     fs = [F_in[f] for f in fs]
     return fs
