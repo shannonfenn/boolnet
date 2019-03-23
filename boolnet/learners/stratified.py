@@ -188,7 +188,8 @@ def run(optimiser, model_generator, network_params, training_set,
     to_learn = list(range(training_set.No))
     feature_sets = np.empty(training_set.No, dtype=list)
     # will be used as a stack
-    target_order = reversed(target_order) if target_order else None
+    if target_order is not None:
+        target_order = list(reversed(target_order))
     # make an initial accumulator state with no gates
     accumulated = BNState(np.empty((0, 3)), X)
 
