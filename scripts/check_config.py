@@ -52,7 +52,7 @@ def main():
     # test generation of tasks
     try:
         check(settings, args.verbose)
-        print('\nExperiment config is valid.')
+        print('Experiment config is valid.')
     except cft.ValidationError as err:
         print()
         print(err)

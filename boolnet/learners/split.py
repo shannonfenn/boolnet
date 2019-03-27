@@ -95,6 +95,7 @@ def run(optimiser, model_generator, network_params, training_set,
     if target_order is None:
         target_order = list(range(D.No))
 
+    i = 0
     for target, size in zip(target_order, budgets):
         t1 = time()
 
@@ -107,7 +108,7 @@ def run(optimiser, model_generator, network_params, training_set,
         t2 = time()
         partial_result = optimiser.run(state)
         if early_terminate and partial_result.error > 0:
-            raise ValueError(f'Target {target} failed to memorise '
+            raise ValueError(f'Step {i} Target {target} failed to memorise '
                              f'error: {partial_result.error} '
                              f'stage time: {time()-t1} total time: {time()-t0}')
         t3 = time()
@@ -125,6 +126,7 @@ def run(optimiser, model_generator, network_params, training_set,
         t4 = time()
         optimisation_times.append(t3 - t2)
         other_times.append(t4 - t3 + t2 - t1)
+        i += 1
 
     return {
         'network': accumulated_network.representation,
