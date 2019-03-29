@@ -111,7 +111,7 @@ sampling_schema = Any(
 
 
 network_schema = Schema({
-    'Ng':           Any(All(int, Range(min=1)), Match('[1-9][0-9]*n2?')),
+    'Ng':           Any(All(int, Range(min=1)), Match('^[1-9][0-9]*n2?$')),
     'node_funcs':   [All(int, Range(min=0, max=15))]
     })
 
@@ -136,7 +136,7 @@ optimiser_schema = Any(
     Schema({
         'name':                                  'HC',
         'max_iterations':                        Any(All(int, Range(min=1)),
-                                                     Match('[1-9][0-9]*n')),
+                                                     Match('^[1-9][0-9]*n$')),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return_option'):               In(['best', 'last']),
@@ -148,7 +148,7 @@ optimiser_schema = Any(
         'name':                                  'LAHC',
         'cost_list_length':                      All(int, Range(min=1)),
         'max_iterations':                        Any(All(int, Range(min=1)),
-                                                     Match('[1-9][0-9]*n')),
+                                                     Match('^[1-9][0-9]*n$')),
         'guiding_function':                      In(guiding_functions),
         Optional('guiding_function_parameters'): Schema({}, extra_keys=Allow),
         Optional('return_option'):               In(['best', 'last']),
@@ -259,7 +259,7 @@ instance_schema = Schema({
     'optimiser':    optimiser_schema,
     'sampling':     sampling_schema,
     'log_keys':     log_keys_schema,
-    Optional(Match(r'notes.*')):  str,
+    Optional(Match(r'^notes.*')):  str,
     Optional('verbose_errors'):             bool,
     Optional('verbose_timing'):             bool,
     Optional('record_final_net'):           bool,
