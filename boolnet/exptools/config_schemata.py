@@ -111,7 +111,7 @@ sampling_schema = Any(
 
 
 network_schema = Schema({
-    'Ng':           Any(All(int, Range(min=1)), Match('[1-9][0-9]*n')),
+    'Ng':           Any(All(int, Range(min=1)), Match('[1-9][0-9]*n2?')),
     'node_funcs':   [All(int, Range(min=0, max=15))]
     })
 

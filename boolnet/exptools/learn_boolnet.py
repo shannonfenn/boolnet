@@ -206,6 +206,17 @@ def add_noise(mapping, rate):
     return effective_rate
 
 
+def handle_n_string(code, multiplier):
+    if str(code).endswith('n2'):
+        n = int(str(code)[:-2])
+        return n * multiplier * multiplier
+    elif str(code).endswith('n'):
+        n = int(str(code)[:-1])
+        return n * multiplier
+    else:
+        return code
+
+
 def learn_bool_net(parameters):
     start_time = time.monotonic()
 
@@ -233,10 +244,8 @@ def learn_bool_net(parameters):
         Ng, Ni, No, node_funcs)
 
     # Handle flexible network size
-    if str(learner_params['network_params']['Ng']).endswith('n'):
-        n = int(str(learner_params['network_params']['Ng'])[:-1])
-        Ng = n * training_set.No
-        learner_params['network_params']['Ng'] = Ng
+    learner_params['network_params']['Ng'] = handle_n_string(
+        learner_params['network_params']['Ng'], training_set.No)
 
     record = build_parameter_record(parameters, seed)
 
