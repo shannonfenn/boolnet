@@ -182,6 +182,9 @@ def build_training_set(mapping):
         targets = mapping['targets']
         return gen.packed_from_operator(indices, Nb, No, operator, targets)
 
+    else:
+        raise ValueError(f'Invalid mapping type: {mapping["type"]}')
+
 
 def add_noise(mapping, rate):
     Ne, No = mapping.Ne, mapping.No
