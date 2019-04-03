@@ -82,12 +82,12 @@ def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
 
 
 def get_next_target(Xsub, Y, Ni, given_order, to_learn, strata_sizes,
-                    prev_fsets, prefilter, use_filtering, minfs_params):
+                    prev_fsets, prefilter, apply_mask, minfs_params):
     fsets = np.empty_like(prev_fsets)
     if given_order:
         # get the feature set now
         next_target = given_order.pop()
-        if use_filtering:
+        if apply_mask:
             y = Y[next_target, :]
             fsets[next_target] = single_fs_helper(
                 Xsub, y, Ni, strata_sizes, prev_fsets[next_target],
@@ -205,7 +205,7 @@ def run(optimiser, model_generator, network_params, training_set,
         # determine next target index
         target, feature_sets = get_next_target(
             Xsub, Y, training_set.Ni, target_order, to_learn, strata_sizes,
-            feature_sets, prefilter, filter, minfs_params)
+            feature_sets, prefilter, apply_mask, minfs_params)
 
         Dsub = partial_instance(Xsub, Y, target, feature_sets, apply_mask)
 
