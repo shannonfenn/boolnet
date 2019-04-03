@@ -42,9 +42,12 @@ def strip_times(record):
         record.pop(k)
 
 
-# @pytest.mark.parametrize('task,expected', specific_harnesses('add3', None))
-@pytest.mark.parametrize('task,expected', task_expectation_pairs())
+# @pytest.mark.parametrize(
+#     'task,expected',
+#     specific_harnesses('cpar7', [0,1,2,3,4,5,6,7,10,11,12,13,14]))
+# @pytest.mark.parametrize('task,expected', task_expectation_pairs())
 @pytest.mark.slow
+@pytest.mark.skip(reason='external breaking changes are continuous')
 def test_run(task, expected):
     print(task['id'], task['learner']['name'], task['notes_tmt'])
     result = learn_boolnet.learn_bool_net(task)

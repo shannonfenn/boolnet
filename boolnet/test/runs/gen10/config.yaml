@@ -5,7 +5,7 @@ seed: 3354645
 
 # common params
 base_config:
-  data: 
+  data:
     type: file
     targets: random
 
@@ -36,7 +36,7 @@ base_config:
     max_iterations:   10000
 
 product:
-  - 
+  -
     - {notes_tmt: mono-e1, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e1, max_iterations: 10000n}}
     - {notes_tmt: mono-e2-lsb, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e2, max_iterations: 10000n}}
     - {notes_tmt: mono-e3-lsb, learner: {name: monolithic, target_order: lsb}, optimiser: {guiding_function: e3, max_iterations: 10000n}}
@@ -44,14 +44,14 @@ product:
     - {notes_tmt: mono-e2-auto, learner: {name: monolithic, target_order: auto}, optimiser: {guiding_function: e2, max_iterations: 10000n}}
     - {notes_tmt: mono-e3-auto, learner: {name: monolithic, target_order: auto}, optimiser: {guiding_function: e3, max_iterations: 10000n}}
     - {notes_tmt: mono-e6-auto, learner: {name: monolithic, target_order: auto}, optimiser: {guiding_function: e6, max_iterations: 10000n}}
-    - {notes_tmt: split-raps, learner: {name: split, target_order: lsb, apply_mask: yes}}
-    - {notes_tmt: strat-raps-all, learner: {name: stratified, prefilter: ~, target_order: auto, apply_mask: yes}}
-    - {notes_tmt: strat-raps-reduced, learner: {name: stratified, prefilter: prev-strata+prev-fs+input, target_order: auto, apply_mask: yes}}
-    - {notes_tmt: strat-raps-all-shrink, learner: {name: stratified, prefilter: ~, target_order: auto, apply_mask: yes, shrink_subnets: yes}}
-    - {notes_tmt: strat-raps-reduced-shrink, learner: {name: stratified, prefilter: prev-strata+prev-fs+input, target_order: auto, apply_mask: yes, shrink_subnets: yes}}
-    - {notes_tmt: cc-auto, learner: {name: classifierchain, target_order: auto, network_params: {Ng: 40n}}}
-    - {notes_tmt: cc-random, learner: {name: classifierchain, target_order: random, network_params: {Ng: 40n}}}
-    - {notes_tmt: cc-plus, learner: {name: classifierchain_plus, target_order: auto, network_params: {Ng: 40n}}}
+    - {notes_tmt: split-raps, learner: {name: split, target_order: lsb, apply_mask: true, early_terminate: false}}
+    - {notes_tmt: strat-raps-all, learner: {name: stratified, prefilter: ~, target_order: auto, apply_mask: true, early_terminate: false}}
+    - {notes_tmt: strat-raps-reduced, learner: {name: stratified, prefilter: prev-strata+prev-fs+input, target_order: auto, apply_mask: true, early_terminate: false}}
+    - {notes_tmt: strat-raps-all-shrink, learner: {name: stratified, prefilter: ~, target_order: auto, apply_mask: true, shrink_subnets: true, early_terminate: false}}
+    - {notes_tmt: strat-raps-reduced-shrink, learner: {name: stratified, prefilter: prev-strata+prev-fs+input, target_order: auto, apply_mask: true, shrink_subnets: true, early_terminate: false}}
+    - {notes_tmt: cc-auto, learner: {name: classifierchain, target_order: auto, network_params: {Ng: 40n}, early_terminate: false}}
+    - {notes_tmt: cc-random, learner: {name: classifierchain, target_order: random, network_params: {Ng: 40n}, early_terminate: false}}
+    - {notes_tmt: cc-plus, learner: {name: classifierchain_plus, target_order: auto, network_params: {Ng: 40n}, early_terminate: false}}
   -
     - {sampling: {Ne: 16, seed: s0}}
   -
