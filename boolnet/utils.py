@@ -71,24 +71,28 @@ class PackedMatrix(np.ndarray):
 
 
 def partition_packed(matrix, indices):
-    M_trg, M_test = pk.partition_columns(matrix, matrix.Ne, indices)
-
-    # return the PackedMatrix types to provide meta-data
-    Ne = indices.shape[0]
-    training_matrix = PackedMatrix(M_trg, Ne=Ne, Ni=matrix.Ni)
-    test_matrix = PackedMatrix(M_test, Ne=matrix.Ne-Ne, Ni=matrix.Ni)
-
-    return training_matrix, test_matrix
+    unpacked_matrix = unpack(matrix)
+    M_in = pack(unpacked_matrix[indices, :], Ni=matrix.Ni)
+    M_out = pack(np.delete(unpacked_matrix, indices, axis=0), Ni=matrix.Ni)
+    return M_in, M_out
 
 
 def sample_packed(matrix, indices, invert=False):
-    sample = pk.sample_columns(matrix, matrix.Ne, indices, invert)
-    Ne = matrix.Ne - indices.size if invert else indices.size
-    return PackedMatrix(sample, Ne=Ne, Ni=matrix.Ni)
+    unpacked_matrix = unpack(matrix)
+    if invert:
+        return pack(np.delete(unpacked_matrix, indices, axis=0), Ni=matrix.Ni)
+    else:
+        return pack(unpacked_matrix[indices, :], Ni=matrix.Ni)
 
 
 def unpack(packed_matrix, transpose=True):
     return pk.unpackmat(packed_matrix, packed_matrix.Ne, transpose=transpose)
+
+
+def pack(unpacked_matrix, Ni=0, transpose=True):
+    Ne = unpacked_matrix.shape[0] if transpose else unpacked_matrix.shape[1]
+    packed_matrix = pk.packmat(unpacked_matrix, transpose=transpose)
+    return PackedMatrix(packed_matrix, Ne=Ne, Ni=Ni)
 
 
 def pairwise(iterable):
