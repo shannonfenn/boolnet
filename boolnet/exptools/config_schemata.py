@@ -186,6 +186,7 @@ minfs_schema = Schema({
 
 target_order_schema = Any('auto', 'msb', 'lsb', 'random',
                           All(list, permutation))
+mask_schema = Any(bool, 'prefilter')
 learner_schema = Schema(All(
     Any(
         Schema({
@@ -205,7 +206,7 @@ learner_schema = Schema(All(
                                                 'prev-strata+input',
                                                 'prev-strata+prev-fs',
                                                 'prev-strata+prev-fs+input'),
-            Optional('apply_mask'):         bool,
+            Optional('apply_mask'):         mask_schema,
             Optional('shrink_subnets'):     bool,
             Optional('early_terminate'):    bool,
             }),
@@ -230,7 +231,7 @@ learner_schema = Schema(All(
             'target_order':                 target_order_schema,
             Optional('seed'):               seed_schema,
             Optional('minfs_params'):       minfs_schema,
-            Optional('apply_mask'):         bool,
+            Optional('apply_mask'):         mask_schema,
             Optional('early_terminate'):    bool,
             }),
         # a bit hacky for now - the learner will have to catch config errors

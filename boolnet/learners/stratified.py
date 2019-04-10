@@ -50,11 +50,11 @@ def ranked_fs_helper(Xp, Yp, Ni, strata_sizes, targets, prev_fsets,
         F_in = [prefilter_features(Ni, strata_sizes, prev_fsets[t], prefilter)
                 for t in targets]
         mfs_X = [pk.unpackmat(Xp[fs, :], Xp.Ne) for fs in F_in]
-        fs_maps = F_in
+        prefilter_maps = F_in
     else:
         F_in = prefilter_features(Ni, strata_sizes, None, prefilter)
         mfs_X = pk.unpackmat(Xp[F_in, :], Xp.Ne)
-        fs_maps = (F_in for i in range(len(targets)))
+        prefilter_maps = [F_in for i in range(len(targets))]
 
     mfs_Y = pk.unpackmat(Yp[targets, :], Xp.Ne)
 
@@ -62,11 +62,11 @@ def ranked_fs_helper(Xp, Yp, Ni, strata_sizes, targets, prev_fsets,
         mfs_X, mfs_Y, **minfs_params)
 
     # remap feature sets using given feature indices
-    for fs, fsmap in zip(feature_sets, fs_maps):
+    for fs, fsmap in zip(feature_sets, prefilter_maps):
         for i, f in enumerate(fs):
             fs[i] = fsmap[f]
 
-    return ranking, feature_sets
+    return ranking, feature_sets, prefilter_maps
 
 
 def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
@@ -78,45 +78,63 @@ def single_fs_helper(Xp, yp, Ni, strata_sizes, prev_fs,
     fs, _, _ = mfs.best_feature_set(X, y, **minfs_params)
     # remap feature sets using given feature indices
     fs = [F_in[f] for f in fs]
-    return fs
+    return fs, F_in
 
 
 def get_next_target(Xsub, Y, Ni, given_order, to_learn, strata_sizes,
                     prev_fsets, prefilter, apply_mask, minfs_params):
     fsets = np.empty_like(prev_fsets)
+    prefilter_ranges = np.empty_like(fsets)
     if given_order:
         # get the feature set now
         next_target = given_order.pop()
         if apply_mask:
             y = Y[next_target, :]
-            fsets[next_target] = single_fs_helper(
+            fs, pf_range = single_fs_helper(
                 Xsub, y, Ni, strata_sizes, prev_fsets[next_target],
                 prefilter, minfs_params)
+            fsets[next_target] = fs
+            prefilter_ranges[next_target] = pf_range
+
     else:
-        ranking, partial_fsets = ranked_fs_helper(
+        ranking, partial_fsets, partial_ranges = ranked_fs_helper(
             Xsub, Y, Ni, strata_sizes, to_learn, prev_fsets,
             prefilter, minfs_params)
         # randomly pick from top ranked targets
         next_target = to_learn[np.random.choice(np.where(ranking == 0)[0])]
         fsets[to_learn] = partial_fsets
-    return next_target, fsets
+        prefilter_ranges[to_learn] = partial_ranges
+    return next_target, fsets, prefilter_ranges
 
 
-def partial_instance(Xsub, Y, t, feature_sets, apply_mask):
-    if apply_mask:
+def partial_instance(Xsub, Y, t, feature_sets, apply_mask, prefilter_ranges):
+    if apply_mask == 'prefilter':
+        index = prefilter_ranges[t]
+        if not index:     # empty prefilter is an error
+            raise ValueError(f'Bad prefilter: {index}')
+        try:
+            Xsub = Xsub[index]
+        except IndexError as e:
+            print(f'index: {index}')
+            raise e
+    elif apply_mask:
         fs = feature_sets[t]
         if len(fs) > 0:     # empty fs should pass inputs through
             Xsub = Xsub[fs]
+
     return PackedMatrix(np.vstack((Xsub, Y[t, :])), Xsub.Ne, Xsub.shape[0])
 
 
-def join_networks(base, new, fs, apply_mask, shrink):
+def join_networks(base, new, apply_mask, shrink, fs, prefilter_range):
     # simple: build up a map for all sources, for sources after the
     # original minfs input just have them as + Ni_offset (whatever that is,
     # might including old.Ng) and for the former ones use the fs mapping
-    if apply_mask and fs:
+    if (apply_mask == 'prefilter' and prefilter_range) or (apply_mask and fs):
         # build a map for replacing sources
-        new_input_map = fs
+        if apply_mask == 'prefilter':
+            new_input_map = prefilter_range
+        else:
+            new_input_map = fs
         # difference in input sizes plus # of non-output base gates
         # offset = base.Ni - new.Ni + base.Ng - base.No
         offset = base.Ni + base.Ng - base.No
@@ -203,11 +221,12 @@ def run(optimiser, model_generator, network_params, training_set,
         Xsub = PackedMatrix(Xsub, Ne=training_set.Ne, Ni=Xsub.shape[0])
 
         # determine next target index
-        target, feature_sets = get_next_target(
+        target, feature_sets, prefilter_ranges = get_next_target(
             Xsub, Y, training_set.Ni, target_order, to_learn, strata_sizes,
             feature_sets, prefilter, apply_mask, minfs_params)
 
-        Dsub = partial_instance(Xsub, Y, target, feature_sets, apply_mask)
+        Dsub = partial_instance(Xsub, Y, target, feature_sets, apply_mask,
+                                prefilter_ranges)
 
         # ### build state to be optimised ### #
         # next batch of gates
@@ -226,9 +245,9 @@ def run(optimiser, model_generator, network_params, training_set,
         t3 = time()
 
         new_state = BNState(partial_result.representation.gates, Dsub)
-        accumulated = join_networks(accumulated, new_state,
-                                    feature_sets[target], apply_mask,
-                                    shrink_subnets)
+        accumulated = join_networks(accumulated, new_state, apply_mask,
+                                    shrink_subnets, feature_sets[target],
+                                    prefilter_ranges[target])
 
         opt_results.append(partial_result)
         learned_targets.append(target)
